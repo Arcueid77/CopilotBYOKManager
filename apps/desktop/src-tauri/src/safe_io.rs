@@ -148,16 +148,11 @@ fn write_using(
     fs::create_dir_all(parent).map_err(|error| AppError::io(parent, error))?;
     let temp = parent.join(format!(".pilotweave-{}.tmp", Uuid::new_v4()));
     let result = (|| -> AppResult<()> {
-        let mut options = OpenOptions::new();
-        options.create_new(true).write(true);
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::OpenOptionsExt;
-            options.mode(0o600);
-        }
-        let mut file = options
-            .open(&temp)
-            .map_err(|error| AppError::io(&temp, error))?;
+        // Transaction targets/journals can materialize provider keys. Reuse the
+        // protected Windows DACL (owner + LocalSystem), not inherited ACLs;
+        // Unix keeps the existing 0600 behavior and optional preserved modes.
+        let mut file =
+            crate::safe_file::create_private(&temp).map_err(|error| AppError::io(&temp, error))?;
         if let Some(mode) = mode {
             file.set_permissions(mode)
                 .map_err(|error| AppError::io(&temp, error))?;
@@ -320,6 +315,70 @@ mod tests {
             Some(b"two".to_vec())
         );
         assert!(read_optional(&path, 2).is_err());
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn transaction_files_use_protected_owner_and_system_acl_after_replacement() {
+        use std::os::windows::ffi::OsStrExt;
+        use windows_sys::Win32::Foundation::LocalFree;
+        use windows_sys::Win32::Security::Authorization::{
+            ConvertSecurityDescriptorToStringSecurityDescriptorW, GetNamedSecurityInfoW,
+            SDDL_REVISION_1, SE_FILE_OBJECT,
+        };
+        use windows_sys::Win32::Security::DACL_SECURITY_INFORMATION;
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("transaction-private.json");
+        for bytes in [b"before".as_slice(), b"after"] {
+            write_private(&path, bytes).unwrap();
+            let wide = path
+                .as_os_str()
+                .encode_wide()
+                .chain(Some(0))
+                .collect::<Vec<_>>();
+            let mut descriptor = std::ptr::null_mut();
+            // SAFETY: the name is NUL-terminated; the API allocates the descriptor.
+            assert_eq!(
+                unsafe {
+                    GetNamedSecurityInfoW(
+                        wide.as_ptr(),
+                        SE_FILE_OBJECT,
+                        DACL_SECURITY_INFORMATION,
+                        std::ptr::null_mut(),
+                        std::ptr::null_mut(),
+                        std::ptr::null_mut(),
+                        std::ptr::null_mut(),
+                        &mut descriptor,
+                    )
+                },
+                0
+            );
+            let mut sddl = std::ptr::null_mut();
+            let mut len = 0;
+            // SAFETY: descriptor is valid and both allocations are freed below.
+            let converted = unsafe {
+                ConvertSecurityDescriptorToStringSecurityDescriptorW(
+                    descriptor,
+                    SDDL_REVISION_1,
+                    DACL_SECURITY_INFORMATION,
+                    &mut sddl,
+                    &mut len,
+                )
+            };
+            let text = if converted != 0 {
+                // SAFETY: the API reports the allocated UTF-16 length including NUL.
+                String::from_utf16_lossy(unsafe { std::slice::from_raw_parts(sddl, len as usize) })
+            } else {
+                String::new()
+            };
+            // SAFETY: both pointers were allocated by the Windows security APIs.
+            unsafe {
+                LocalFree(descriptor);
+                LocalFree(sddl.cast());
+            }
+            assert_ne!(converted, 0);
+            assert_eq!(text.trim_end_matches('\0'), "D:P(A;;FA;;;SY)(A;;FA;;;OW)");
+        }
     }
 
     #[cfg(unix)]

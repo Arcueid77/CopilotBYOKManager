@@ -31,8 +31,11 @@ The product manages these logical surfaces:
 - **VS Code Copilot**: VS Code Stable and Insiders, including concrete profiles and the supported GitHub Copilot capability/extension state.
 - **GitHub Copilot CLI**: the official `copilot` CLI/runtime.
 - **GitHub Copilot app**: the official desktop application.
+- **JetBrains GitHub Copilot (maintainer-requested optional integration)**: concrete standard IDE/version profiles with public Copilot plugin metadata. Keep each profile separate, distinguish missing/disabled/unsafe metadata, and describe profile observations rather than claiming a live IDE or verified account.
 
 A logical surface may share a physical package/runtime/source with another surface. The system must model both logical surfaces and physical components so installation and usage are not duplicated.
+
+JetBrains does not add a mandatory IDE/plugin installation to the original three-surface clean-machine workflow. The maintainer requires automatic BYOK deployment, not manual instructions as the completed integration. Project verified runtime versions into the dedicated `github-copilot/byok.json` namespace using normal reviewed one-shot plans, prepare-all, durable ownership, private journals, atomic writes and conditional rollback. Preserve unmanaged providers and deduplicate IDEs sharing the physical file. Materialize only the Connection's own provider key; never read Password Safe, private authentication XML/databases, client OAuth tokens or conversation stores. Unknown versions/schema and incompatible endpoints must refuse automatic writes explicitly. Disk publication is separate from IDE restart/model-picker refresh, sign-in and provider execution. Each enabled profile still needs an official per-IDE account check; changed profiles invalidate manual confirmation, and Copilot app confirmation cannot cover JetBrains. Resources/OTel import require separately verified paths/parsers; unsupported coverage stays unknown, not zero. See `jetbrains-support.md` for the reviewed automatic-write contract, fixtures and boundaries.
 
 ### 3.2 Required capabilities
 
@@ -989,6 +992,7 @@ Before coding each adapter, verify current primary sources:
 - official GitHub Copilot CLI repository/documentation for installation, login, runtime behavior, models, and supported session metrics;
 - official GitHub Copilot app repository/releases/documentation for platform assets, installation, sign-in, and public interfaces;
 - official VS Code/GitHub Copilot documentation and extension metadata for installation, profiles, sign-in actions, custom models, and supported debug/usage sources;
+- official JetBrains directory/plugin-descriptor documentation, the GitHub Marketplace plugin identity, and GitHub Copilot JetBrains BYOK/sign-in documentation before changing that optional adapter;
 - official GitHub REST documentation for current personal usage/Billing endpoints, versions, units, permissions, pagination, and coverage limits;
 - official GitHub/provider model pricing sources for rates and effective dates;
 - official WinGet/package metadata for exact IDs and publishers.

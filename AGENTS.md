@@ -31,6 +31,8 @@ The checked-in implementation is an initial connection/deployment prototype. It 
 - a read-only/manual boundary for GitHub Copilot app provider configuration;
 - a browser fallback for reviewing the frontend without native writes.
 
+The maintainer requires automatic JetBrains GitHub Copilot BYOK deployment, not only manual runbooks. The adapter observes public IDE/profile metadata and projects reviewed plugin versions into the official runtime's dedicated `github-copilot/byok.json` namespace through normal native-held plans, ownership, journals and rollback. Shared writes are deduplicated. Only PilotWeave's own provider keys may be materialized; never read/copy GitHub login credentials, Password Safe, authentication files or conversations. Unknown plugin versions remain unsupported pending verification. Publication is not proof of running/authenticated IDEs or successful provider requests. See `docs/jetbrains-support.md`; JetBrains is not a mandatory installation dependency of the original three-surface setup.
+
 Treat this as a prototype. It does not prove that transactions, ownership, rollback, recovery, installer, login, official-usage, local-usage, or pricing guarantees are complete.
 
 The repository does not yet implement the complete required MVP: workstation installation, account orchestration, official runtime quota and personal Billing, local usage import, price catalog, complete Usage UI, and the deployment hardening defined by the specification.

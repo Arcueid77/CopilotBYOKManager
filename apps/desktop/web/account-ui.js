@@ -14,6 +14,7 @@
     "vsCodeCopilot",
     "copilotCli",
     "githubCopilotApp",
+    "jetBrainsCopilot",
   ];
   const selectableStates = new Set([
     "verified",
@@ -429,7 +430,7 @@
   function renderPlanOperation(operation) {
     return `
       <div class="account-plan-operation">
-        <span class="account-status ${operation.supported ? "action" : "unsupported"}">${operation.supported ? operation.surface === "vsCodeCopilot" ? "Instructions" : "Will open" : "Unavailable"}</span>
+        <span class="account-status ${operation.supported || operation.surface === "jetBrainsCopilot" ? "action" : "unsupported"}">${operation.surface === "jetBrainsCopilot" ? "Manual instructions" : operation.supported ? operation.surface === "vsCodeCopilot" ? "Instructions" : "Will open" : "Unavailable"}</span>
         <div>
           <strong>${escapeHtml(operation.title)}</strong>
           <p>${escapeHtml(operation.description)}</p>
@@ -520,6 +521,7 @@
       vsCodeCopilot: "VS Code Copilot",
       copilotCli: "GitHub Copilot CLI",
       githubCopilotApp: "GitHub Copilot app",
+      jetBrainsCopilot: "JetBrains GitHub Copilot",
     }[surface] ?? surface;
   }
 
@@ -528,6 +530,7 @@
       vsCodeCopilot: "VS",
       copilotCli: ">_",
       githubCopilotApp: "◆",
+      jetBrainsCopilot: "JB",
     }[surface] ?? "◇";
   }
 

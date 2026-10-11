@@ -130,6 +130,7 @@ pub fn run() {
             model_discovery::discover_connection_models,
             commands::delete_connection,
             commands::preview_deployment,
+            adapters::jetbrains::get_jetbrains_setup_guide,
             commands::preview_revoke_and_delete,
             commands::apply_deployment_plan,
             commands::preview_deployment_recovery,

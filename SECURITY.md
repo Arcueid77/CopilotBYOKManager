@@ -8,6 +8,7 @@ Do not include any of the following in a public issue, discussion, screenshot, o
 
 - API keys, GitHub tokens, authorization headers, device codes, cookies, or refresh tokens;
 - browser profile data, VS Code SecretStorage data, Copilot CLI authentication files, or GitHub Copilot app credential data;
+- JetBrains Password Safe data, Copilot authentication settings, raw `github-copilot/byok.json`, private rollback snapshots, or IDE conversation/debug logs;
 - full environment dumps;
 - complete VS Code, Copilot CLI, or Copilot app configuration files when they contain materialized credentials;
 - raw Copilot session or Agent Debug Log files;

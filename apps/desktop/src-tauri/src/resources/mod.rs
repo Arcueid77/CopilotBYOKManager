@@ -246,6 +246,13 @@ fn targets_at(
     }
     result.push(Target { id: "github-copilot-app:manual".into(), label: "GitHub Copilot app".into(), path: None, mcp_key: None,
         supported: false, detail: "Manual: this adapter has no verified stable resource-write interface; private app stores are never inspected".into() });
+    for client in clients
+        .iter()
+        .filter(|c| c.kind == ClientKind::JetBrainsCopilot && c.path.is_some())
+    {
+        result.push(Target { id: client.id.clone(), label: client.name.clone(), path: None, mcp_key: None,
+            supported: false, detail: "Manual: review resources in this IDE's Copilot customizations UI. No stable external personal resource-write schema is verified; VS Code/CLI deployment does not prove JetBrains synchronization".into() });
+    }
     result
 }
 

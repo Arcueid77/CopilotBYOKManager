@@ -230,6 +230,8 @@ pub enum ClientKind {
     VsCodeCopilot,
     CopilotCli,
     GithubCopilotApp,
+    #[serde(rename = "jetbrains-copilot")]
+    JetBrainsCopilot,
 }
 
 impl ClientKind {
@@ -238,6 +240,7 @@ impl ClientKind {
             Self::VsCodeCopilot => "vscode-copilot",
             Self::CopilotCli => "copilot-cli",
             Self::GithubCopilotApp => "github-copilot-app",
+            Self::JetBrainsCopilot => "jetbrains-copilot",
         }
     }
 }

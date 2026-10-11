@@ -602,7 +602,7 @@ pub async fn preview_revoke_and_delete(
                 target_ids: Vec::new(), operations: Vec::new(), created_at: Utc::now(),
             }
         } else {
-            adapters::preview_resolved(&connection, &owned_ids, &targets).map_err(command_error)?
+            adapters::preview_revoke_resolved(&connection, &owned_ids, &targets).map_err(command_error)?
         };
         plan.purpose = DeploymentPurpose::RevokeAndDelete;
         for operation in &mut plan.operations {

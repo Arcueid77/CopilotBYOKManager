@@ -7,6 +7,9 @@ use sha2::{Digest, Sha256};
 use std::path::{Path, PathBuf};
 pub fn recovery_resources() -> AppResult<Vec<transaction::Resource>> {
     let mut resources = adapters::copilot_cli::observed_resources()?;
+    // Recovery must work even after an IDE/plugin is removed; only the dedicated
+    // native-owned BYOK path is allowed, never paths read from a journal.
+    resources.extend(adapters::jetbrains::byok::observed_resources()?);
     for target in adapters::discover_all() {
         if target.kind == ClientKind::VsCodeCopilot && target.detected {
             if let Some(path) = target.path {
@@ -94,15 +97,29 @@ pub(super) fn prepare_writes(
                 };
                 (prepared, ownership::cli_resource_id(), projection)
             }
+            ClientKind::JetBrainsCopilot => {
+                // Native metadata must still match the reviewed schema/target.
+                adapters::jetbrains::ensure_writable(target)?;
+                let (write, projection) = adapters::jetbrains::byok::prepare_owned(
+                    connection,
+                    secret,
+                    &context.owner_id,
+                    &context.ownership,
+                    revoke,
+                )?;
+                let resource_id = ownership::resource_id(&write.resource);
+                (vec![write], resource_id, projection)
+            }
             ClientKind::GithubCopilotApp => {
                 return Err(AppError::Unsupported(
-                    "Copilot app remains manual/read-only".into(),
+                    "This client remains manual/read-only".into(),
                 ))
             }
         };
         ownership_after.retain(|proof| {
             !(proof.resource_id == resource_id
-                && (target.kind == ClientKind::CopilotCli || proof.connection_id == connection.id))
+                && (target.kind == ClientKind::CopilotCli || proof.connection_id == connection.id)
+                && (target.kind != ClientKind::JetBrainsCopilot || proof.target_id == target.id))
         });
         if let Some(projection_fingerprint) = projection {
             ownership_after.push(ownership::TargetOwnership {
@@ -141,6 +158,9 @@ pub(super) fn fingerprint_target_with_writes(
     if target.kind == ClientKind::CopilotCli && target.detected {
         hash.update(adapters::copilot_cli::routing_fingerprint()?.as_bytes());
     }
+    if target.kind == ClientKind::JetBrainsCopilot {
+        hash.update(adapters::jetbrains::target_fingerprint(target)?.as_bytes());
+    }
     let resources = match target.kind {
         ClientKind::CopilotCli if target.detected => adapters::copilot_cli::observed_resources()?,
         ClientKind::VsCodeCopilot if target.detected => vec![transaction::Resource::File(
@@ -151,6 +171,9 @@ pub(super) fn fingerprint_target_with_writes(
                     .ok_or_else(|| AppError::Config("Missing target path".into()))?,
             ))?,
         )],
+        ClientKind::JetBrainsCopilot if target.detected && target.supports_write => {
+            adapters::jetbrains::byok::observed_resources()?
+        }
         _ => Vec::new(),
     };
     for resource in resources {

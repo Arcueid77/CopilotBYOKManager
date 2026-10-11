@@ -149,6 +149,7 @@
   }
   function render(snapshot, data, native) {
     return `${!native ? '<div class="preview-banner">Browser preview · no native usage, quota or Billing access</div>' : ""}${overview(snapshot, data)}
+      ${(snapshot.clients ?? []).some(c => c.kind === "jetbrains-copilot" && c.path) ? '<p class="security-note" role="status">JetBrains usage: not covered by a verified importer in this version. The plugin exposes OpenTelemetry, but its parser/attribution schema has not been validated here. IDE logs are not read, and CLI/shared-runtime records are not attributed to JetBrains by guesswork. Missing usage is unknown, not zero.</p>' : ""}
       <nav class="usage-tabs" aria-label="Usage views">${[["official", "Official subscription / usage"], ["models", "Model statistics"], ["sessions", "Sessions / details"], ["sources", "Data sources / prices"]].map(([id, name]) => `<button class="${tab === id ? "active" : ""}" data-usage-tab="${id}" aria-current="${tab === id ? "page" : "false"}">${name}</button>`).join("")}</nav>
       ${{ official: () => official(data, native), models: () => models(snapshot, data), sessions: () => sessions(data), sources: () => sources(data, native) }[tab]()}`;
   }

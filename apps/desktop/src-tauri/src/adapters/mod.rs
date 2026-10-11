@@ -1,5 +1,6 @@
 pub mod copilot_cli;
 pub mod github_app;
+pub mod jetbrains;
 pub mod vscode;
 #[cfg(windows)]
 pub(crate) mod vscode_install;
@@ -29,6 +30,7 @@ pub fn discover_all() -> Vec<ClientTarget> {
     }
     targets.push(copilot_cli::discover_target());
     targets.push(github_app::discover_target());
+    targets.extend(jetbrains::discover_targets());
     targets.sort_by(|left, right| {
         left.kind
             .as_str()
@@ -50,6 +52,35 @@ pub fn preview_resolved(
     connection: &Connection,
     requested_target_ids: &[String],
     available: &[ClientTarget],
+) -> AppResult<DeploymentPlan> {
+    preview_for_purpose(
+        connection,
+        requested_target_ids,
+        available,
+        crate::domain::DeploymentPurpose::Deploy,
+    )
+}
+
+/// Removing proven owned data does not depend on a Connection's current key or
+/// endpoint being usable for a new deployment. Targets/schema must still match.
+pub fn preview_revoke_resolved(
+    connection: &Connection,
+    requested_target_ids: &[String],
+    available: &[ClientTarget],
+) -> AppResult<DeploymentPlan> {
+    preview_for_purpose(
+        connection,
+        requested_target_ids,
+        available,
+        crate::domain::DeploymentPurpose::RevokeAndDelete,
+    )
+}
+
+fn preview_for_purpose(
+    connection: &Connection,
+    requested_target_ids: &[String],
+    available: &[ClientTarget],
+    purpose: crate::domain::DeploymentPurpose,
 ) -> AppResult<DeploymentPlan> {
     if requested_target_ids.len() > 64 || requested_target_ids.iter().any(|id| id.len() > 512) {
         return Err(AppError::InvalidInput(
@@ -77,6 +108,12 @@ pub fn preview_resolved(
             ClientKind::VsCodeCopilot => vscode::preview(connection, target),
             ClientKind::CopilotCli => copilot_cli::preview(connection, target),
             ClientKind::GithubCopilotApp => github_app::preview(connection, target),
+            ClientKind::JetBrainsCopilot
+                if purpose == crate::domain::DeploymentPurpose::RevokeAndDelete =>
+            {
+                jetbrains::preview_revocation(connection, target)
+            }
+            ClientKind::JetBrainsCopilot => jetbrains::preview(connection, target),
         };
         canonical_ids.push(target.id.clone());
         operations.push(operation);
@@ -84,7 +121,7 @@ pub fn preview_resolved(
 
     Ok(DeploymentPlan {
         id: Uuid::new_v4().to_string(),
-        purpose: crate::domain::DeploymentPurpose::Deploy,
+        purpose,
         connection_id: connection.id.clone(),
         connection_name: connection.name.clone(),
         target_ids: canonical_ids,
@@ -109,6 +146,9 @@ pub fn apply_to_target(
         ClientKind::VsCodeCopilot => vscode::apply(connection, secret, target),
         ClientKind::CopilotCli => copilot_cli::apply(connection, secret, target),
         ClientKind::GithubCopilotApp => github_app::apply(connection, secret, target),
+        ClientKind::JetBrainsCopilot => Err(AppError::Unsupported(
+            jetbrains::MANUAL_PROVIDER.to_string(),
+        )),
     }
 }
 

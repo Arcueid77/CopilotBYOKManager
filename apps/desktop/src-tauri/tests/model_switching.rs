@@ -1,4 +1,4 @@
-//! End-to-end model-switching coverage for the three Copilot surfaces:
+//! Model-switching and preview coverage for all supported Copilot surface kinds:
 //!
 //! - VS Code Copilot consumes `chatLanguageModels.json` (verified in a
 //!   temporary directory),
@@ -6,6 +6,7 @@
 //!   (verified through the pure projection, never the real environment),
 //! - the GitHub Copilot app stays behind its intentional read-only/manual
 //!   boundary.
+//! - JetBrains Copilot exposes enabled models through a manual BYOK runbook.
 //!
 //! These tests touch no real profile, registry, environment, or shell file.
 
@@ -165,17 +166,42 @@ fn switching_models_projects_every_supported_client() {
 #[test]
 fn a_plan_covers_every_client_kind_with_the_active_model() {
     let connection = connection("upstream/model-b");
-    let plan = adapters::preview(
+    let root = tempfile::tempdir().unwrap();
+    let vscode = vscode_target(&root.path().join("models.json"));
+    let make = |id: &str, kind, writable| ClientTarget {
+        id: id.into(),
+        kind,
+        name: id.into(),
+        detail: "Synthetic preview target".into(),
+        path: None,
+        detected: true,
+        supports_write: writable,
+        status: if writable {
+            ClientStatus::Available
+        } else {
+            ClientStatus::ReadOnly
+        },
+        diagnostic: None,
+    };
+    let targets = vec![
+        vscode,
+        make("copilot-cli:user-environment", ClientKind::CopilotCli, true),
+        make(
+            "github-copilot-app:local",
+            ClientKind::GithubCopilotApp,
+            false,
+        ),
+        make("jetbrains:fixture", ClientKind::JetBrainsCopilot, false),
+    ];
+    let plan = adapters::preview_resolved(
         &connection,
-        &[
-            "copilot-cli:user-environment".to_string(),
-            "github-copilot-app:local".to_string(),
-        ],
+        &targets.iter().map(|t| t.id.clone()).collect::<Vec<_>>(),
+        &targets,
     )
     .expect("deployment plan");
 
     assert_eq!(plan.connection_id, "switch-test");
-    assert_eq!(plan.operations.len(), 2);
+    assert_eq!(plan.operations.len(), 4);
     assert!(plan
         .operations
         .iter()
@@ -184,8 +210,21 @@ fn a_plan_covers_every_client_kind_with_the_active_model() {
         .operations
         .iter()
         .any(|operation| operation.target_kind == ClientKind::GithubCopilotApp));
+    assert!(plan
+        .operations
+        .iter()
+        .any(|operation| operation.target_kind == ClientKind::VsCodeCopilot));
+    assert!(plan.operations.iter().any(|operation| operation.target_kind
+        == ClientKind::JetBrainsCopilot
+        && !operation.supported));
     for operation in &plan.operations {
         let rendered = format!("{} {}", operation.description, operation.changes.join(" "));
+        if operation.target_kind == ClientKind::VsCodeCopilot {
+            // VS Code previews the catalog count; the preceding integration
+            // test verifies the exact active model in its native projection.
+            assert!(rendered.contains("Publish 1 enabled model"));
+            continue;
+        }
         assert!(
             rendered.contains("upstream/model-b"),
             "operation must name the active model: {rendered}"

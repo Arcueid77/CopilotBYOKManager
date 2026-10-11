@@ -8,6 +8,10 @@ The repository currently contains a basic connection/deployment prototype. The r
 
 ## Product model
 
+### Optional JetBrains BYOK adapter
+
+`adapters/jetbrains` reads bounded public standard plugin directories, `disabled_plugins.txt`, and `META-INF/plugin.xml` in the public plugin JAR, not every dependency JAR. ID/vendor is metadata identity, not signature or live-IDE verification. Profile hashes give distinct target IDs; metadata digests invalidate reviews. `jetbrains/byok` owns reviewed 1.19 namespace/root selection, bounded duplicate-key rejecting JSON parsing and narrow provider projection. Automatic deployment publishes endpoint, protocol, models, capabilities, headers and the Connection's own provider key through existing native plans/transactions. Unmanaged values/precision survive; shared writes are deduplicated with per-profile proofs/audit. Proofs bind owner, Connection, resource and the three owned provider keys. Global fingerprints reject stale reviews and externally changed rollback; recovery recognizes the dedicated path even after plugin removal. Unknown versions/incompatible endpoints refuse writing. No authentication files or Password Safe are opened; publication is not model-picker refresh/provider execution. Accounts remain official per-IDE flows; resource/usage coverage remains explicit pending separate verified interfaces. Existing state/ownership and old account history stay compatible without a SQLite migration. See `jetbrains-support.md`.
+
 PilotWeave is not organized as an application switcher. The source of truth is client-neutral and is projected into concrete client targets.
 
 ```text

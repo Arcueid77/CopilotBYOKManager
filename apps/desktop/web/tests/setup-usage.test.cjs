@@ -3,7 +3,7 @@ const assert = require("node:assert/strict");
 const setup = require("../setup-ui.js");
 const usage = require("../usage-ui.js");
 const connection = { id: "connection", name: "Fixture", models: [{ modelId: "gpt-5", name: "GPT-5", enabled: true }] };
-const snapshot = { connections: [connection], clients: [{ id: "vscode", detected: true, supportsWrite: true }, { id: "cli", detected: true, supportsWrite: true }, { id: "app", detected: true, supportsWrite: false }] };
+const snapshot = { connections: [connection], clients: [{ id: "vscode", kind: "vs-code-copilot", detected: true, supportsWrite: true }, { id: "cli", kind: "copilot-cli", detected: true, supportsWrite: true }, { id: "app", kind: "github-copilot-app", detected: true, supportsWrite: false }] };
 function data() { return { components: [1, 2, 3, 4].map((id) => ({ id, status: "ready" })), setup: { preferences: { connectionId: connection.id }, alignment: "userConfirmedSameAccount", manualConfirmed: true, targets: [{ targetId: "vscode", state: "inSync" }, { targetId: "cli", state: "inSync" }] }, errors: {} }; }
 
 test("usage authorization does not block core setup and preview never claims real readiness", () => {

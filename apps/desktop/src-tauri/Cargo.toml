@@ -20,6 +20,9 @@ chrono = { version = "0.4", features = ["serde"] }
 dirs = "5.0"
 json5 = "0.4"
 keyring = { version = "3", features = ["apple-native", "windows-native", "sync-secret-service"] }
+# Parse public JetBrains plugin descriptors without executing JARs or extracting files.
+quick-xml = "0.41.0"
+zip = { version = "6.0.0", default-features = false, features = ["deflate-flate2-zlib-rs"] }
 log = "0.4"
 rusqlite = { version = "0.40.2", features = ["bundled"] }
 rust_decimal = "1.42.1"

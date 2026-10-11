@@ -38,6 +38,21 @@ async function nativeFixture() {
   const catalog = { catalog: { id: "fixture-price", sourceVersion: "fixture", fetchedAt: now, parserVersion: 1, detail: "Public rate comparison fixture", models: [{ model: "openai/gpt-5", supported: true, tiers: [{ minInput: 0, input: "1.25", output: "10", cacheRead: "0.125", cacheWrite: null }] }] }, latest: { status: "available", finishedAt: now, detail: "Fixture catalog" }, stale: false };
   let deploymentRecovery = null;
   let recoveryIssue = {}, recoveryPlan = null;
+  let reviewedTargets = [];
+  window.__addJetBrains = () => {
+    for (const [id, name, detected] of [["jb-idea", "IntelliJ IDEA 2026.2 · Copilot", true], ["jb-pycharm", "PyCharm 2026.2 · Copilot", true], ["jb-disabled", "WebStorm 2026.2 · Copilot", false]]) {
+      clients.push({ id, name, kind: "jetbrains-copilot", detected, supportsWrite: false, status: "read-only", detail: detected ? "Plugin metadata only; manual BYOK" : "Plugin disabled; enable it in this IDE", path: "Fixture profile" });
+      setup.targets.push({ targetId: id, state: "manual", detail: "JetBrains not configured or verified" });
+    }
+    accounts.surfaces.push({ surface: "jetBrainsCopilot", state: "actionRequired", identity: null, evidence: "Public metadata only", detail: "Check IntelliJ IDEA and PyCharm separately", observedAt: now });
+    setup.alignment = "partiallyVerified";
+  };
+  window.__enableAutomaticJetBrains = () => {
+    clients.filter(c => c.kind === "jetbrains-copilot" && c.detected).forEach(c => {
+      c.supportsWrite = true; c.status = "available"; c.detail = "Reviewed 1.19 schema · shared BYOK file · restart IDEs after deployment";
+      setup.targets.find(t => t.targetId === c.id).state = "notDeployed";
+    });
+  };
   window.__setRecovery = (issue = {}) => { deploymentRecovery = "An interrupted deployment needs review"; recoveryIssue = issue; };
   window.__calls = [];
   window.__TAURI__ = { core: { invoke: async (cmd, args = {}) => {
@@ -60,8 +75,10 @@ async function nativeFixture() {
     if (["refresh_official_runtime_usage", "refresh_price_catalog", "refresh_personal_github_usage"].includes(cmd)) return null;
     if (cmd === "preview_deployment_recovery") { assertNative(["restore", "keepCurrent"].includes(args.action)); recoveryPlan = { id: `reviewed-recovery-${args.action}`, action: args.action, view: { resourceCount: 2, conflictCount: 0, unknownResourceCount: 0, unreadableResourceCount: 0, committed: false, ...recoveryIssue } }; return structuredClone(recoveryPlan); }
     if (cmd === "apply_deployment_recovery") { assertNative(recoveryPlan && args.planId === recoveryPlan.id && args.confirmed && Object.keys(args).length === 2); recoveryPlan = null; deploymentRecovery = null; return true; }
-    if (cmd === "preview_deployment") return { id: "reviewed-plan", connectionId: connection.id, operations: args.targetIds.map((id) => ({ targetId: id, title: id, description: "Fixture operation", supported: true, changes: ["Fixture change"] })) };
-    if (cmd === "apply_deployment_plan") { assertNative(args.planId === "reviewed-plan" && args.confirmed === true && Object.keys(args).length === 2); setup.targets.forEach((t) => { if (t.targetId !== "app") t.state = "inSync"; }); return { records: [{ status: "applied" }] }; }
+    if (cmd === "get_jetbrains_setup_guide") { assertNative(args.connectionId === connection.id && args.targetId.startsWith("jb-") && Object.keys(args).length === 2); const supported = clients.find(c => c.id === args.targetId).supportsWrite; return { targetId: args.targetId, targetKind: "jetbrains-copilot", title: "JetBrains BYOK review", description: supported ? "Automatic shared byok.json projection" : "Manage Models > Add Models", supported, requiresRestart: supported, changes: ["Endpoint: https://example.invalid/v1", "Enable model: gpt-5"] }; }
+    if (cmd === "preview_login") return { id: "jb-login-guide", requestedSurfaces: args.surfaces, targetIdentity: identity, expiresAt: now, operations: [{ surface: "jetBrainsCopilot", title: "JetBrains sign-in guide", supported: false, description: "Tools > GitHub Copilot > Login to GitHub. Check IntelliJ IDEA and PyCharm separately." }] };
+    if (cmd === "preview_deployment") { reviewedTargets = [...args.targetIds]; return { id: "reviewed-plan", connectionId: connection.id, operations: args.targetIds.map((id) => ({ targetId: id, title: id, description: "Fixture operation", supported: clients.find(c => c.id === id).supportsWrite, requiresRestart: id.startsWith("jb-"), changes: ["Fixture change"] })) }; }
+    if (cmd === "apply_deployment_plan") { assertNative(args.planId === "reviewed-plan" && args.confirmed === true && Object.keys(args).length === 2); setup.targets.forEach((t) => { if (reviewedTargets.includes(t.targetId) && clients.find(c => c.id === t.targetId).supportsWrite) t.state = "inSync"; }); reviewedTargets = []; return { records: [{ status: "applied" }] }; }
     throw Error(`Unmocked command: ${cmd}`);
   } }, event: { listen: async () => () => {} } };
   function assertNative(condition) { if (!condition) throw Error("Incorrect native command arguments"); }
@@ -128,7 +145,54 @@ async function nativeFixture() {
       const calls = await native.evaluate(() => window.__calls.filter((c) => c.cmd === "preview_deployment_recovery").slice(-2));
       assert.deepEqual(calls.map((c) => c.args.action), ["restore", "keepCurrent"]);
     }
+    await native.evaluate(() => window.__addJetBrains()); await native.locator('#refresh-button').click();
+    await native.getByRole("button", { name: "Verify the same GitHub account", exact: true }).waitFor();
+    await native.getByRole("button", { name: "Confirm accounts", exact: true }).click();
+    await native.getByText(/including each detected JetBrains IDE profile/).waitFor();
+    await native.locator("#confirm-all-accounts").check(); await native.locator("#save-account-confirmation").click();
+    await native.getByText("Your core Copilot setup is ready", { exact: true }).waitFor();
+    const writesBefore = await native.evaluate(() => window.__calls.filter(c => c.cmd === "apply_deployment_plan").length);
+    await native.locator('[data-action="jetbrains-guide"][data-id="jb-idea"]').click();
+    await native.getByText("JetBrains BYOK · IntelliJ IDEA 2026.2 · Copilot", { exact: true }).waitFor();
+    assert.ok((await native.locator("#modal-root").textContent()).includes("https://example.invalid/v1"));
+    assert.equal(await native.locator("#modal-root input").count(), 0);
+    assert.equal(await native.locator("#modal-root #confirm-manual").count(), 0);
+    await native.screenshot({ path: path.join(output, "jetbrains-guide-fixture.png"), fullPage: true });
+    await native.locator(".modal-footer [data-modal-close]").click();
+    assert.equal(await native.evaluate(() => window.__calls.filter(c => c.cmd === "apply_deployment_plan").length), writesBefore);
+    await native.locator('.setup-checks').evaluate(e => { e.open = true; });
+    await native.locator('[data-action="setup-signin"][data-surface="jetBrainsCopilot"]').click();
+    await native.getByText("Manual instructions", { exact: true }).waitFor();
+    assert.equal(await native.locator('[data-account-confirm]').isDisabled(), true);
+    await native.locator('.modal-footer [data-account-modal-close]').click();
+    await native.locator('[data-action="setup-deploy"]').click();
+    await native.locator("#modal-root details").evaluate(e => { e.open = true; });
+    for (const id of ["vscode", "cli"]) await native.locator(`#target-${id}`).uncheck();
+    await native.locator('#target-jb-idea').check(); await native.locator('#preview-deployment').click();
+    assert.equal(await native.locator('#preview-deployment').isDisabled(), true);
+    await native.locator('#target-cli').check(); assert.equal(await native.locator('#preview-deployment').isDisabled(), false);
+    await native.locator(".modal-footer [data-modal-close]").click();
+    await native.locator('.setup-target-details').evaluate(e => { e.open = true; });
+    assert.equal(await native.locator('.setup-target-details .setup-badge').filter({ hasText: /^Manual$/ }).count(), 3);
+    await native.screenshot({ path: path.join(output, "home-jetbrains-fixture.png"), fullPage: true });
+    await native.evaluate(() => window.__enableAutomaticJetBrains()); await native.locator('#refresh-button').click();
+    await native.locator('[data-action="jetbrains-guide"][data-id="jb-idea"]').click();
+    await native.getByText("Automatic BYOK deployment is available.", { exact: true }).waitFor();
+    await native.screenshot({ path: path.join(output, "jetbrains-automatic-fixture.png"), fullPage: true });
+    await native.locator('#jetbrains-preview-deployment').click();
+    assert.equal(await native.locator('input[name="deployment-target"]:checked').count(), 1);
+    assert.equal(await native.locator('#target-jb-idea').isChecked(), true);
+    const automaticWritesBefore = await native.evaluate(() => window.__calls.filter(c => c.cmd === "apply_deployment_plan").length);
+    await native.locator('#preview-deployment').click();
+    assert.equal(await native.evaluate(() => window.__calls.filter(c => c.cmd === "apply_deployment_plan").length), automaticWritesBefore);
+    assert.equal(await native.locator('#preview-deployment').isDisabled(), false);
+    assert.deepEqual(await native.evaluate(() => window.__calls.filter(c => c.cmd === "preview_deployment").at(-1).args.targetIds), ["jb-idea"]);
+    await native.locator('#preview-deployment').click();
+    await native.waitForFunction((count) => window.__calls.filter(c => c.cmd === "apply_deployment_plan").length === count + 1, automaticWritesBefore);
+    const automaticApply = await native.evaluate(() => window.__calls.filter(c => c.cmd === "apply_deployment_plan").at(-1).args);
+    assert.deepEqual(automaticApply, { planId: "reviewed-plan", confirmed: true });
+    await native.locator('#primary-nav [data-route="usage"]').click(); await native.getByText(/JetBrains usage: not covered/).waitFor();
     assert.equal(await native.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
-    assert.deepEqual(errors, []); console.log(JSON.stringify({ status: "passed", scenarios: ["preview routes", "account confirmation", "reviewed deployment", "manual provider", "quota and Billing", "models and details", "source consent/import/clear", "price refresh", "filters", "reviewed recovery", "external conflict retention", "missing target retention"], output }));
+    assert.deepEqual(errors, []); console.log(JSON.stringify({ status: "passed", scenarios: ["preview routes", "account confirmation", "reviewed deployment", "manual provider", "quota and Billing", "models and details", "source consent/import/clear", "price refresh", "filters", "reviewed recovery", "external conflict retention", "missing target retention", "JetBrains per-IDE account confirmation", "JetBrains native guide without writes", "JetBrains manual sign-in", "manual-only apply disabled", "independent app/JetBrains status", "JetBrains coverage unavailable", "automatic JetBrains BYOK native review", "single selected IDE preview before apply", "JetBrains apply submits only reviewed plan ID"], output }));
   } finally { await browser.close(); server.close(); }
 })().catch((err) => { console.error(err); server.close(); process.exitCode = 1; });

@@ -336,3 +336,36 @@ fn shared_skill_is_one_physical_projection_and_custom_home_remains_manual() {
     let rendered = String::from_utf8(markdown("owner", &record).unwrap()).unwrap();
     assert!(rendered.starts_with("---\nname: pilotweave-"));
 }
+
+#[test]
+fn jetbrains_resources_are_per_profile_and_never_reuse_vscode_or_cli_paths() {
+    let root = tempfile::tempdir().unwrap();
+    let client = ClientTarget {
+        id: "jetbrains:fixture".into(),
+        kind: crate::domain::ClientKind::JetBrainsCopilot,
+        name: "IntelliJ IDEA fixture".into(),
+        detail: "Plugin metadata".into(),
+        path: Some(root.path().to_string_lossy().into()),
+        detected: true,
+        supports_write: false,
+        status: crate::domain::ClientStatus::ReadOnly,
+        diagnostic: None,
+    };
+    for kind in [
+        ResourceKind::Skill,
+        ResourceKind::Mcp,
+        ResourceKind::Instructions,
+    ] {
+        let targets = targets_at(
+            &record(kind),
+            std::slice::from_ref(&client),
+            root.path(),
+            root.path(),
+            false,
+        );
+        let target = targets.iter().find(|t| t.id == client.id).unwrap();
+        assert!(!target.supported);
+        assert!(target.path.is_none());
+        assert!(targets.iter().all(|t| !t.supported));
+    }
+}

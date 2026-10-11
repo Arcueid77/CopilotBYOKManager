@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<idea-plugin>
+  <id>com.github.copilot</id>
+  <name>GitHub Copilot</name>
+  <vendor url="https://github.com">GitHub</vendor>
+  <version>1.19.0-252</version>
+  <idea-version since-build="252"/>
+  <description><![CDATA[Synthetic public metadata fixture for the reviewed 252 bundle. No credentials or client settings.]]></description>
+</idea-plugin>

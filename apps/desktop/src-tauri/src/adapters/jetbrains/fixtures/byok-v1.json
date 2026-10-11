@@ -1,0 +1,13 @@
+{
+  "Fixture Provider-api-key": "synthetic-unmanaged-provider-key",
+  "Fixture Provider-provider-config": {"groupName": "User provider", "apiType": "responses", "futureField": true},
+  "Fixture Provider-models-config": {
+    "fixture-model": {
+      "deploymentUrl": "https://example.invalid/v1",
+      "isRegistered": true,
+      "isCustomModel": true,
+      "modelCapabilities": {"name": "Fixture", "maxInputTokens": 128000, "maxOutputTokens": 16000, "toolCalling": true, "vision": false, "requestHeaders": {"X-Fixture": "sanitized"}}
+    }
+  },
+  "future-user-field": {"keep": [null, false, "untouched"], "precise": 0.12345678901234567890123456789}
+}

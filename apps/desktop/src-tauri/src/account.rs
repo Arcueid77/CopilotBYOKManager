@@ -39,6 +39,7 @@ pub enum LoginSurface {
     VsCodeCopilot,
     CopilotCli,
     GithubCopilotApp,
+    JetBrainsCopilot,
 }
 
 impl LoginSurface {
@@ -47,6 +48,7 @@ impl LoginSurface {
             Self::VsCodeCopilot => "vscode-copilot",
             Self::CopilotCli => "copilot-cli",
             Self::GithubCopilotApp => "github-copilot-app",
+            Self::JetBrainsCopilot => "jetbrains-copilot",
         }
     }
 
@@ -55,6 +57,7 @@ impl LoginSurface {
             Self::VsCodeCopilot => "VS Code Copilot",
             Self::CopilotCli => "GitHub Copilot CLI",
             Self::GithubCopilotApp => "GitHub Copilot app",
+            Self::JetBrainsCopilot => "JetBrains GitHub Copilot",
         }
     }
 }
@@ -254,6 +257,25 @@ impl LoginPlanStore {
                 continue;
             }
 
+            if *surface == LoginSurface::JetBrainsCopilot {
+                skip_statuses.insert(*surface, LoginStepStatus::ActionRequired);
+                operations.push(LoginOperation {
+                    surface: *surface,
+                    title: "JetBrains official sign-in instructions (each detected IDE)".into(),
+                    description: format!(
+                        "{} {}",
+                        adapters::jetbrains::SIGN_IN,
+                        status
+                            .surfaces
+                            .iter()
+                            .find(|s| s.surface == *surface)
+                            .map(|s| s.detail.as_str())
+                            .unwrap_or("")
+                    ),
+                    supported: false,
+                });
+                continue;
+            }
             match executable_operation(*surface) {
                 Ok(executable) => {
                     operations.push(LoginOperation {
@@ -567,6 +589,19 @@ pub fn discover_status(
         )
     })
     .collect();
+    if clients
+        .iter()
+        .any(|c| c.kind == ClientKind::JetBrainsCopilot && c.detected)
+    {
+        surfaces.push(observe_surface(
+            LoginSurface::JetBrainsCopilot,
+            observed_at,
+            &anchor,
+            &clients,
+            &components,
+            &environment_overrides,
+        ));
+    }
     // A saved launch/manual confirmation is never verified. A recent native
     // public-RPC observation is qualified by its own timestamp and surface.
     if environment_overrides.is_empty() {
@@ -862,6 +897,17 @@ fn observe_surface(
                 .to_string(),
             observed_at,
         },
+        LoginSurface::JetBrainsCopilot => {
+            let profiles: Vec<_> = clients.iter().filter(|c| c.kind == ClientKind::JetBrainsCopilot).collect();
+            let digest = crate::fingerprint::json("jetbrains-account-profiles-v1", &profiles).unwrap_or_default();
+            SurfaceAccountObservation {
+                surface, state: AccountObservationState::ActionRequired, identity: None,
+                evidence: format!("Public plugin metadata only (observation {digest}); Password Safe and private authentication settings were not inspected"),
+                detail: format!("Check the GitHub account separately in each enabled plugin profile: {}. {}",
+                    profiles.iter().filter(|c| c.detected).map(|c| c.name.as_str()).collect::<Vec<_>>().join(", "), adapters::jetbrains::SIGN_IN),
+                observed_at,
+            }
+        }
     }
 }
 
@@ -874,6 +920,7 @@ fn surface_installed(
         LoginSurface::VsCodeCopilot => ClientKind::VsCodeCopilot,
         LoginSurface::CopilotCli => ClientKind::CopilotCli,
         LoginSurface::GithubCopilotApp => ClientKind::GithubCopilotApp,
+        LoginSurface::JetBrainsCopilot => ClientKind::JetBrainsCopilot,
     };
     let client_detected = clients
         .iter()
@@ -882,6 +929,7 @@ fn surface_installed(
         LoginSurface::VsCodeCopilot => installer::COMPONENT_VSCODE,
         LoginSurface::CopilotCli => installer::COMPONENT_COPILOT_CLI,
         LoginSurface::GithubCopilotApp => installer::COMPONENT_COPILOT_APP,
+        LoginSurface::JetBrainsCopilot => return client_detected,
     };
     client_detected
         || components.iter().any(|component| {
@@ -894,6 +942,7 @@ fn executable_operation(surface: LoginSurface) -> AppResult<ExecutableLoginOpera
         LoginSurface::VsCodeCopilot => find_vscode_executable(),
         LoginSurface::CopilotCli => find_copilot_executable(),
         LoginSurface::GithubCopilotApp => find_copilot_app_executable(),
+        LoginSurface::JetBrainsCopilot => None,
     }
     .ok_or_else(|| {
         AppError::Unsupported(format!(
@@ -910,7 +959,7 @@ fn executable_operation(surface: LoginSurface) -> AppResult<ExecutableLoginOpera
             "https://github.com".to_string(),
             "--web-flow".to_string(),
         ],
-        LoginSurface::GithubCopilotApp => Vec::new(),
+        LoginSurface::GithubCopilotApp | LoginSurface::JetBrainsCopilot => Vec::new(),
     };
     Ok(ExecutableLoginOperation {
         path,
@@ -930,6 +979,7 @@ fn operation_description(surface: LoginSurface) -> &'static str {
         LoginSurface::GithubCopilotApp => {
             "Launch the discovered GitHub Copilot application; use its official Sign in to GitHub control"
         }
+        LoginSurface::JetBrainsCopilot => adapters::jetbrains::SIGN_IN,
     }
 }
 
@@ -944,6 +994,7 @@ fn launched_detail(surface: LoginSurface) -> &'static str {
         LoginSurface::GithubCopilotApp => {
             "GitHub Copilot app was opened. Complete its Sign in to GitHub flow; no private app state was read or written"
         }
+        LoginSurface::JetBrainsCopilot => adapters::jetbrains::SIGN_IN,
     }
 }
 
@@ -954,6 +1005,9 @@ fn execute_account_action(
     spawn: impl FnOnce(&Path, &[&OsStr]) -> AppResult<()>,
     focus: impl FnOnce(&Path) -> &'static str,
 ) -> AppResult<&'static str> {
+    if surface == LoginSurface::JetBrainsCopilot {
+        return Ok(adapters::jetbrains::SIGN_IN);
+    }
     if surface == LoginSurface::VsCodeCopilot {
         return Ok(focus(path));
     }
@@ -962,6 +1016,11 @@ fn execute_account_action(
 }
 
 fn canonical_surfaces(values: &[LoginSurface]) -> AppResult<Vec<LoginSurface>> {
+    if values.len() > 64 {
+        return Err(AppError::InvalidInput(
+            "Sign-in selection exceeds its input bounds".into(),
+        ));
+    }
     let mut values = if values.is_empty() {
         vec![
             LoginSurface::VsCodeCopilot,
@@ -973,7 +1032,7 @@ fn canonical_surfaces(values: &[LoginSurface]) -> AppResult<Vec<LoginSurface>> {
     };
     values.sort();
     values.dedup();
-    if values.len() > 3 {
+    if values.len() > 4 {
         return Err(AppError::InvalidInput(
             "Too many sign-in surfaces were requested".to_string(),
         ));
@@ -1156,12 +1215,12 @@ fn validate_run(run: &LoginRunRecord) -> AppResult<()> {
             ));
         }
     }
-    if run.requested_surfaces.is_empty() || run.requested_surfaces.len() > 3 {
+    if run.requested_surfaces.is_empty() || run.requested_surfaces.len() > 4 {
         return Err(AppError::InvalidInput(
             "Sign-in history contains an invalid surface set".to_string(),
         ));
     }
-    if run.steps.len() > 3 {
+    if run.steps.len() > 4 {
         return Err(AppError::InvalidInput(
             "Sign-in history contains too many steps".to_string(),
         ));
@@ -1254,6 +1313,124 @@ mod tests {
         assert!(values.contains(&LoginSurface::VsCodeCopilot));
         assert!(values.contains(&LoginSurface::CopilotCli));
         assert!(values.contains(&LoginSurface::GithubCopilotApp));
+    }
+
+    #[test]
+    fn jetbrains_observations_remain_manual_and_include_each_profile() {
+        let now = Utc::now();
+        let anchor = AccountAnchorObservation {
+            state: AccountObservationState::Verified,
+            identity: Some(GithubIdentity {
+                host: "github.com".into(),
+                login: "fixture".into(),
+                user_id: Some(1),
+                avatar_url: None,
+            }),
+            evidence: "Fake API anchor".into(),
+            detail: "No real token".into(),
+            observed_at: now,
+        };
+        let make = |name: &str, detected| ClientTarget {
+            id: name.into(),
+            kind: ClientKind::JetBrainsCopilot,
+            name: name.into(),
+            detail: "Public metadata only".into(),
+            path: None,
+            detected,
+            supports_write: false,
+            status: crate::domain::ClientStatus::ReadOnly,
+            diagnostic: None,
+        };
+        let clients = vec![
+            make("IntelliJ IDEA 2026.2", true),
+            make("PyCharm 2026.2", true),
+        ];
+        let observation = observe_surface(
+            LoginSurface::JetBrainsCopilot,
+            now,
+            &anchor,
+            &clients,
+            &[],
+            &[],
+        );
+        assert_eq!(observation.state, AccountObservationState::ActionRequired);
+        assert!(observation.identity.is_none());
+        assert!(observation.detail.contains("IntelliJ IDEA"));
+        assert!(observation.detail.contains("PyCharm"));
+        let changed = observe_surface(
+            LoginSurface::JetBrainsCopilot,
+            now,
+            &anchor,
+            &clients[..1],
+            &[],
+            &[],
+        );
+        assert_ne!(observation.evidence, changed.evidence);
+        let missing = observe_surface(
+            LoginSurface::JetBrainsCopilot,
+            now,
+            &anchor,
+            &[make("Disabled", false)],
+            &[],
+            &[],
+        );
+        assert_eq!(missing.state, AccountObservationState::NotInstalled);
+        assert_eq!(
+            serde_json::to_string(&ClientKind::JetBrainsCopilot).unwrap(),
+            "\"jetbrains-copilot\""
+        );
+    }
+
+    #[test]
+    fn jetbrains_account_actions_never_launch_an_ide_or_transfer_authentication() {
+        let result = execute_account_action(
+            LoginSurface::JetBrainsCopilot,
+            Path::new("untrusted-idea.exe"),
+            &[],
+            |_, _| panic!("JetBrains must not be launched"),
+            |_| panic!("No window automation is needed"),
+        )
+        .unwrap();
+        assert_eq!(result, adapters::jetbrains::SIGN_IN);
+        let mut selected = canonical_surfaces(&[]).unwrap();
+        selected.push(LoginSurface::JetBrainsCopilot);
+        assert_eq!(canonical_surfaces(&selected).unwrap().len(), 4);
+        assert!(canonical_surfaces(&[LoginSurface::JetBrainsCopilot; 65]).is_err());
+    }
+
+    #[test]
+    fn four_surface_login_history_reopens_without_verifying_manual_jetbrains() {
+        let root = tempfile::tempdir().unwrap();
+        let path = root.path().join("login-runs.json");
+        let now = Utc::now();
+        let mut selected = canonical_surfaces(&[]).unwrap();
+        selected.push(LoginSurface::JetBrainsCopilot);
+        let plan = LoginPlan {
+            id: "four-surfaces".into(),
+            target_identity: None,
+            requested_surfaces: selected,
+            operations: vec![],
+            created_at: now,
+            expires_at: now + ChronoDuration::minutes(15),
+        };
+        let mut store = LoginStore::open_at(path.clone());
+        let mut run = store.begin_run(&plan).unwrap();
+        for step in &mut run.steps {
+            step.status = LoginStepStatus::ActionRequired;
+            step.detail = "Manual account check".into();
+        }
+        run.status = LoginRunStatus::ActionRequired;
+        run.finished_at = Some(now);
+        store.finish_run(run).unwrap();
+        let reopened = LoginStore::open_at(path);
+        assert!(reopened.recovery().is_none());
+        let step = reopened.runs()[0]
+            .steps
+            .iter()
+            .find(|s| s.surface == LoginSurface::JetBrainsCopilot)
+            .unwrap()
+            .clone();
+        assert_eq!(step.status, LoginStepStatus::ActionRequired);
     }
 
     #[test]

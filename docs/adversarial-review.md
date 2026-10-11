@@ -6,6 +6,15 @@ Sections below describe required mitigations. They are not claims that the curre
 
 ## Threat model
 
+### JetBrains optional integration
+
+- A directory named Copilot is not sufficient: require the public descriptor ID `com.github.copilot` and vendor `GitHub`; do not claim a cryptographically authenticated binary or running IDE.
+- Bound directories, public descriptor JAR candidates, total bytes, ZIP entries/central directory, XML size/depth/events and identity fields. Do not mistake numerous official dependency JARs for descriptor candidates. Reject ZIP64/multipart/ambiguous layouts, duplicate identities, external/custom XML entities, malformed metadata, linked/junction parents and oversized content. Discovery never extracts or executes archives.
+- Standard profiles may survive uninstallation and custom/portable paths may be missed. Report these limitations, disabled plugins, and scan errors; do not manufacture readiness.
+- Automatic writes require an exact reviewed version; a forged writable flag cannot bypass native metadata. Only the dedicated BYOK namespace is projected. Bound JSON size/depth/keys/strings and reject duplicates without echoing raw values. Preserve unknown fields/decimal precision. Replacing the three owned provider keys requires matching durable owner/Connection/resource/projection proof, not markers alone. Missing/foreign/modified/per-model overriding keys conflict. Shared IDE targets get one physical write. Include BYOK in stale checks, prepare-all, private journals, post-write verification and conditional rollback; interrupted recovery still works after plugin removal.
+- One IDE's account check is not proof for another; adding/changing observed profiles invalidates aggregate manual confirmation. The Copilot app provider confirmation belongs only to that app.
+- Materialize only PilotWeave's own BYOK key after confirmation. Never read Password Safe, authentication settings/databases or conversation/debug logs to infer accounts/costs. BYOK JSON and rollback snapshots are native-only secret-bearing data. Catalog publication is not an open chat's selected model, sign-in or provider execution. CLI/shared-runtime records must not be relabeled JetBrains without authoritative evidence.
+
 PilotWeave runs as the local user and intentionally modifies developer-tool configuration. It may launch installers, open official authentication flows, read local usage metadata, query GitHub personal-usage endpoints, and calculate monetary estimates.
 
 An attacker or faulty dependency may influence:

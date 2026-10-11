@@ -364,6 +364,7 @@
       "vs-code-copilot": "⌘",
       "copilot-cli": ">_",
       "github-copilot-app": "◈",
+      "jetbrains-copilot": "JB",
     }[kind] ?? "◇";
   }
 
@@ -547,6 +548,7 @@
         <h3>${escapeHtml(client.name)}</h3>
         <p>${escapeHtml(client.detail)}</p>
         <div class="path-line" title="${escapeHtml(client.path ?? client.diagnostic ?? "")}">${escapeHtml(client.path ?? client.diagnostic ?? "No local path")}</div>
+        ${client.kind === "jetbrains-copilot" ? `<button class="button ghost small" data-action="jetbrains-guide" data-id="${escapeHtml(client.id)}">${client.supportsWrite ? "Automatic BYOK deployment" : "BYOK and plugin setup"}</button>` : ""}
       </article>`;
   }
 
@@ -833,7 +835,7 @@
     });
   }
 
-  function openDeployment(connection) {
+  function openDeployment(connection, selectedIds = null) {
     if (snapshot.stateRecovery || snapshot.deploymentRecovery) {
       showToast("Managed writes are disabled during read-only recovery", "error");
       return;
@@ -844,11 +846,11 @@
       wide: true,
       body: `
         <p class="muted" style="font-size:11px;line-height:1.6">Review the concrete targets before confirming. This exact preview expires after 15 minutes and can be applied once. Changed state requires a new preview.</p>
-        <details><summary>Review individual targets and VS Code profiles</summary><div class="target-list">
+        <details><summary>Review individual client targets and profiles</summary><div class="target-list">
           ${targets
             .map(
               (target) => `<div class="target-option">
-                <input id="target-${escapeHtml(target.id)}" type="checkbox" name="deployment-target" value="${escapeHtml(target.id)}" ${target.detected && target.supportsWrite ? "checked" : target.detected ? "" : "disabled"} />
+                <input id="target-${escapeHtml(target.id)}" type="checkbox" name="deployment-target" value="${escapeHtml(target.id)}" ${target.detected && target.supportsWrite && (!selectedIds || selectedIds.includes(target.id)) ? "checked" : target.detected ? "" : "disabled"} />
                 <label for="target-${escapeHtml(target.id)}"><strong>${escapeHtml(target.name)}</strong><small>${escapeHtml(target.detail)} · ${escapeHtml(target.supportsWrite ? "writable" : "manual/read-only")}</small></label>
                 <span class="status-pill ${escapeHtml(target.status)}">${escapeHtml(statusLabel(target.status))}</span>
               </div>`,
@@ -868,6 +870,7 @@
           input.addEventListener("change", () => {
             review.invalidate();
             actionButton.textContent = "Preview changes";
+            actionButton.disabled = false;
             root.querySelector("#deployment-preview").textContent = "Selection changed. Generate a new preview.";
           });
         });
@@ -902,7 +905,7 @@
             root.querySelector("#deployment-preview").textContent = "The previous preview cannot be reused. Review a new preview before applying.";
             showToast(error?.message ?? String(error), "error");
           } finally {
-            actionButton.disabled = false;
+            actionButton.disabled = Boolean(review.plan && !review.plan.operations.some(op => op.supported));
             actionButton.textContent = review.plan ? "Apply supported changes" : "Preview changes";
           }
         });
@@ -918,7 +921,7 @@
       <p>Check the account displayed in VS Code Copilot, Copilot CLI, and the Copilot app. This records your confirmation separately from automatic verification.</p>
       <label class="setup-select">GitHub login<input id="confirmed-login" maxlength="39" value="${escapeHtml(data.setup.target?.login ?? "")}" placeholder="Your github.com login" /></label>
       <p class="muted">PilotWeave uses GitHub's public user API to resolve the stable account ID. No Billing authorization is required.</p>
-      <label class="account-confirmation"><input type="checkbox" id="confirm-all-accounts" /><span>I checked that all three clients display this same github.com account.</span></label>`,
+      <label class="account-confirmation"><input type="checkbox" id="confirm-all-accounts" /><span>I checked that every listed client, including each detected JetBrains IDE profile, displays this same github.com account.</span></label>`,
       footer: '<button class="button ghost" data-modal-close>Cancel</button><button class="button primary" id="save-account-confirmation" disabled>Save my confirmation</button>',
       onOpen(root) {
         const button = root.querySelector("#save-account-confirmation");
@@ -944,6 +947,23 @@
         try { await invoke("confirm_manual_provider", { connectionId: connection.id, confirmed: true }); closeModal(); await refresh(); }
         catch (error) { showToast(error?.message ?? String(error), "error"); event.target.disabled = false; }
       }); },
+    });
+  }
+  async function openJetBrainsGuide(targetId) {
+    const target = snapshot.clients.find(c => c.id === targetId && c.kind === "jetbrains-copilot");
+    if (!target) return;
+    const connection = window.PilotWeaveSetup.derive(snapshot, data, isDesktop).selected;
+    let operation = null;
+    if (isDesktop && connection && !snapshot.stateRecovery && !snapshot.deploymentRecovery) {
+      try {
+        const guide = await invoke("get_jetbrains_setup_guide", { connectionId: connection.id, targetId: target.id });
+        if (guide.targetId === target.id) operation = guide;
+      } catch (error) { showToast(error?.message ?? String(error), "error"); }
+    }
+    openModal({ title: `JetBrains BYOK · ${target.name}`, wide: true,
+      body: window.PilotWeaveJetBrains.guide(connection, target, operation),
+      footer: `<button class="button ghost" data-modal-close>Close</button>${operation?.supported ? '<button class="button primary" id="jetbrains-preview-deployment">Preview automatic BYOK</button>' : ""}`,
+      onOpen(root) { root.querySelector("#jetbrains-preview-deployment")?.addEventListener("click", () => openDeployment(connection, [target.id])); }
     });
   }
   async function openRecovery(action = "restore") {
@@ -1011,6 +1031,7 @@
         if (selected) openDeployment(selected); else openConnectionForm(); break;
       }
       case "setup-manual": openManualSetup(); break;
+      case "jetbrains-guide": openJetBrainsGuide(action.dataset.id).catch(error => showToast(error?.message ?? String(error), "error")); break;
       case "preview-recovery": openRecovery(); break;
       case "add-connection":
         openConnectionForm();

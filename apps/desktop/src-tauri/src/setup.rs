@@ -131,7 +131,7 @@ pub fn alignment(
     }) {
         return Alignment::Conflict;
     }
-    if accounts.surfaces.len() == 3
+    if has_core_accounts(accounts)
         && accounts.surfaces.iter().all(|s| {
             s.state == AccountObservationState::Verified
                 && s.identity.as_ref().is_some_and(|id| same(id, target))
@@ -144,7 +144,7 @@ pub fn alignment(
             && same(&s.target, target)
             && s.confirmed_at <= Utc::now()
             && Utc::now() - s.confirmed_at < chrono::Duration::days(30)
-    }) && accounts.surfaces.len() == 3
+    }) && has_core_accounts(accounts)
         && accounts
             .surfaces
             .iter()
@@ -155,16 +155,44 @@ pub fn alignment(
     Alignment::PartiallyVerified
 }
 
+fn has_core_accounts(accounts: &AccountStatusSnapshot) -> bool {
+    use crate::account::LoginSurface;
+    (3..=4).contains(&accounts.surfaces.len())
+        && [
+            LoginSurface::VsCodeCopilot,
+            LoginSurface::CopilotCli,
+            LoginSurface::GithubCopilotApp,
+        ]
+        .iter()
+        .all(|surface| accounts.surfaces.iter().any(|s| s.surface == *surface))
+}
+
 pub fn drift(
     target: &ClientTarget,
     connection: Option<&Connection>,
     records: &[DeploymentRecord],
     live: AppResult<String>,
 ) -> TargetState {
-    let (state, detail) = if !target.detected {
+    let (state, detail) = if target.kind == crate::domain::ClientKind::JetBrainsCopilot
+        && target.status == crate::domain::ClientStatus::Error
+    {
+        (Drift::Unknown, target.detail.as_str())
+    } else if target.kind == crate::domain::ClientKind::JetBrainsCopilot
+        && target.status == crate::domain::ClientStatus::ReadOnly
+        && !target.detected
+    {
+        (Drift::Manual, target.detail.as_str())
+    } else if !target.detected {
         (Drift::NotInstalled, "Client is not installed")
     } else if !target.supports_write {
-        (Drift::Manual, "Complete the provider setup in the app")
+        (
+            Drift::Manual,
+            if target.kind == crate::domain::ClientKind::JetBrainsCopilot {
+                "Configure BYOK in this IDE's Copilot Chat > Manage Models; not verified by PilotWeave"
+            } else {
+                "Complete the provider setup in the app"
+            },
+        )
     } else if let Some(connection) = connection {
         match records
             .iter()
@@ -357,7 +385,7 @@ pub async fn confirm_account_alignment(
             "Account observations changed. Rescan and confirm the current evidence.".into(),
         );
     }
-    if accounts.surfaces.len() != 3
+    if !has_core_accounts(&accounts)
         || accounts
             .surfaces
             .iter()
@@ -502,6 +530,36 @@ mod tests {
         assert_eq!(
             loaded.account_confirmation.unwrap().surfaces[0].state,
             AccountObservationState::ActionRequired
+        );
+    }
+    #[test]
+    fn optional_jetbrains_requires_fresh_account_confirmation_but_never_claims_verified() {
+        let mut a = accounts();
+        let target = a.anchor.identity.clone().unwrap();
+        let old_digest = evidence(&a).unwrap();
+        let mut saved = AccountConfirmation {
+            target: target.clone(),
+            confirmed_at: Utc::now(),
+            evidence_fingerprint: old_digest,
+            surfaces: a.surfaces.clone(),
+        };
+        let mut jb = a.surfaces[0].clone();
+        jb.surface = crate::account::LoginSurface::JetBrainsCopilot;
+        jb.detail = "Check IntelliJ IDEA and PyCharm separately".into();
+        a.surfaces.push(jb);
+        let digest = evidence(&a).unwrap();
+        assert_eq!(
+            alignment(&a, Some(&target), Some(&saved), &digest),
+            Alignment::PartiallyVerified
+        );
+        saved.evidence_fingerprint = digest.clone();
+        assert_eq!(
+            alignment(&a, Some(&target), Some(&saved), &digest),
+            Alignment::UserConfirmedSameAccount
+        );
+        assert_ne!(
+            alignment(&a, Some(&target), None, &digest),
+            Alignment::VerifiedSameAccount
         );
     }
     #[test]
