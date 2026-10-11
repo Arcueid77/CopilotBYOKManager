@@ -138,13 +138,15 @@ fn command_error(error: AppError) -> String {
 pub async fn get_dashboard(state: State<'_, ManagedState>) -> Result<DashboardSnapshot, String> {
     let state = state.inner().clone();
     native_job(move || {
-        let (state_path, mut connections, deployments, state_recovery) = {
+        let (state_path, mut connections, deployments, state_recovery, owner, ownership) = {
             let store = state.store().map_err(command_error)?;
             (
                 store.path().to_string_lossy().to_string(),
                 store.connections().to_vec(),
                 store.deployments().to_vec(),
                 store.recovery().map(str::to_string),
+                store.installation_owner_id().to_string(),
+                store.ownership().to_vec(),
             )
         };
         let credential_statuses = connections
@@ -174,13 +176,21 @@ pub async fn get_dashboard(state: State<'_, ManagedState>) -> Result<DashboardSn
                 "An interrupted deployment requires recovery review; managed writes are disabled"
                     .to_string()
             });
+        let clients = adapters::discover_all();
+        let published_sources = deployment::publication::observe(
+            &clients,
+            &ownership,
+            &owner,
+            state_recovery.is_some() || deployment_recovery.is_some(),
+        );
         Ok(DashboardSnapshot {
+            published_sources,
             credential_statuses,
             deployment_recovery,
             version: STATE_VERSION,
             state_path,
             connections,
-            clients: adapters::discover_all(),
+            clients,
             deployments,
             state_recovery: state_recovery.map(|reason| redact::redact_text(&reason)),
             usage_db: state.usage_db_status().map_err(command_error)?,
@@ -501,6 +511,28 @@ pub async fn upsert_connection(
 }
 
 #[tauri::command(rename_all = "camelCase")]
+pub async fn set_connection_enabled(
+    state: State<'_, ManagedState>,
+    connection_id: String,
+    enabled: bool,
+) -> Result<Connection, String> {
+    let state = state.inner().clone();
+    native_job(move || {
+        let _write = state
+            .writes
+            .try_lock()
+            .map_err(|_| "Another managed write is active".to_string())?;
+        let mut store = state.store().map_err(command_error)?;
+        let _lease = crate::write_lock::WriteLock::acquire(store.path()).map_err(command_error)?;
+        deployment::ensure_no_pending_journal(store.path()).map_err(command_error)?;
+        store
+            .set_connection_enabled(&connection_id, enabled)
+            .map_err(command_error)
+    })
+    .await
+}
+
+#[tauri::command(rename_all = "camelCase")]
 pub async fn delete_connection(
     state: State<'_, ManagedState>,
     connection_id: String,
@@ -534,6 +566,11 @@ pub async fn preview_deployment(
             store.ensure_writable().map_err(command_error)?;
             deployment::ensure_no_pending_journal(store.path()).map_err(command_error)?;
             let connection = store.connection(&connection_id).map_err(command_error)?;
+            if !connection.enabled {
+                return Err(command_error(AppError::InvalidInput(
+                    "Enable this connection before publishing".into(),
+                )));
+            }
             let secret = store.secret_for(&connection).map_err(command_error)?;
             let context = PlanContext::new(
                 store.installation_owner_id(),
@@ -691,6 +728,14 @@ fn execute_stored_plan(state: &ManagedState, stored: StoredPlan) -> AppResult<Ap
                 },
             );
             if record.status == DeploymentStatus::Applied {
+                if !revoke && connection.default_model().is_some() {
+                    record.detail.push_str("; ");
+                    record
+                        .detail
+                        .push_str(deployment::publication::selection_notice(
+                            operation.target_kind,
+                        ));
+                }
                 record.target_fingerprint =
                     stored.after_fingerprints.get(&record.target_id).cloned();
                 record.connection_revision = Some(crate::fingerprint::json(

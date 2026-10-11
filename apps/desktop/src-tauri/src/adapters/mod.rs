@@ -160,6 +160,7 @@ mod tests {
 
     fn connection() -> Connection {
         Connection {
+            enabled: true,
             id: "one".to_string(),
             name: "One".to_string(),
             base_url: "https://example.invalid/v1".to_string(),

@@ -259,13 +259,13 @@ fn build(state: &ManagedState, accounts: AccountStatusSnapshot) -> Result<SetupS
     };
     if !connections
         .iter()
-        .any(|c| Some(&c.id) == preferences.connection_id.as_ref())
+        .any(|c| c.enabled && Some(&c.id) == preferences.connection_id.as_ref())
     {
-        preferences.connection_id = connections.first().map(|c| c.id.clone());
+        preferences.connection_id = connections.iter().find(|c| c.enabled).map(|c| c.id.clone());
     }
     let selected = connections
         .iter()
-        .find(|c| Some(&c.id) == preferences.connection_id.as_ref());
+        .find(|c| c.enabled && Some(&c.id) == preferences.connection_id.as_ref());
     let digest = evidence(&accounts).map_err(error)?;
     let authorized = state.github_authorization().map_err(error)?.status();
     let target = accounts
@@ -323,10 +323,13 @@ pub fn select_setup_connection(
     state: State<'_, ManagedState>,
     connection_id: String,
 ) -> Result<(), String> {
-    state
+    let connection = state
         .store()
         .and_then(|s| s.connection(&connection_id))
         .map_err(error)?;
+    if !connection.enabled {
+        return Err("Enable this connection before selecting it".into());
+    }
     with_db(&state, |db| {
         let mut p = load(db)?;
         p.connection_id = Some(connection_id);

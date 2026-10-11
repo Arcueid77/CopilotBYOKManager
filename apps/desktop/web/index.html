@@ -1,15 +1,16 @@
 <!doctype html>
-<html lang="en">
+<html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="color-scheme" content="dark" />
-    <title>PilotWeave</title>
+    <meta name="color-scheme" content="light" />
+    <title>CopilotBYOKManager</title>
     <link rel="stylesheet" href="styles.css" />
     <link rel="stylesheet" href="installer.css" />
     <link rel="stylesheet" href="account.css" />
     <link rel="stylesheet" href="github-auth.css" />
     <link rel="stylesheet" href="setup-usage.css" />
+    <link rel="stylesheet" href="manager.css" />
   </head>
   <body>
     <div class="app-shell">
@@ -19,39 +20,37 @@
             <span></span><span></span><span></span>
           </div>
           <div>
-            <strong>PilotWeave</strong>
+            <strong>CopilotBYOKManager</strong>
             <small>Your Copilot setup</small>
           </div>
         </div>
 
         <nav id="primary-nav" aria-label="Primary navigation">
           <button class="nav-item active" data-route="overview">
-            <span class="nav-icon">⌂</span><span>Home</span>
+            <span>总览</span>
           </button>
           <button class="nav-item" data-route="connections">
-            <span class="nav-icon">◇</span><span>Connections</span>
+            <span>连接</span>
           </button>
-          <button class="nav-item" data-route="usage">
-            <span class="nav-icon">◷</span><span>Usage</span>
-          </button>
-          <button class="nav-item" data-route="resources"><span class="nav-icon">▤</span><span>Resources</span></button>
-          <details class="more-nav"><summary class="nav-item"><span class="nav-icon">···</span><span>More</span></summary>
-          <button class="nav-item" data-route="clients"><span class="nav-icon">▦</span><span>Client diagnostics</span></button>
+          <button class="nav-item" data-route="clients"><span>客户端</span></button>
+          <button class="nav-item" data-route="usage"><span>用量</span></button>
+          <details class="more-nav"><summary class="nav-item"><span>更多</span></summary><div class="more-menu">
+          <button class="nav-item" data-route="resources"><span>资源</span></button>
           <button class="nav-item" data-route="activity">
-            <span class="nav-icon">↗</span><span>Activity</span>
+            <span>活动记录</span>
           </button>
           <button class="nav-item" data-route="settings">
-            <span class="nav-icon">⚙</span><span>Settings</span>
+            <span>设置</span>
           </button>
-          <button class="nav-item" data-route="about"><span class="nav-icon">ⓘ</span><span>About</span></button>
-          </details>
+          <button class="nav-item" data-route="about"><span>关于</span></button>
+          </div></details>
         </nav>
 
         <div class="sidebar-footer">
           <div class="runtime-dot"></div>
           <div>
-            <strong id="runtime-label">Loading</strong>
-            <small id="runtime-detail">Checking backend</small>
+            <strong id="runtime-label">读取状态中</strong>
+            <small id="runtime-detail">检查本地后端</small>
           </div>
         </div>
       </aside>
@@ -60,12 +59,12 @@
         <header class="topbar">
           <div>
             <p class="eyebrow">PILOTWEAVE</p>
-            <h1 id="page-title">Home</h1>
-            <p id="page-subtitle">One model setup across every Copilot surface.</p>
+            <h1 id="page-title">总览</h1>
+            <p id="page-subtitle">管理连接，预览后发布。</p>
           </div>
           <div class="topbar-actions">
-            <button id="refresh-button" class="button ghost">Refresh</button>
-            <button id="add-connection-button" class="button primary">Add connection</button>
+            <button id="refresh-button" class="button ghost">刷新</button>
+            <button id="add-connection-button" class="button primary">添加连接</button>
           </div>
         </header>
         <section id="content" class="content" aria-live="polite"></section>
@@ -84,6 +83,8 @@
     <script src="plan-session.js"></script>
     <script src="resources-ui.js"></script>
     <script src="model-discovery.js"></script>
+    <script src="manager-ui.js"></script>
+    <script src="inline-deployment.js"></script>
     <script src="app.js"></script>
   </body>
 </html>

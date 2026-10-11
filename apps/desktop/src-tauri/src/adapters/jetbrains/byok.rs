@@ -249,6 +249,56 @@ fn projection(map: &Map<String, Value>, owned: &[String; 3]) -> AppResult<String
     fingerprint::json("jetbrains-owned-provider-v1", &values)
 }
 
+pub(crate) fn observe_owned(
+    path: &Path,
+    owner: &str,
+) -> AppResult<crate::deployment::publication::CatalogEvidence> {
+    use crate::deployment::publication::CatalogEvidence;
+    let resource = transaction::Resource::File(safe_io::resource_path(path)?);
+    let map = parse(safe_io::read_optional(path, MAX_BYTES)?.as_deref())?;
+    let mut sources = BTreeMap::new();
+    for (key, config) in &map {
+        if !key.ends_with("-provider-config")
+            || config.get(OWNER).and_then(Value::as_str) != Some(owner)
+        {
+            continue;
+        }
+        let Some(id) = config.get(CONNECTION).and_then(Value::as_str) else {
+            continue;
+        };
+        if id.len() > 160
+            || config.get(MANAGED) != Some(&Value::Bool(true))
+            || config.get(SCHEMA).and_then(Value::as_str) != Some(SCHEMA_VERSION)
+        {
+            return Err(ownership::conflict());
+        }
+        let owned = keys(&provider_name(owner, id)?);
+        if key != &owned[1] || !map.contains_key(&owned[0]) {
+            return Err(ownership::conflict());
+        }
+        let models = map
+            .get(&owned[2])
+            .and_then(Value::as_object)
+            .ok_or_else(ownership::conflict)?;
+        if models.len() > 128 {
+            return Err(ownership::conflict());
+        }
+        if sources
+            .insert(
+                id.to_owned(),
+                (projection(&map, &owned)?, models.len() as u32),
+            )
+            .is_some()
+        {
+            return Err(ownership::conflict());
+        }
+    }
+    Ok(CatalogEvidence {
+        resource_id: ownership::resource_id(&resource),
+        sources,
+    })
+}
+
 pub fn prepare_owned(
     connection: &Connection,
     secret: Option<&str>,

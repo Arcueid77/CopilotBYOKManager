@@ -99,12 +99,14 @@ pub fn preview(connection: &Connection, target: &ClientTarget) -> DeploymentOper
         target_id: target.id.clone(),
         target_kind: ClientKind::CopilotCli,
         title: format!("Activate {} for Copilot CLI", connection.name),
-        description: format!("Set the user-level CLI provider and default model to {model}"),
+        description: format!("Replace the single user-environment provider route and set the preferred model to {model}"),
         changes: vec![
             "Write COPILOT_PROVIDER_* routing variables".to_string(),
             format!("Set COPILOT_MODEL and wire model to {model}"),
             "Store the materialized credential only in the platform user environment".to_string(),
             "New terminal processes will inherit the change".to_string(),
+            "This legacy environment projection replaces the previous CLI provider route; it does not add another selectable provider. Use a new terminal and CLI session; do not expect the GitHub-hosted route while this environment override is active".to_string(),
+            "Do not write providers.json; a detected registry that takes precedence blocks this environment deployment".to_string(),
         ],
         supported: target.detected && target.supports_write,
         requires_restart: true,
@@ -766,6 +768,7 @@ mod tests {
         Connection {
             id: "one".to_string(),
             name: "One".to_string(),
+            enabled: true,
             base_url: "https://example.invalid/v1".to_string(),
             provider_kind,
             protocol,

@@ -29,6 +29,7 @@ use std::fs;
 
 pub mod ownership;
 mod planner;
+pub mod publication;
 pub use planner::{validate_plan, PlanContext, PlanStore, StoredPlan};
 #[cfg(test)]
 mod ownership_tests;
@@ -228,6 +229,7 @@ mod tests {
         Connection {
             id: "one".to_string(),
             name: "One".to_string(),
+            enabled: true,
             base_url: "https://example.invalid/v1".to_string(),
             provider_kind: ProviderKind::Openai,
             protocol: ApiProtocol::ChatCompletions,

@@ -2,7 +2,7 @@
 
 **Set up GitHub Copilot on this computer.**
 
-Install apps, confirm one GitHub account, deploy one model setup, and inspect usage with explicit source coverage.
+Manage provider connections, publish reviewed model catalogs, confirm client accounts, and inspect usage with explicit source coverage. The desktop UI display name is **CopilotBYOKManager**; repository, state and credential namespaces remain PilotWeave for compatibility.
 
 > Configure once. Preview every change. Apply across supported Copilot surfaces.
 
@@ -35,7 +35,9 @@ PilotWeave is still pre-release, but the repository now contains working vertica
 - Official read-only CLI account follow-up with matching/conflicting/expired outcomes; other clients retain their manual account boundary.
 - Optional JetBrains Copilot integration: standard IDE/version observations and automatic BYOK deployment for reviewed 1.19 distributions. Preview/apply publishes endpoint, protocol, enabled models, limits/capabilities, headers and the Connection's own key into the dedicated shared runtime namespace; unmanaged providers survive and writes are deduplicated. Ownership, stale checks, journals and rollback apply. GitHub sign-in remains an official per-IDE flow, never credential copying; resource/usage gaps stay explicit. See [JetBrains support and provenance](docs/jetbrains-support.md).
 
-The Home setup flow combines component discovery, account evidence, a persistent user confirmation, a selected Connection, live deployment fingerprints, and manual app setup. Its four core steps are independent from Billing authorization and usage opt-in. Navigation is Home, Connections, Resources, Usage, and More. Resources are locally authored configuration, not imported conversation content; a last-published binding is not proof that every client consumes it.
+The approved lightweight Home layout shows pending actions, per-client owned model sources, enabled Connection cards and the last publication result. Navigation is 总览 / 连接 / 客户端 / 用量 / 更多 (Resources, Activity and Settings). Connections have a persisted enable switch, a read-only catalog-access test, checked model addition and a preferred-model selector. Disabling hides the card and blocks new publication; it never silently revokes configuration. Preview expands inline and confirmation is separate; edits, target changes, refresh and navigation invalidate the review, including late responses.
+
+VS Code and reviewed JetBrains publication adds/updates only that Connection's supplier group; other suppliers survive. Publishing is not selecting: choose the new model in the client's model picker (restart relevant JetBrains IDEs first). Source chips use verified deployed counts, not the edited catalog or private current-model state. App provider setup remains manual. The CLI adapter uses a single legacy environment route and `COPILOT_MODEL`, requires a new terminal/session, never writes `providers.json`, and refuses a provider registry that shadows the environment. Current [GitHub BYOK instructions](https://docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/use-byok-models) describe broader CLI model coexistence; this legacy adapter limitation is not a claim about every current CLI interface. Resources are locally authored configuration, not imported conversation content; a last-published binding is not proof that every client consumes it.
 
 Usage has native commands and a SQLite v2 migration for:
 
@@ -92,7 +94,7 @@ Current regression coverage includes:
 
 - **Deployment lifecycle** — one-shot/expiring plans, stale targets, journals, rollback refusal after external changes, and recovery-safe state handling.
 - **VS Code Copilot** — enabled models are projected into a temporary `chatLanguageModels.json`; switching models replaces only the PilotWeave-owned group, foreign groups survive, and the original backup remains distinct from per-deployment snapshots.
-- **Copilot CLI** — `COPILOT_PROVIDER_*` projection is verified per provider kind and protocol; switching the default model rewrites every model variable, and a failing store write restores the previous fake snapshot.
+- **Copilot CLI** — `COPILOT_PROVIDER_*` projection is verified per provider kind and protocol; changing the preferred model rewrites every model variable, and a failing store write restores the previous fake snapshot.
 - **GitHub Copilot app** — deployment remains intentionally read-only; tests pin the manual-configuration boundary and runbook preview.
 - **JetBrains Copilot** — reviewed BYOK namespace projection is transactional; shared IDE writes are deduplicated, unmanaged providers/precise values survive, and stale/unproven/unsafe state refuses writes or rollback. IDE restart/model selection and real provider use remain separate acceptance checks.
 - **Installation and sign-in** — backend-owned component/surface allowlists, one-shot plans, bounded native-process output, interrupted login-run recovery, and UTF-8-safe redacted diagnostics.
@@ -100,7 +102,7 @@ Current regression coverage includes:
 - **Usage persistence and money** — v1-to-v2 migrations, foreign keys, append/truncate/rotate/reopen behavior, incomplete final lines, atomic batches, cancel/recovery, stable cumulative IDs, privacy sentinels, exact counters across IPC, cache arithmetic, context tiers, aliases, and immutable historical prices.
 - **Setup and UI** — manual vs verified identity, expiry/evidence invalidation, drift, optional usage readiness, escaped remote strings, exact decimal display, and model-list union.
 
-An optional isolated browser check is available as `node apps/desktop/web/tests/browser-smoke.cjs` with Playwright installed (or `PILOTWEAVE_PLAYWRIGHT` set to its module path). `PILOTWEAVE_BROWSER` can select a browser executable. It uses a fresh headless profile and in-memory native fixtures; screenshots go to a temporary directory. It does not exercise a real native account or installer.
+An optional isolated browser check is available as `node apps/desktop/web/tests/browser-smoke.cjs` with Playwright installed (or `PILOTWEAVE_PLAYWRIGHT` set to its module path). `PILOTWEAVE_BROWSER` can select a browser executable. It uses a fresh headless profile and in-memory native fixtures; screenshots go to a temporary directory. In addition to account/usage/recovery coverage, it exercises enablement with retained source chips, masked saved keys, checked model addition, preferred order, read-only probes, inline ID-only apply, target/refresh/navigation/late-response invalidation, two-supplier coexistence with one CLI route, and responsive layout. It does not exercise a real native account, client or installer. `node prototype/smoke-test.cjs` checks the standalone design reference without a hardcoded checkout path.
 
 Tests use temporary directories, fake stores/runners, and sanitized data. They never modify real VS Code profiles, registry keys, environment variables, shell files, client sessions, or GitHub credentials.
 

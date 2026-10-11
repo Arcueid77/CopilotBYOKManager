@@ -35,7 +35,7 @@ const AUTHENTICATION_HEADERS: &[&str] = &[
 pub fn validate_connection(connection: &Connection) -> AppResult<()> {
     connection.validate()?;
 
-    validate_required_text("Connection id", &connection.id, MAX_CONNECTION_ID_BYTES)?;
+    validate_connection_id(&connection.id)?;
     validate_required_text(
         "Connection name",
         &connection.name,
@@ -99,6 +99,15 @@ pub fn validate_connection(connection: &Connection) -> AppResult<()> {
         )));
     }
     Ok(())
+}
+
+pub fn validate_connection_id(id: &str) -> AppResult<()> {
+    if id.chars().any(char::is_control) {
+        return Err(AppError::InvalidInput(
+            "Connection id contains control characters".into(),
+        ));
+    }
+    validate_required_text("Connection id", id, MAX_CONNECTION_ID_BYTES)
 }
 
 pub(crate) fn validate_headers(headers: &BTreeMap<String, String>) -> AppResult<()> {
@@ -181,11 +190,7 @@ pub fn validate_persisted_identities(state: &PersistentState) -> AppResult<()> {
         )));
     }
     for connection in &state.connections {
-        validate_required_text(
-            "Persisted connection id",
-            &connection.id,
-            MAX_CONNECTION_ID_BYTES,
-        )?;
+        validate_connection_id(&connection.id)?;
         validate_required_text(
             "Persisted credential reference",
             &connection.secret_ref,
@@ -383,6 +388,7 @@ mod tests {
         Connection {
             id: "connection-one".to_string(),
             name: "One".to_string(),
+            enabled: true,
             base_url: endpoint.to_string(),
             provider_kind: ProviderKind::Openai,
             protocol: ApiProtocol::ChatCompletions,

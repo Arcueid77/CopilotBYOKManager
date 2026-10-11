@@ -26,7 +26,7 @@ test("money rendering preserves decimal precision and unknown is distinct from e
   assert.equal(usage.value(0), "0"); assert.match(usage.value(null), /Unknown/);
 });
 
-test("Home puts editable connection controls first and scopes sign-in per client", () => {
+test("legacy setup renderer keeps editable controls and scoped sign-in for compatibility", () => {
   const d = data();
   d.setup.accounts = {surfaces:[{surface:'vsCodeCopilot',state:'actionRequired'}]};
   const html = setup.render(snapshot,d,true);

@@ -365,3 +365,29 @@ fn byok_recovery_refuses_to_overwrite_external_provider_changes() {
     assert_eq!(fs::read(&path).unwrap(), external_bytes);
     assert!(journal.exists());
 }
+
+#[test]
+fn owned_source_observation_counts_published_models_without_returning_keys() {
+    let root = tempfile::tempdir().unwrap();
+    let path = root.path().join("byok.json");
+    let (write, hash) = prepare(&path, &connection(), &[], false);
+    write_after(&write);
+    let observed = observe_owned(&path, "owner").unwrap();
+    assert_eq!(observed.sources["fixture"], (hash.unwrap(), 1));
+    assert_eq!(
+        observed.resource_id,
+        ownership::resource_id(&write.resource)
+    );
+    assert!(observe_owned(&path, "foreign").unwrap().sources.is_empty());
+    let copied = root.path().join("copied.json");
+    fs::copy(&path, &copied).unwrap();
+    assert_ne!(
+        observe_owned(&copied, "owner").unwrap().resource_id,
+        observed.resource_id
+    );
+    let mut external: Value = serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
+    let owned = keys(&provider_name("owner", "fixture").unwrap());
+    external[&owned[1]][SCHEMA] = json!("unreviewed-schema");
+    fs::write(path.clone(), serde_json::to_vec(&external).unwrap()).unwrap();
+    assert!(observe_owned(&path, "owner").is_err());
+}

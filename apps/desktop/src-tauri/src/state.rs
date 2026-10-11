@@ -239,6 +239,7 @@ impl StateStore {
     }
 
     pub fn connection(&self, id: &str) -> AppResult<Connection> {
+        validation::validate_connection_id(id)?;
         self.state
             .connections
             .iter()
@@ -307,6 +308,9 @@ impl StateStore {
         let mut connection = Connection {
             id,
             name: input.name,
+            enabled: existing
+                .as_ref()
+                .is_none_or(|connection| connection.enabled),
             base_url: input.base_url,
             provider_kind: input.provider_kind,
             protocol: input.protocol,
@@ -374,6 +378,22 @@ impl StateStore {
             return Err(error);
         }
 
+        Ok(connection)
+    }
+
+    pub fn set_connection_enabled(&mut self, id: &str, enabled: bool) -> AppResult<Connection> {
+        self.ensure_writable()?;
+        let mut connection = self.connection(id)?;
+        if connection.enabled == enabled {
+            return Ok(connection);
+        }
+        connection.enabled = enabled;
+        connection.updated_at = Utc::now();
+        let mut next = self.state.clone();
+        let index = next.connections.iter().position(|c| c.id == id).unwrap();
+        next.connections[index] = connection.clone();
+        // No credential access or client mutation. The state revision invalidates previews.
+        self.replace_state(next)?;
         Ok(connection)
     }
 
@@ -571,6 +591,7 @@ mod tests {
             state.connections.push(Connection {
                 id: format!("connection-{n}"),
                 name: format!("Connection {n}"),
+                enabled: true,
                 base_url: "https://example.invalid/v1".into(),
                 provider_kind: crate::domain::ProviderKind::Openai,
                 protocol: crate::domain::ApiProtocol::ChatCompletions,
@@ -648,6 +669,7 @@ mod tests {
             connections: vec![Connection {
                 id: "fixture".into(),
                 name: name.into(),
+                enabled: true,
                 base_url: "https://example.invalid/v1".into(),
                 provider_kind: crate::domain::ProviderKind::Openai,
                 protocol: crate::domain::ApiProtocol::ChatCompletions,
@@ -666,6 +688,77 @@ mod tests {
             }],
             ..PersistentState::default()
         }
+    }
+
+    #[test]
+    fn legacy_connection_enablement_defaults_true_and_toggle_survives_reopen() {
+        let root = tempfile::tempdir().unwrap();
+        let path = root.path().join("state.json");
+        let mut legacy = serde_json::to_value(fixture_state("Legacy")).unwrap();
+        legacy["connections"][0]
+            .as_object_mut()
+            .unwrap()
+            .remove("enabled");
+        fs::write(&path, serde_json::to_vec(&legacy).unwrap()).unwrap();
+        let mut store = StateStore::open_at(path.clone());
+        assert!(store.connection("fixture").unwrap().enabled);
+        let mut malformed = fixture_state("Fixture");
+        malformed.connections[0].id.push('\n');
+        let malformed_bytes = serde_json::to_vec(&malformed).unwrap();
+        let bad_path = root.path().join("invalid-id-state.json");
+        fs::write(&bad_path, &malformed_bytes).unwrap();
+        let recovered = StateStore::open_at(bad_path.clone());
+        assert!(recovered.recovery().is_some());
+        assert!(recovered.connections().is_empty());
+        assert_eq!(fs::read(bad_path).unwrap(), malformed_bytes);
+        let revision = store.revision().unwrap();
+        assert!(
+            !store
+                .set_connection_enabled("fixture", false)
+                .unwrap()
+                .enabled
+        );
+        assert_ne!(store.revision().unwrap(), revision);
+        let bytes = fs::read(&path).unwrap();
+        store.set_connection_enabled("fixture", false).unwrap();
+        assert_eq!(fs::read(&path).unwrap(), bytes); // No-op preserves timestamps / bytes.
+        assert!(store.set_connection_enabled("unknown", true).is_err());
+        let mut reopened = StateStore::open_at(path.clone());
+        assert!(!reopened.connection("fixture").unwrap().enabled);
+        assert!(
+            reopened
+                .set_connection_enabled("fixture", true)
+                .unwrap()
+                .enabled
+        );
+        fs::write(&path, b"broken").unwrap();
+        let mut recovered = StateStore::open_at(path.clone());
+        assert!(recovered.set_connection_enabled("fixture", false).is_err());
+        assert_eq!(fs::read(path).unwrap(), b"broken");
+        // This whole test uses no OS credential store and never deploys a client.
+    }
+
+    #[test]
+    fn enablement_rejects_unsafe_or_unbounded_ids_without_changes_or_echo() {
+        let root = tempfile::tempdir().unwrap();
+        let path = root.path().join("state.json");
+        write_state(&path, &fixture_state("Fixture")).unwrap();
+        let mut store = StateStore::open_at(path.clone());
+        let bytes = fs::read(&path).unwrap();
+        for id in [
+            "".to_string(),
+            " ".into(),
+            "sentinel-private".repeat(100),
+            "sentinel-private\n".into(),
+        ] {
+            let error = store
+                .set_connection_enabled(&id, false)
+                .unwrap_err()
+                .to_string();
+            assert!(!error.contains("sentinel-private"));
+            assert_eq!(fs::read(&path).unwrap(), bytes);
+        }
+        assert!(store.connection("fixture").unwrap().enabled);
     }
 
     #[test]

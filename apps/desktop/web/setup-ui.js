@@ -15,7 +15,8 @@
     const installed = scanned && components.length >= 4 && components.every((c) => c.status === "ready");
     const missing = components.filter((c) => ["missing", "broken"].includes(c.status));
     const aligned = scanned && ["verifiedSameAccount", "userConfirmedSameAccount"].includes(setup?.alignment);
-    const selected = snapshot.connections.find((c) => c.id === setup?.preferences?.connectionId) ?? snapshot.connections[0];
+    const connections = snapshot.connections.filter(c => c.enabled !== false);
+    const selected = connections.find((c) => c.id === setup?.preferences?.connectionId) ?? connections[0];
     const writable = snapshot.clients.filter((c) => c.detected && c.supportsWrite);
     // The saved manual confirmation belongs only to the Copilot app. Optional
     // JetBrains never inherits app confirmation. Reviewed writable profiles use

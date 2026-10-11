@@ -107,6 +107,9 @@ impl ModelSpec {
 pub struct Connection {
     pub id: String,
     pub name: String,
+    /// Publication eligibility only. Disabling never revokes client configuration.
+    #[serde(default = "default_true")]
+    pub enabled: bool,
     pub base_url: String,
     #[serde(default)]
     pub provider_kind: ProviderKind,
@@ -394,6 +397,8 @@ pub struct DashboardSnapshot {
     pub connections: Vec<Connection>,
     pub clients: Vec<ClientTarget>,
     pub deployments: Vec<DeploymentRecord>,
+    #[serde(default)]
+    pub published_sources: Vec<crate::deployment::publication::PublishedSource>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub state_recovery: Option<String>,
     pub usage_db: UsageDbStatus,
@@ -463,6 +468,7 @@ mod tests {
         Connection {
             id: "one".to_string(),
             name: "One".to_string(),
+            enabled: true,
             base_url: "https://example.invalid/v1".to_string(),
             provider_kind: ProviderKind::Openai,
             protocol: ApiProtocol::ChatCompletions,

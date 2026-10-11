@@ -127,6 +127,7 @@ pub fn run() {
             commands::refresh_github_authorization,
             commands::clear_github_authorization,
             commands::upsert_connection,
+            commands::set_connection_enabled,
             model_discovery::discover_connection_models,
             commands::delete_connection,
             commands::preview_deployment,

@@ -1,7 +1,7 @@
 /* 最小 DOM 桩 + vm 沙箱：执行原型脚本并遍历所有场景 × 页面 × 模态，捕获运行时错误 */
 const fs = require("fs");
 const vm = require("vm");
-const html = fs.readFileSync("f:/PilotWeave/prototype/copilot-byok-manager.html", "utf8");
+const html = fs.readFileSync(require("path").join(__dirname, "copilot-byok-manager.html"), "utf8");
 const parts = html.split("<script>");
 if (parts.length < 2) { console.error("no script tag"); process.exit(1); }
 const js = parts[1].split("</scr" + "ipt>")[0];

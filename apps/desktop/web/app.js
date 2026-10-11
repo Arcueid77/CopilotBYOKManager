@@ -16,31 +16,31 @@
 
   const routes = {
     overview: {
-      title: "Home",
-      subtitle: "One account. One model setup. Every supported client.",
+      title: "总览",
+      subtitle: "管理连接，预览后发布。",
       add: false,
     },
     connections: {
-      title: "Connections",
-      subtitle: "Your provider endpoints, credentials, and models.",
+      title: "连接",
+      subtitle: "端点、密钥与模型。停用连接不会删除客户端配置。",
       add: true,
     },
     clients: {
-      title: "Client diagnostics",
-      subtitle: "Detected Copilot surfaces and their deployment capabilities.",
+      title: "客户端",
+      subtitle: "安装、官方登录与发布能力，按客户端逐个核对。",
       add: false,
     },
-    usage: { title: "Usage", subtitle: "Official quota, personal Billing, and local observations with source coverage.", add: false },
-    resources: { title: "Resources", subtitle: "Reviewed MCP, Skills and Instructions publication through public paths.", add: false },
-    about: { title: "About", subtitle: "PilotWeave", add: false },
+    usage: { title: "用量", subtitle: "官方配额、个人账单与本地记录，分别显示覆盖范围。", add: false },
+    resources: { title: "资源", subtitle: "通过已审核的公开配置发布 MCP、Skills 与 Instructions。", add: false },
+    about: { title: "关于", subtitle: "CopilotBYOKManager · PilotWeave", add: false },
     activity: {
-      title: "Activity",
-      subtitle: "Local deployment audit history without secret values.",
+      title: "活动记录",
+      subtitle: "本地操作记录，不含密钥或对话内容。",
       add: false,
     },
     settings: {
-      title: "Settings",
-      subtitle: "Runtime, state ownership, and safety boundaries.",
+      title: "设置",
+      subtitle: "本地存储、授权与恢复状态。",
       add: false,
     },
   };
@@ -48,6 +48,9 @@
   let route = "overview";
   let snapshot = null;
   let loading = false;
+  let refreshQueued = false;
+  let deploymentCleanup = null;
+  function closeDeployment() { deploymentCleanup?.(); deploymentCleanup = null; }
   const data = { errors: {} };
   const usageSections = () => [
     ["localUsage", "get_usage_overview", { query: window.PilotWeaveUsage.query() }],
@@ -104,6 +107,7 @@
         {
           id: "demo-openrouter",
           name: "OpenRouter",
+          enabled: true,
           baseUrl: "https://openrouter.ai/api/v1",
           providerKind: "openai",
           protocol: "chat-completions",
@@ -155,6 +159,7 @@
         },
       ],
       deployments: [],
+      publishedSources: [],
     };
   }
 
@@ -199,6 +204,7 @@
         const connection = {
           id,
           name: input.name.trim(),
+          enabled: existing?.enabled !== false,
           baseUrl: input.baseUrl.trim().replace(/\/$/, ""),
           providerKind: input.providerKind,
           protocol: input.protocol,
@@ -215,7 +221,16 @@
         if (index >= 0) demoState.connections[index] = connection;
         else demoState.connections.push(connection);
         demoState.connections.sort((a, b) => a.name.localeCompare(b.name));
+        demoPlans.clear();
         saveDemoState();
+        return structuredClone(connection);
+      }
+      case "set_connection_enabled": {
+        const connection = demoState.connections.find(item => item.id === args.connectionId);
+        if (!connection) throw new Error("连接不存在");
+        if (connection.enabled !== args.enabled) {
+          connection.enabled = args.enabled; connection.updatedAt = nowIso(); demoPlans.clear(); saveDemoState();
+        }
         return structuredClone(connection);
       }
       case "delete_connection": {
@@ -225,6 +240,8 @@
         demoState.deployments = demoState.deployments.filter(
           (item) => item.connectionId !== args.connectionId,
         );
+        demoState.publishedSources = (demoState.publishedSources ?? []).filter(item => item.connectionId !== args.connectionId);
+        demoPlans.clear();
         saveDemoState();
         return true;
       }
@@ -233,6 +250,7 @@
           (item) => item.id === args.connectionId,
         );
         if (!connection) throw new Error("Unknown connection");
+        if (connection.enabled === false) throw new Error("请先启用连接再发布");
         const targets = args.targetIds.map((id) =>
           demoState.clients.find((item) => item.id === id),
         );
@@ -281,6 +299,12 @@
         }));
         demoState.deployments.unshift(...records);
         demoState.deployments = demoState.deployments.slice(0, 200);
+        demoState.publishedSources ??= [];
+        for (const record of records.filter(record => record.status === "applied")) {
+          demoState.publishedSources = demoState.publishedSources.filter(source => !(source.targetId === record.targetId && (record.targetKind === "copilot-cli" || source.connectionId === connection.id)));
+          const count = record.targetKind === "copilot-cli" ? 1 : connection.models.filter(model => model.enabled).length;
+          if (count) demoState.publishedSources.push({ targetId: record.targetId, connectionId: connection.id, state: "published", modelCount: count, publishedAt: record.createdAt });
+        }
         saveDemoState();
         return { planId: plan.id, records };
       }
@@ -349,13 +373,13 @@
 
   function statusLabel(status) {
     return {
-      available: "Available",
-      "not-installed": "Not installed",
-      "read-only": "Read only",
-      error: "Error",
-      applied: "Applied",
-      skipped: "Skipped",
-      failed: "Failed",
+      available: "可用",
+      "not-installed": "未安装",
+      "read-only": "仅手动处理",
+      error: "需核对",
+      applied: "已完成",
+      skipped: "未自动处理",
+      failed: "失败",
     }[status] ?? status;
   }
 
@@ -378,17 +402,18 @@
 
   function setRuntimeState() {
     runtimeDot.classList.toggle("online", true);
-    runtimeLabel.textContent = isDesktop ? "Native backend" : "Browser preview";
+    runtimeLabel.textContent = isDesktop ? "本地模式" : "浏览器试用";
     runtimeDetail.textContent = isDesktop
-      ? "Local writes enabled"
-      : "No filesystem writes";
+      ? "写入前须预览确认"
+      : "不修改电脑";
   }
 
   async function refresh() {
-    if (loading) return;
+    closeDeployment();
+    if (loading) { refreshQueued = true; return; }
     loading = true;
     refreshButton.disabled = true;
-    content.innerHTML = '<div class="loading"><div><div class="spinner"></div>Loading local state…</div></div>';
+    content.innerHTML = '<div class="loading"><div><div class="spinner"></div>读取本地状态…</div></div>';
     try {
       await loadSections([["dashboard", "get_dashboard"], ["components", "get_installation_status"], ["installRuns", "get_install_runs"], ["resources", "get_resources"], ["setup", "get_setup_status"], ["authorization", "get_github_authorization_status"], ...usageSections()]);
       if (!data.dashboard) throw new Error(data.errors.dashboard);
@@ -410,6 +435,7 @@
     } finally {
       loading = false;
       refreshButton.disabled = false;
+      if (refreshQueued) { refreshQueued = false; void refresh(); }
     }
   }
 
@@ -419,16 +445,19 @@
     document.querySelectorAll(".nav-item").forEach((button) => {
       button.classList.toggle("active", button.dataset.route === route);
     });
+    document.querySelector(".more-nav").open = false;
+    document.querySelector(".more-nav > summary").classList.toggle("active", ["resources", "activity", "settings", "about"].includes(route));
     render();
   }
 
   function render() {
     if (!snapshot) return;
+    closeDeployment();
     const meta = routes[route];
     pageTitle.textContent = meta.title;
     pageSubtitle.textContent = meta.subtitle;
     addConnectionButton.hidden = !meta.add;
-    addConnectionButton.disabled = Boolean(snapshot.stateRecovery);
+    addConnectionButton.disabled = Boolean(snapshot.stateRecovery || snapshot.deploymentRecovery);
     const renderers = {
       overview: renderOverview,
       connections: renderConnections,
@@ -439,7 +468,7 @@
       activity: renderActivity,
       settings: renderSettings,
     };
-    content.innerHTML = (!isDesktop && !["overview", "usage"].includes(route) ? '<div class="preview-banner">Browser preview · disposable sample data · no native computer access</div>' : "") + renderers[route]();
+    content.innerHTML = (!isDesktop && !["overview", "usage"].includes(route) ? '<div class="preview-banner">浏览器试用 · 示例数据 · 不修改电脑</div>' : "") + renderers[route]();
     content.dataset.route = route;
     window.PilotWeaveInstaller.mount();
     window.PilotWeaveAccount.mount();
@@ -447,32 +476,21 @@
   }
 
   function renderOverview() {
-    return storageWarningBanner() + window.PilotWeaveSetup.render(snapshot, data, isDesktop);
+    return window.PilotWeaveManager.renderHome(snapshot, data, isDesktop);
   }
 
   function renderConnections() {
     return `
-      <div class="security-note">
-        <div class="note-icon">◆</div>
-        <div>
-          <strong>Credentials stay out of PilotWeave state JSON</strong>
-          <p>The desktop backend stores API keys in the operating-system credential store. The UI receives only a has-secret flag, and native adapters fetch the secret during apply.</p>
-        </div>
-      </div>
+      <p class="manager-boundary" style="margin-bottom:18px">密钥保存在系统凭据库，不回读到界面。测试连接仅查询模型目录，不验证推理能力。</p>
       ${snapshot.connections.length ? `<div class="card-grid">${snapshot.connections.map(connectionCard).join("")}</div>` : emptyConnections()}
     `;
   }
 
   function renderClients() {
-    return `<section id="installation-panel" class="install-panel"></section><section id="account-panel" class="account-panel"></section>
-      <div class="security-note">
-        <div class="note-icon">◎</div>
-        <div>
-          <strong>Capabilities are explicit per target</strong>
-          <p>Read-only does not mean broken. It means PilotWeave detected the client but will not mutate an unsupported private store.</p>
-        </div>
-      </div>
+    return `<details class="manager-section" ${isDesktop && data.components?.some(component => ["missing", "broken", "unknown"].includes(component.status)) ? "open" : ""}><summary>安装与更新</summary><section id="installation-panel" class="install-panel"></section></details>
+      <details class="manager-section" ${isDesktop && !["verifiedSameAccount", "userConfirmedSameAccount"].includes(data.setup?.alignment) ? "open" : ""}><summary>官方登录与账号核对</summary><section id="account-panel" class="account-panel"></section><button class="button ghost small" data-action="setup-accounts" ${!isDesktop ? "disabled" : ""}>逐个核对同一 GitHub 账号</button></details>
       <div class="client-grid">${snapshot.clients.map(clientCard).join("")}</div>
+      ${snapshot.clients.some(client => client.kind === "github-copilot-app" && client.detected) ? `<section class="manager-section"><h2>Copilot App 供应商</h2><p class="manager-meta">${escapeHtml(window.PilotWeaveManager.policy("github-copilot-app"))}</p><button class="button ghost small" data-action="setup-manual">查看手动配置步骤</button></section>` : ""}
     `;
   }
 
@@ -548,46 +566,27 @@
         <h3>${escapeHtml(client.name)}</h3>
         <p>${escapeHtml(client.detail)}</p>
         <div class="path-line" title="${escapeHtml(client.path ?? client.diagnostic ?? "")}">${escapeHtml(client.path ?? client.diagnostic ?? "No local path")}</div>
-        ${client.kind === "jetbrains-copilot" ? `<button class="button ghost small" data-action="jetbrains-guide" data-id="${escapeHtml(client.id)}">${client.supportsWrite ? "Automatic BYOK deployment" : "BYOK and plugin setup"}</button>` : ""}
+        ${client.kind === "jetbrains-copilot" ? `<button class="button ghost small" data-action="jetbrains-guide" data-id="${escapeHtml(client.id)}">${client.supportsWrite ? "自动发布 BYOK" : "配置指引"}</button>` : ""}
       </article>`;
   }
 
   function connectionCard(connection) {
-    const enabled = connection.models.filter((item) => item.enabled);
-    return `
-      <article class="card">
-        <div class="card-header">
-          <div class="connection-title">
-            <div class="connection-avatar">${escapeHtml(initials(connection.name))}</div>
-            <div><h3>${escapeHtml(connection.name)}</h3><span class="muted" style="font-size:10px">${escapeHtml(connection.providerKind)} · ${escapeHtml(connection.protocol)}</span></div>
-          </div>
-          <span class="badge ${connection.hasSecret ? "secure" : ""}">${snapshot.credentialStatuses?.[connection.id]?.state === "unavailable" ? "Credential store unavailable" : connection.hasSecret ? "Credential stored" : "No credential"}</span>
-        </div>
-        <div class="endpoint" title="${escapeHtml(connection.baseUrl)}">${escapeHtml(connection.baseUrl)}</div>
-        <div class="model-list">
-          ${enabled.slice(0, 4).map((item) => `<span class="model-chip">${escapeHtml(item.name)}</span>`).join("")}
-          ${enabled.length > 4 ? `<span class="model-chip">+${enabled.length - 4}</span>` : ""}
-        </div>
-        <div class="card-actions">
-          <button class="button ghost small" data-action="edit-connection" data-id="${escapeHtml(connection.id)}">Edit</button>
-          <button class="button primary small" data-action="deploy-connection" data-id="${escapeHtml(connection.id)}">Deploy</button>
-          <button class="button danger small" data-action="delete-connection" data-id="${escapeHtml(connection.id)}">Delete</button>
-        </div>
-      </article>`;
+    return window.PilotWeaveManager.connectionCard(connection, snapshot, isDesktop);
   }
 
   function emptyConnections() {
     return `
       <div class="empty-state">
         <div class="empty-icon">◇</div>
-        <h2>No connections configured</h2>
-        <p>Add an OpenAI-compatible, Azure, Anthropic, local, or custom endpoint. A single connection can then be projected differently into each Copilot client.</p>
-        <button class="button primary" data-action="add-connection">Add connection</button>
+        <h2>尚无连接</h2>
+        <p>添加供应商端点和模型，预览后发布到支持的客户端。</p>
+        <button class="button primary" data-action="add-connection">添加连接</button>
       </div>`;
   }
 
   let modalCleanup = null;
   function openModal({ title, body, footer = "", wide = false, onOpen }) {
+    closeDeployment();
     modalCleanup?.();
     modalCleanup = null;
     modalRoot.innerHTML = `
@@ -613,7 +612,6 @@
   }
 
   function openConnectionForm(connection = null) {
-    const openedFromHome = route === "overview";
     if (snapshot.stateRecovery || snapshot.deploymentRecovery) {
       showToast("Connection changes are disabled during read-only recovery", "error");
       return;
@@ -627,61 +625,73 @@
           .join("\n")
       : "";
     openModal({
-      title: connection ? `Edit ${connection.name}` : "Add connection",
+      title: connection ? `编辑 ${connection.name}` : "添加连接",
       wide: true,
       body: `
         <form id="connection-form" class="form-grid">
           <input type="hidden" name="id" value="${escapeHtml(connection?.id ?? "")}" />
           <div class="form-field">
-            <label for="connection-name">Name</label>
+            <label for="connection-name">名称</label>
             <input id="connection-name" name="name" required value="${escapeHtml(connection?.name ?? "")}" placeholder="OpenRouter" />
           </div>
           <div class="form-field">
-            <label for="provider-kind">Provider kind</label>
+            <label for="provider-kind">供应商类型</label>
             <select id="provider-kind" name="providerKind">
               ${selectOptions(["openai", "azure", "anthropic", "local", "custom"], connection?.providerKind ?? "openai")}
             </select>
           </div>
           <div class="form-field full">
-            <label for="base-url">Endpoint URL</label>
+            <label for="base-url">端点地址</label>
             <input id="base-url" name="baseUrl" type="url" required value="${escapeHtml(connection?.baseUrl ?? "")}" placeholder="https://api.example.com/v1" />
-            <small>Use the provider base or terminal inference endpoint expected by the selected client adapter.</small>
+            <small>填写供应商基址或客户端所需的推理端点。</small>
           </div>
           <div class="form-field">
-            <label for="protocol">Wire protocol</label>
+            <label for="protocol">接口协议</label>
             <select id="protocol" name="protocol">
               ${selectOptions(["chat-completions", "responses", "messages"], connection?.protocol ?? "chat-completions")}
             </select>
           </div>
           <div class="form-field">
-            <label for="api-key">API key</label>
-            <input id="api-key" name="apiKey" type="password" autocomplete="new-password" placeholder="${connection?.hasSecret ? "Leave blank to keep current credential" : "Optional for local endpoints"}" />
-            <small>The desktop backend stores this in the OS credential store.</small>
+            <label for="api-key">API 密钥</label>
+            <input id="api-key" name="apiKey" type="password" autocomplete="new-password" placeholder="${connection?.hasSecret ? "留空保留已存密钥，不回读原值" : "本地端点可留空"}" />
+            <small>保存在系统凭据库，不写入连接配置文件。</small>
           </div>
-          ${connection ? `<div class="form-field full"><label><input name="clearSecret" type="checkbox" style="width:auto;height:auto;margin-right:7px" />Remove the stored credential</label></div>` : ""}
+          ${connection ? `<div class="form-field full"><label><input name="clearSecret" type="checkbox" style="width:auto;height:auto;margin-right:7px" />移除已保存的密钥</label></div>` : ""}
           <div class="form-field full model-discovery" id="model-discovery">
-            <div class="model-discovery-actions"><strong>Discover models</strong><button type="button" class="button ghost small" data-model-fetch>Fetch models</button></div>
+            <div class="model-discovery-actions"><strong>获取模型目录</strong><button type="button" class="button ghost small" data-model-fetch>获取模型</button></div>
             <small data-model-status role="status" aria-live="polite"></small>
-            <small>Uses your key to read the model catalog at this endpoint. No chat request is sent.</small>
+            <small>只读取当前端点的模型目录，不发送对话请求。勾选后添加，不会自动全选。</small>
             <div data-model-results hidden>
-              <input type="search" data-model-search aria-label="Filter discovered models" placeholder="Filter by model name or ID" />
+              <input type="search" data-model-search aria-label="筛选模型" placeholder="按模型名称或 ID 筛选" />
               <div class="discovered-models" data-model-list></div>
-              <button type="button" class="button ghost small" data-model-add disabled>Add selected (0)</button>
+              <button type="button" class="button ghost small" data-model-add disabled>添加已选 (0)</button>
             </div>
           </div>
           <div class="form-field full">
-            <label for="models">Models</label>
+            <label for="models">模型</label>
             <textarea id="models" name="models" required placeholder="model-id | Display Name">${escapeHtml(modelsText)}</textarea>
-            <small>One model per line. Display name is optional: <code>upstream/model-id | Friendly name</code>.</small>
+            <small>每行一个模型：<code>上游模型 ID | 显示名称</code>，名称可省略。</small>
           </div>
+          <div class="form-field full"><label for="preferred-model">首选模型</label><select id="preferred-model" name="preferredModel"></select><small>CLI 写入 COPILOT_MODEL；其他客户端仅作本软件推荐，仍需在客户端选择。</small></div>
           <div class="form-field full">
-            <label for="headers">Request headers</label>
+            <label for="headers">请求头</label>
             <textarea id="headers" name="headers" placeholder="X-Custom-Header: value&#10;Authorization: Bearer \${apiKey}">${escapeHtml(headersText)}</textarea>
-            <small>One header per line. Use <code>\${apiKey}</code> as a deployment-time placeholder.</small>
+            <small>每行一个请求头；用 <code>\${apiKey}</code> 作为发布时的密钥占位符。</small>
           </div>
         </form>`,
-      footer: `<button class="button ghost" data-modal-close>Cancel</button><button class="button primary" id="save-connection">${connection ? "Save changes" : "Add connection"}</button>`,
+      footer: `<button class="button ghost" data-modal-close>取消</button><button class="button primary" id="save-connection">保存连接</button>`,
       onOpen(root) {
+        const preferred = root.querySelector("#preferred-model");
+        const modelsField = root.querySelector("#models");
+        function syncPreferred() {
+          const chosen = preferred.value || connection?.models.find(model => model.enabled)?.modelId;
+          const lines = modelsField.value.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+          const options = lines.map(line => line.split("|")[0].trim()).filter(id => id && connection?.models.find(model => model.modelId === id)?.enabled !== false);
+          preferred.replaceChildren();
+          for (const id of options) { const option = document.createElement("option"); option.value = id; option.textContent = id; preferred.append(option); }
+          if (options.includes(chosen)) preferred.value = chosen;
+        }
+        modelsField.addEventListener("input", syncPreferred); syncPreferred();
         const discovery = window.ModelDiscovery.mount(root.querySelector("#connection-form"), { invoke, native: Boolean(window.__TAURI__?.core?.invoke), connection });
         modalCleanup = () => discovery.dispose();
         root.querySelectorAll("[data-modal-close]").forEach((button) =>
@@ -698,14 +708,9 @@
           saveButton.disabled = true;
           try {
             const input = parseConnectionForm(data, connection, discovery.discoveredIds);
-            const saved = await invoke("upsert_connection", { input });
-            let selectionFailed = false;
-            if (openedFromHome) {
-              try { await invoke("select_setup_connection", { connectionId: saved.id }); }
-              catch { selectionFailed = true; }
-            }
+            await invoke("upsert_connection", { input });
             if (form.isConnected) closeModal();
-            showToast(selectionFailed ? "Connection saved. Select it on Home after setup storage becomes available." : connection ? "Connection updated; review deployment to apply changes" : "Connection added; review deployment when ready", selectionFailed ? "error" : "success");
+            showToast("连接已保存，尚未发布到客户端。");
             await refresh();
           } catch (error) {
             showToast(error?.message ?? String(error), "error");
@@ -735,7 +740,7 @@
     const existingByModelId = Object.fromEntries(
       (existing?.models ?? []).map((item) => [item.modelId, item]),
     );
-    const models = modelLines.map((line) => {
+    let models = modelLines.map((line) => {
       const [rawId, ...nameParts] = line.split("|");
       const modelId = rawId.trim();
       if (!modelId) throw new Error(`Invalid model line: ${line}`);
@@ -754,6 +759,7 @@
         },
       };
     });
+    models = window.ModelDiscovery.preferModels(models, String(data.get("preferredModel") ?? ""));
     const headers = window.ModelDiscovery.parseHeaders(String(data.get("headers") ?? ""));
     const id = String(data.get("id") ?? "").trim();
     return {
@@ -837,78 +843,21 @@
 
   function openDeployment(connection, selectedIds = null) {
     if (snapshot.stateRecovery || snapshot.deploymentRecovery) {
-      showToast("Managed writes are disabled during read-only recovery", "error");
+      showToast("只读恢复期间不能发布。", "error");
       return;
     }
-    const targets = snapshot.clients;
-    openModal({
-      title: `Deploy ${connection.name}`,
-      wide: true,
-      body: `
-        <p class="muted" style="font-size:11px;line-height:1.6">Review the concrete targets before confirming. This exact preview expires after 15 minutes and can be applied once. Changed state requires a new preview.</p>
-        <details><summary>Review individual client targets and profiles</summary><div class="target-list">
-          ${targets
-            .map(
-              (target) => `<div class="target-option">
-                <input id="target-${escapeHtml(target.id)}" type="checkbox" name="deployment-target" value="${escapeHtml(target.id)}" ${target.detected && target.supportsWrite && (!selectedIds || selectedIds.includes(target.id)) ? "checked" : target.detected ? "" : "disabled"} />
-                <label for="target-${escapeHtml(target.id)}"><strong>${escapeHtml(target.name)}</strong><small>${escapeHtml(target.detail)} · ${escapeHtml(target.supportsWrite ? "writable" : "manual/read-only")}</small></label>
-                <span class="status-pill ${escapeHtml(target.status)}">${escapeHtml(statusLabel(target.status))}</span>
-              </div>`,
-            )
-            .join("")}
-        </div>
-        </details><hr class="preview-separator" />
-        <div id="deployment-preview"><p class="muted" style="font-size:11px">Preview has not been generated.</p></div>`,
-      footer: `<button class="button ghost" data-modal-close>Cancel</button><button class="button primary" id="preview-deployment">Preview changes</button>`,
-      onOpen(root) {
-        root.querySelectorAll("[data-modal-close]").forEach((button) =>
-          button.addEventListener("click", closeModal),
-        );
-        const actionButton = root.querySelector("#preview-deployment");
-        const review = window.PilotWeaveDeploymentReview.createSession(invoke);
-        root.querySelectorAll('input[name="deployment-target"]').forEach((input) => {
-          input.addEventListener("change", () => {
-            review.invalidate();
-            actionButton.textContent = "Preview changes";
-            actionButton.disabled = false;
-            root.querySelector("#deployment-preview").textContent = "Selection changed. Generate a new preview.";
-          });
-        });
-        actionButton.addEventListener("click", async () => {
-          if (review.busy) return;
-          actionButton.disabled = true;
-          try {
-            if (!review.plan) {
-              const selectedTargetIds = Array.from(
-                root.querySelectorAll('input[name="deployment-target"]:checked'),
-              ).map((input) => input.value);
-              if (!selectedTargetIds.length) {
-                showToast("Select at least one target", "error");
-                return;
-              }
-              const plan = await review.preview(connection.id, selectedTargetIds);
-              if (!plan) return;
-              root.querySelector("#deployment-preview").innerHTML = `
-                <div class="operation-list">${plan.operations.map(operationCard).join("")}</div>`;
-              actionButton.textContent = "Apply supported changes";
-            } else {
-              const result = await review.apply();
-              closeModal();
-              const applied = result.records.filter((item) => item.status === "applied").length;
-              const skipped = result.records.filter((item) => item.status === "skipped").length;
-              const failed = result.records.filter((item) => item.status === "failed").length;
-              showToast(`Deployment complete: ${applied} applied, ${skipped} skipped, ${failed} failed`, failed ? "error" : "success");
-              await refresh();
-            }
-          } catch (error) {
-            review.invalidate();
-            root.querySelector("#deployment-preview").textContent = "The previous preview cannot be reused. Review a new preview before applying.";
-            showToast(error?.message ?? String(error), "error");
-          } finally {
-            actionButton.disabled = Boolean(review.plan && !review.plan.operations.some(op => op.supported));
-            actionButton.textContent = review.plan ? "Apply supported changes" : "Preview changes";
-          }
-        });
+    if (connection.enabled === false) { showToast("请先启用连接再发布。", "error"); return; }
+    closeModal(); closeDeployment();
+    deploymentCleanup = window.PilotWeaveInlineDeployment.mount({
+      container: content, connection, targets: snapshot.clients, selectedIds, invoke, native: isDesktop,
+      onError: error => showToast(error?.message ?? String(error), "error"),
+      async onApplied(result) {
+        const applied = result.records.filter(item => item.status === "applied");
+        const skipped = result.records.filter(item => item.status === "skipped").length;
+        const failed = result.records.filter(item => item.status === "failed").length;
+        const picker = applied.some(item => ["vs-code-copilot", "vscode-copilot", "jetbrains-copilot"].includes(item.targetKind));
+        showToast(`${isDesktop ? "" : "模拟 · "}${applied.length} 个目标已完成${skipped ? `，${skipped} 个需手动处理` : ""}${failed ? `，${failed} 个失败` : ""}${picker && connection.models.some(model => model.enabled) ? "。请到客户端的模型选择器中选用刚发布的模型；JetBrains 请先重启 IDE。" : ""}`, failed ? "error" : "success");
+        await refresh();
       },
     });
   }
@@ -917,12 +866,12 @@
   function openAccountConfirmation() {
     if (!isDesktop || !data.setup) return;
     const evidenceFingerprint = data.setup.evidenceFingerprint;
-    openModal({ title: "Confirm the same GitHub account", body: `
-      <p>Check the account displayed in VS Code Copilot, Copilot CLI, and the Copilot app. This records your confirmation separately from automatic verification.</p>
-      <label class="setup-select">GitHub login<input id="confirmed-login" maxlength="39" value="${escapeHtml(data.setup.target?.login ?? "")}" placeholder="Your github.com login" /></label>
-      <p class="muted">PilotWeave uses GitHub's public user API to resolve the stable account ID. No Billing authorization is required.</p>
-      <label class="account-confirmation"><input type="checkbox" id="confirm-all-accounts" /><span>I checked that every listed client, including each detected JetBrains IDE profile, displays this same github.com account.</span></label>`,
-      footer: '<button class="button ghost" data-modal-close>Cancel</button><button class="button primary" id="save-account-confirmation" disabled>Save my confirmation</button>',
+    openModal({ title: "核对同一 GitHub 账号", body: `
+      <p>逐个检查客户端显示的账号。这只记录你的确认，不代替自动验证。</p>
+      <label class="setup-select">GitHub 用户名<input id="confirmed-login" maxlength="39" value="${escapeHtml(data.setup.target?.login ?? "")}" placeholder="github.com 用户名" /></label>
+      <p class="muted">通过 GitHub 公开用户接口解析账号 ID，不需要账单授权。</p>
+      <label class="account-confirmation"><input type="checkbox" id="confirm-all-accounts" /><span>我已逐个核对所有列出的客户端，包括每个检测到的 JetBrains IDE 配置，均显示同一个 github.com 账号。</span></label>`,
+      footer: '<button class="button ghost" data-modal-close>取消</button><button class="button primary" id="save-account-confirmation" disabled>保存我的确认</button>',
       onOpen(root) {
         const button = root.querySelector("#save-account-confirmation");
         root.querySelector("#confirm-all-accounts").addEventListener("change", (e) => { button.disabled = !e.target.checked; });
@@ -937,11 +886,12 @@
   function openManualSetup() {
     const connection = window.PilotWeaveSetup.derive(snapshot, data, isDesktop).selected;
     if (!connection) { openConnectionForm(); return; }
-    openModal({ title: "Set up the Copilot app provider", body: `
-      <ol class="manual-steps"><li>Open the Copilot app and its <strong>Model providers</strong> settings.</li>
-      <li>Add <strong>${escapeHtml(connection.name)}</strong>, endpoint <code>${escapeHtml(connection.baseUrl)}</code>, and model <code>${escapeHtml(connection.models.find((m) => m.enabled)?.modelId ?? "Unknown")}</code>. Enter your provider key in the app if requested.</li>
-      <li>Select the provider and model in the app, then verify they work.</li></ol><p>PilotWeave cannot verify or automatically change the app's private provider configuration. Completion here is your manual confirmation.</p>`,
-      footer: `<button class="button ghost" data-modal-close>Close</button><button class="button primary" id="confirm-manual" ${!isDesktop ? "disabled" : ""}>I completed manual setup</button>`,
+    openModal({ title: "手动配置 Copilot App", body: `
+      <p class="manager-meta">${escapeHtml(window.PilotWeaveManager.policy("github-copilot-app"))}</p>
+      <ol class="manual-steps"><li>在 Copilot App 中打开 <strong>Model providers</strong> 设置。</li>
+      <li>添加 <strong>${escapeHtml(connection.name)}</strong>，端点 <code>${escapeHtml(connection.baseUrl)}</code>，推荐模型 <code>${escapeHtml(connection.models.find((m) => m.enabled)?.modelId ?? "未配置")}</code>。如需密钥，请在 App 内输入。</li>
+      <li>在 App 内选择供应商和模型，并验证请求。</li></ol><p>这里记录你的手动确认，不读取或验证 App 的私有供应商配置。</p>`,
+      footer: `<button class="button ghost" data-modal-close>关闭</button><button class="button primary" id="confirm-manual" ${!isDesktop || snapshot.stateRecovery || snapshot.deploymentRecovery ? "disabled" : ""}>我已完成手动配置</button>`,
       onOpen(root) { root.querySelector("#confirm-manual").addEventListener("click", async (event) => {
         event.target.disabled = true;
         try { await invoke("confirm_manual_provider", { connectionId: connection.id, confirmed: true }); closeModal(); await refresh(); }
@@ -1004,12 +954,25 @@
   }
 
 
-  function operationCard(operation) {
-    return `<article class="operation-card">
-      <div class="card-header"><div><strong>${escapeHtml(operation.title)}</strong><p>${escapeHtml(operation.description)}</p></div><span class="status-pill ${operation.supported ? "available" : "read-only"}">${operation.supported ? "Will apply" : "Manual"}</span></div>
-      <ul>${operation.changes.map((change) => `<li>${escapeHtml(change)}</li>`).join("")}</ul>
-      ${operation.requiresRestart ? '<p style="margin-top:9px;color:var(--warning)">A new terminal or client process is required.</p>' : ""}
-    </article>`;
+  async function toggleConnection(connection, button) {
+    if (snapshot.stateRecovery || snapshot.deploymentRecovery) return;
+    closeDeployment(); button.disabled = true;
+    try {
+      await invoke("set_connection_enabled", { connectionId: connection.id, enabled: connection.enabled === false });
+      showToast(connection.enabled === false ? "连接已启用，尚未重新发布。" : "连接已停用，客户端配置仍保留。");
+      await refresh();
+    } catch (error) { showToast(error?.message ?? String(error), "error"); }
+    finally { if (button.isConnected) button.disabled = false; }
+  }
+
+  async function testConnection(connection, button) {
+    if (!isDesktop || snapshot.stateRecovery || snapshot.deploymentRecovery) return;
+    const status = button.closest("[data-connection-id]").querySelector("[data-probe-id]");
+    button.disabled = true; status.textContent = "测试模型目录接口…";
+    try {
+      const result = await window.ModelDiscovery.testConnection(invoke, connection);
+      if (status.isConnected) { status.textContent = result.detail; status.dataset.status = result.status; }
+    } finally { if (button.isConnected) button.disabled = false; }
   }
 
   document.querySelector("#primary-nav").addEventListener("click", (event) => {
@@ -1041,6 +1004,12 @@
         break;
       case "deploy-connection":
         if (connection) openDeployment(connection);
+        break;
+      case "toggle-connection":
+        if (connection) void toggleConnection(connection, action);
+        break;
+      case "test-connection":
+        if (connection) void testConnection(connection, action);
         break;
       case "delete-connection":
         if (connection) openDeleteConfirmation(connection);

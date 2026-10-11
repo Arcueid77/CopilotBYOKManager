@@ -75,6 +75,7 @@ fn credentials_are_bound_to_saved_configuration_and_never_read_when_replaced() {
     let saved = Connection {
         id: "fixture".into(),
         name: "Fixture".into(),
+        enabled: true,
         base_url: request.base_url.clone(),
         provider_kind: request.provider_kind,
         protocol: request.protocol,
@@ -360,6 +361,7 @@ fn saved_key_read_excludes_cross_process_updates_and_rechecks_disk_state() {
     state.connections.push(Connection {
         id: "fixture".into(),
         name: "Fixture".into(),
+        enabled: true,
         base_url: "https://example.invalid/v1".into(),
         provider_kind: ProviderKind::Openai,
         protocol: ApiProtocol::ChatCompletions,

@@ -73,6 +73,11 @@ impl PlanStore {
             ));
         }
         validation::validate_connection(connection)?;
+        if !connection.enabled && plan.purpose == crate::domain::DeploymentPurpose::Deploy {
+            return Err(AppError::InvalidInput(
+                "Enable this connection before publishing".into(),
+            ));
+        }
         validation::validate_api_key(secret)?;
         validate_shape(&plan, connection, targets)?;
         let mut fingerprints = BTreeMap::new();
@@ -306,5 +311,45 @@ mod tests {
         assert!(PlanStore::default().consume(&id).is_err());
         assert!(store.consume(&id).is_ok());
         assert!(store.consume(&id).is_err());
+    }
+
+    #[test]
+    fn disabled_connections_cannot_publish_or_reuse_preview_but_can_revoke() {
+        let root = tempfile::tempdir().unwrap();
+        let mut connection = connection();
+        let targets = [target(&root.path().join("config.json"))];
+        let mut store = PlanStore::default();
+        let preview = store
+            .insert(
+                &connection,
+                None,
+                plan(&connection, &targets[0]),
+                &targets,
+                context(),
+            )
+            .unwrap();
+        let stored = store.consume(&preview.id).unwrap();
+        connection.enabled = false;
+        assert!(matches!(
+            validate_plan(&stored, &connection, &targets, &context()),
+            Err(AppError::PlanChanged)
+        ));
+        assert!(store
+            .insert(
+                &connection,
+                None,
+                plan(&connection, &targets[0]),
+                &targets,
+                context()
+            )
+            .is_err());
+        assert!(!root.path().join("config.json").exists());
+        let mut revoke = plan(&connection, &targets[0]);
+        revoke.purpose = crate::domain::DeploymentPurpose::RevokeAndDelete;
+        revoke.target_ids.clear();
+        revoke.operations.clear();
+        store
+            .insert(&connection, None, revoke, &[], context())
+            .unwrap();
     }
 }

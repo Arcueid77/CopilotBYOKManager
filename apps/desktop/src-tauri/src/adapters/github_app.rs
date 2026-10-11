@@ -51,12 +51,12 @@ pub fn preview(connection: &Connection, target: &ClientTarget) -> DeploymentOper
         target_id: target.id.clone(),
         target_kind: ClientKind::GithubCopilotApp,
         title: format!("Configure {} in GitHub Copilot app", connection.name),
-        description: "Manual action required in the app's Model providers settings".to_string(),
+        description: "No reviewed documented provider-write interface is available for this app. Add the supplier manually in Model providers; private databases and credential stores are not read or written".to_string(),
         changes: vec![
             format!("Provider name: {}", connection.name),
             format!("Endpoint: {}", connection.base_url),
             format!(
-                "Default model: {}",
+                "Preferred model (choose it in the app): {}",
                 connection
                     .default_model()
                     .map(|model| model.model_id.as_str())
@@ -158,6 +158,7 @@ mod tests {
         Connection {
             id: "one".to_string(),
             name: "One".to_string(),
+            enabled: true,
             base_url: "https://example.invalid/v1".to_string(),
             provider_kind: ProviderKind::Openai,
             protocol: ApiProtocol::ChatCompletions,

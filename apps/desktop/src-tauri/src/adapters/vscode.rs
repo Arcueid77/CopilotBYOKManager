@@ -154,6 +154,7 @@ pub fn preview(connection: &Connection, target: &ClientTarget) -> DeploymentOper
             "Preserve every group not owned by this PilotWeave connection".to_string(),
             "Create a private rollback backup before the first write".to_string(),
             "Materialize the credential only in the native client configuration".to_string(),
+            "Publishing adds or updates only this supplier group; select a published model in the client's model picker".to_string(),
         ]
     };
     DeploymentOperation {
@@ -304,6 +305,43 @@ pub(crate) fn original_backup(
         Some(before.to_vec()),
         false,
     )?))
+}
+
+pub(crate) fn observe_owned(
+    path: &Path,
+    owner: &str,
+) -> AppResult<crate::deployment::publication::CatalogEvidence> {
+    use crate::deployment::{ownership, publication::CatalogEvidence};
+    let resource = crate::transaction::Resource::File(crate::safe_io::resource_path(path)?);
+    let mut sources = BTreeMap::new();
+    for group in read_groups(path)? {
+        let Some(id) = group.get(CONNECTION_ID_FIELD).and_then(Value::as_str) else {
+            continue;
+        };
+        if !is_owned_group(&group, id)
+            || group.get(OWNER_ID_FIELD).and_then(Value::as_str) != Some(owner)
+        {
+            continue;
+        }
+        let models = group
+            .get("models")
+            .and_then(Value::as_array)
+            .ok_or_else(ownership::conflict)?;
+        if id.len() > 160 || models.len() > 128 {
+            return Err(ownership::conflict());
+        }
+        let hash = crate::fingerprint::json("vscode-owned-group-v1", &group)?;
+        if sources
+            .insert(id.to_owned(), (hash, models.len() as u32))
+            .is_some()
+        {
+            return Err(ownership::conflict());
+        }
+    }
+    Ok(CatalogEvidence {
+        resource_id: ownership::resource_id(&resource),
+        sources,
+    })
 }
 
 fn default_user_roots() -> Vec<(Edition, PathBuf)> {
@@ -571,6 +609,7 @@ mod tests {
             id: "openrouter".to_string(),
             name: "OpenRouter".to_string(),
             base_url: "https://openrouter.example/v1/chat/completions".to_string(),
+            enabled: true,
             provider_kind,
             protocol,
             headers: BTreeMap::new(),

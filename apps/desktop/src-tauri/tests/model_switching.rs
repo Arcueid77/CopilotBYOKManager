@@ -38,6 +38,7 @@ fn connection(model_id: &str) -> Connection {
     Connection {
         id: "switch-test".to_string(),
         name: "Switch Test".to_string(),
+        enabled: true,
         base_url: "https://example.invalid/v1".to_string(),
         provider_kind: ProviderKind::Openai,
         protocol: ApiProtocol::ChatCompletions,

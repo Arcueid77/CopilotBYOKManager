@@ -38,6 +38,12 @@ Every enabled profile still needs official per-IDE sign-in/account checking; cha
 
 ## Fixed upstream evidence
 
+### Handoff reconciliation, 2026-10-12
+
+`prototype/handoff-prompt.md` section 1.3 proposes per-IDE `options/github-copilot.xml` BYOK writes. Its linked [JetBrains BYOK article](https://blog.jetbrains.com/ai/2025/12/bring-your-own-key-byok-is-now-live-in-jetbrains-ides/) describes **JetBrains AI Assistant**, not the GitHub Copilot plugin. It is not evidence of a Copilot XML provider schema. The reviewed dedicated namespace described above remains the only automatic target; no IDE authentication XML or Password Safe was opened or modified. Per-IDE XML deployment remains unimplemented pending an official GitHub Copilot schema and sanitized success/failure evidence. Per-IDE account checks still remain separate from shared BYOK publication.
+
+Dashboard source chips verify each owned provider projection independently against persisted proofs and report only its observed model count. Adding another Connection does not remove existing suppliers or select a model in a running IDE. Unknown versions, inaccessible catalogs and changed ownership remain explicit unavailable/changed states.
+
 Verified 2026-10-10 before automatic implementation:
 
 - [Marketplace metadata](https://plugins.jetbrains.com/api/plugins/17718) and [updates API](https://plugins.jetbrains.com/api/plugins/17718/updates?size=10) establish the GitHub identity and fixed distributions.
