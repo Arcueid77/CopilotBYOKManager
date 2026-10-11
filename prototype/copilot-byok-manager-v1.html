@@ -1,0 +1,2174 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Copilot BYOK Manager · 交互原型（浏览器演示）</title>
+<!--
+  Copilot BYOK Manager —— 可交互 HTML 原型
+  打开方式：直接双击本文件，或拖入任意现代浏览器（Edge / Chrome / Firefox）。
+  无需安装依赖、无需开发服务、无需真实账号或 API Key。
+  全部数据为内置模拟数据；不会访问真实服务，也不会对本机执行任何写入。
+  建议从顶部横幅的「使用指南」开始，或用「场景」下拉切换空状态、部分成功、预览过期、账号冲突、操作中断等演示状态。
+-->
+<style>
+/* ============ 基础与主题变量 ============ */
+:root{
+  --bg:#f3f5f9; --surface:#ffffff; --surface-2:#f8fafc; --border:#e2e8f0; --border-strong:#cbd5e1;
+  --text:#182238; --muted:#5b6b82; --faint:#8a97ab;
+  --accent:#4f46e5; --accent-soft:#eef2ff; --accent-hover:#4338ca;
+  --ok:#15803d; --ok-soft:#dcfce7; --ok-border:#bbf7d0;
+  --warn:#b45309; --warn-soft:#fef3c7; --warn-border:#fde68a;
+  --err:#b91c1c; --err-soft:#fee2e2; --err-border:#fecaca;
+  --info:#0369a1; --info-soft:#e0f2fe; --info-border:#bae6fd;
+  --manual:#7c3aed; --manual-soft:#f3e8ff; --manual-border:#e9d5ff;
+  --off:#64748b; --off-soft:#f1f5f9; --off-border:#e2e8f0;
+  --sidebar:#141b31; --sidebar-2:#1b2440; --sidebar-text:#aab4cf; --sidebar-active:#ffffff;
+  --demo-bg:#fff7e6; --demo-border:#f5c96b; --demo-text:#7c5a10;
+  --radius:10px; --radius-sm:7px;
+  --shadow:0 1px 2px rgba(16,24,40,.05),0 1px 3px rgba(16,24,40,.07);
+  --shadow-lg:0 12px 32px rgba(15,23,42,.18);
+  --mono:"Cascadia Mono","JetBrains Mono",Consolas,"Courier New",monospace;
+  --banner-h:46px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family:"Segoe UI Variable Text","Segoe UI","Microsoft YaHei UI","Microsoft YaHei","PingFang SC","Noto Sans CJK SC",sans-serif;
+  background:var(--bg);color:var(--text);font-size:14px;line-height:1.55;
+  -webkit-font-smoothing:antialiased;overflow-x:hidden;
+}
+::selection{background:#c7d2fe}
+button{font-family:inherit;cursor:pointer}
+input,select,textarea{font-family:inherit;font-size:14px;color:var(--text)}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+code,.mono{font-family:var(--mono);font-size:12.5px}
+.path{font-family:var(--mono);font-size:12px;background:var(--surface-2);border:1px solid var(--border);border-radius:5px;padding:1px 6px;color:#334155;word-break:break-all}
+.muted{color:var(--muted)} .faint{color:var(--faint)} .small{font-size:12.5px} .tiny{font-size:11.5px}
+.right{margin-left:auto} .grow{flex:1;min-width:0}
+.row{display:flex;align-items:center;gap:8px}
+.col{display:flex;flex-direction:column;gap:8px}
+.between{justify-content:space-between}
+.wrap{flex-wrap:wrap}
+.g4{gap:4px}.g6{gap:6px}.g12{gap:12px}.g16{gap:16px}
+.mt4{margin-top:4px}.mt8{margin-top:8px}.mt12{margin-top:12px}.mt16{margin-top:16px}.mt20{margin-top:20px}
+.mb4{margin-bottom:4px}.mb8{margin-bottom:8px}.mb12{margin-bottom:12px}.mb16{margin-bottom:16px}
+.hide{display:none!important}
+.hr{border:none;border-top:1px solid var(--border);margin:14px 0}
+.scroll{overflow:auto}
+
+/* ============ 演示横幅 ============ */
+.demo-banner{
+  position:fixed;top:0;left:0;right:0;height:var(--banner-h);z-index:60;
+  display:flex;align-items:center;gap:12px;padding:0 16px;
+  background:repeating-linear-gradient(-45deg,#fff8e6 0 14px,#fdf0cd 14px 28px);
+  border-bottom:1px solid var(--demo-border);color:var(--demo-text);
+}
+.demo-banner .tag{
+  display:inline-flex;align-items:center;gap:6px;font-weight:700;font-size:13px;white-space:nowrap;
+}
+.demo-banner .desc{font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.demo-banner select{
+  font-size:12.5px;padding:4px 8px;border:1px solid #e3c878;border-radius:6px;background:#fffdf5;color:#6b5310;
+}
+.demo-banner .bbtn{
+  font-size:12.5px;padding:4px 10px;border:1px solid #e3c878;border-radius:6px;background:#fffdf5;color:#6b5310;white-space:nowrap;
+}
+.demo-banner .bbtn:hover{background:#fff3d0}
+
+/* ============ 布局骨架 ============ */
+.shell{display:flex;min-height:100vh;padding-top:var(--banner-h)}
+.sidebar{
+  width:216px;flex:none;background:var(--sidebar);color:var(--sidebar-text);
+  display:flex;flex-direction:column;position:sticky;top:var(--banner-h);
+  height:calc(100vh - var(--banner-h));
+}
+.logo{display:flex;align-items:center;gap:10px;padding:16px 16px 14px;color:#fff;border-bottom:1px solid rgba(255,255,255,.07)}
+.logo-mark{width:30px;height:30px;flex:none;border-radius:8px;background:linear-gradient(135deg,#6366f1,#8b5cf6);display:flex;align-items:center;justify-content:center;color:#fff}
+.logo-name{font-weight:700;font-size:13.5px;line-height:1.2}
+.logo-sub{font-size:10.5px;color:#7f8bb0}
+.nav{padding:10px 8px;flex:1;overflow-y:auto}
+.nav-item{
+  display:flex;align-items:center;gap:10px;width:100%;padding:9px 10px;margin-bottom:2px;
+  border:none;border-radius:8px;background:transparent;color:var(--sidebar-text);
+  font-size:13.5px;text-align:left;transition:background .12s,color .12s;
+}
+.nav-item:hover{background:var(--sidebar-2);color:#dde3f5}
+.nav-item.active{background:var(--accent);color:var(--sidebar-active);font-weight:600}
+.nav-item svg{flex:none}
+.nav-item .nav-hint{margin-left:auto;font-size:10.5px;background:rgba(255,255,255,.14);border-radius:9px;padding:0 7px;line-height:18px}
+.nav-foot{padding:12px 14px;border-top:1px solid rgba(255,255,255,.07);font-size:11.5px;color:#7f8bb0}
+.main{flex:1;min-width:0;display:flex;flex-direction:column}
+.page{width:100%;max-width:1240px;margin:0 auto;padding:22px 26px 60px}
+.page-head{display:flex;align-items:flex-start;gap:14px;margin-bottom:18px;flex-wrap:wrap}
+.page-title{font-size:20px;font-weight:700;letter-spacing:.2px}
+.page-sub{font-size:13px;color:var(--muted);margin-top:3px;max-width:720px}
+.page-actions{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+
+/* ============ 卡片 ============ */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow)}
+.card-head{display:flex;align-items:center;gap:10px;padding:13px 16px;border-bottom:1px solid var(--border)}
+.card-title{font-size:14.5px;font-weight:650}
+.card-sub{font-size:12.5px;color:var(--muted)}
+.card-body{padding:16px}
+.card-foot{padding:11px 16px;border-top:1px solid var(--border);background:var(--surface-2);border-radius:0 0 var(--radius) var(--radius)}
+.grid{display:grid;gap:14px}
+.grid-2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.grid-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.grid-4{grid-template-columns:repeat(4,minmax(0,1fr))}
+
+/* ============ 徽章（状态必须带文字，不只用颜色） ============ */
+.badge{
+  display:inline-flex;align-items:center;gap:6px;padding:2px 9px;border-radius:999px;
+  font-size:12px;font-weight:600;border:1px solid transparent;white-space:nowrap;line-height:20px;
+}
+.badge .dot{width:7px;height:7px;border-radius:50%;background:currentColor;flex:none}
+.b-ok{background:var(--ok-soft);color:var(--ok);border-color:var(--ok-border)}
+.b-warn{background:var(--warn-soft);color:var(--warn);border-color:var(--warn-border)}
+.b-err{background:var(--err-soft);color:var(--err);border-color:var(--err-border)}
+.b-info{background:var(--info-soft);color:var(--info);border-color:var(--info-border)}
+.b-manual{background:var(--manual-soft);color:var(--manual);border-color:var(--manual-border)}
+.b-off{background:var(--off-soft);color:var(--off);border-color:var(--off-border)}
+.b-neutral{background:var(--surface-2);color:var(--muted);border-color:var(--border)}
+.b-accent{background:var(--accent-soft);color:var(--accent);border-color:#e0e7ff}
+.badge.lg{font-size:12.5px;padding:3px 11px}
+
+/* ============ 按钮 ============ */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:7px;
+  padding:7px 14px;border-radius:8px;border:1px solid var(--border-strong);
+  background:var(--surface);color:var(--text);font-size:13.5px;font-weight:550;
+  transition:background .12s,border-color .12s,box-shadow .12s;white-space:nowrap;
+}
+.btn:hover{background:var(--surface-2);border-color:#94a3b8}
+.btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn-primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn-primary:hover{background:var(--accent-hover);border-color:var(--accent-hover)}
+.btn-danger{background:#fff;border-color:#fca5a5;color:var(--err)}
+.btn-danger:hover{background:var(--err-soft)}
+.btn-ghost{border-color:transparent;background:transparent;color:var(--muted)}
+.btn-ghost:hover{background:var(--surface-2);color:var(--text)}
+.btn-sm{padding:4px 10px;font-size:12.5px;border-radius:7px}
+.btn-xs{padding:2px 8px;font-size:12px;border-radius:6px}
+.btn:disabled{opacity:.48;cursor:not-allowed;pointer-events:none}
+.btn-lg{padding:9px 20px;font-size:14.5px;border-radius:9px}
+
+/* ============ 表单 ============ */
+.field{margin-bottom:14px}
+.label{display:block;font-size:12.5px;font-weight:600;color:#37455c;margin-bottom:5px}
+.label .req{color:var(--err)}
+.input,.select,.textarea{
+  width:100%;padding:7px 10px;border:1px solid var(--border-strong);border-radius:8px;background:#fff;
+  transition:border-color .12s,box-shadow .12s;
+}
+.input:focus,.select:focus,.textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(79,70,229,.14)}
+.input:disabled,.select:disabled{background:var(--surface-2);color:var(--muted)}
+.textarea{min-height:90px;resize:vertical;font-family:var(--mono);font-size:12.5px;line-height:1.5}
+.hint{font-size:12px;color:var(--muted);margin-top:4px}
+.check-row{display:flex;align-items:center;gap:8px;font-size:13.5px}
+input[type=checkbox],input[type=radio]{width:15px;height:15px;accent-color:var(--accent);flex:none}
+.kv-row{display:flex;gap:8px;margin-bottom:8px;align-items:center}
+.kv-row .input{flex:1}
+.seg{display:inline-flex;background:var(--surface-2);border:1px solid var(--border);border-radius:9px;padding:3px;gap:2px}
+.seg-item{border:none;background:transparent;padding:5px 14px;border-radius:7px;font-size:13px;color:var(--muted);font-weight:550}
+.seg-item:hover{color:var(--text)}
+.seg-item.active{background:#fff;color:var(--text);box-shadow:var(--shadow);font-weight:650}
+.switch{position:relative;display:inline-block;width:36px;height:20px;flex:none}
+.switch input{opacity:0;width:0;height:0}
+.switch .sl{position:absolute;inset:0;background:#cbd5e1;border-radius:999px;transition:.15s;cursor:pointer}
+.switch .sl:before{content:"";position:absolute;width:16px;height:16px;left:2px;top:2px;background:#fff;border-radius:50%;transition:.15s;box-shadow:0 1px 2px rgba(0,0,0,.2)}
+.switch input:checked + .sl{background:var(--accent)}
+.switch input:checked + .sl:before{transform:translateX(16px)}
+
+/* ============ 表格 ============ */
+.table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius);background:#fff}
+table.tbl{width:100%;border-collapse:collapse;font-size:13px;min-width:640px}
+.tbl th{
+  text-align:left;font-size:12px;font-weight:650;color:var(--muted);background:var(--surface-2);
+  padding:9px 12px;border-bottom:1px solid var(--border);white-space:nowrap;position:sticky;top:0;z-index:1;
+}
+.tbl td{padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tbody tr:hover{background:#f8faff}
+.tbl .num{text-align:right;font-variant-numeric:tabular-nums;font-family:var(--mono);font-size:12.5px}
+
+/* ============ 步骤向导 ============ */
+.steps{display:flex;align-items:center;gap:0;margin-bottom:18px;flex-wrap:wrap;row-gap:8px}
+.step{display:flex;align-items:center;gap:8px}
+.step-num{
+  width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:12.5px;font-weight:700;background:var(--surface-2);border:1.5px solid var(--border-strong);color:var(--muted);flex:none;
+}
+.step.active .step-num{background:var(--accent);border-color:var(--accent);color:#fff}
+.step.done .step-num{background:var(--ok);border-color:var(--ok);color:#fff}
+.step-label{font-size:13px;font-weight:600;color:var(--muted)}
+.step.active .step-label{color:var(--text)}
+.step.done .step-label{color:var(--ok)}
+.step-bar{width:36px;height:1.5px;background:var(--border-strong);margin:0 10px;flex:none}
+
+/* ============ 连接选择卡 / 模型 chips / 目标行 ============ */
+.pick{
+  display:block;width:100%;text-align:left;padding:11px 13px;border:1.5px solid var(--border);
+  border-radius:var(--radius);background:#fff;cursor:pointer;transition:border-color .12s,box-shadow .12s;
+}
+.pick:hover{border-color:#a5b4fc}
+.pick.active{border-color:var(--accent);box-shadow:0 0 0 3px rgba(79,70,229,.12);background:linear-gradient(0deg,#fbfbff,#fff)}
+.pick .pick-name{font-weight:650;font-size:13.5px}
+.pick .pick-meta{font-size:12px;color:var(--muted);margin-top:2px}
+.chip{
+  display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border:1.5px solid var(--border);
+  border-radius:999px;background:#fff;font-size:12.5px;font-weight:550;cursor:pointer;user-select:none;
+}
+.chip:hover{border-color:#a5b4fc}
+.chip.on{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+.chip .star{color:#d97706}
+.chip.disabled{opacity:.5;cursor:not-allowed}
+.target-row{
+  display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid var(--border);
+  border-radius:var(--radius);background:#fff;margin-bottom:8px;
+}
+.target-row:hover{border-color:#a5b4fc}
+.target-row.disabled{opacity:.62;background:var(--surface-2)}
+.target-ic{width:34px;height:34px;flex:none;border-radius:8px;display:flex;align-items:center;justify-content:center;background:var(--accent-soft);color:var(--accent)}
+
+/* ============ 提示条 / 横幅 ============ */
+.alert{
+  display:flex;gap:10px;padding:10px 13px;border-radius:var(--radius);border:1px solid;
+  font-size:13px;align-items:flex-start;
+}
+.alert .alert-ic{flex:none;margin-top:1px}
+.alert b{font-weight:650}
+.a-info{background:var(--info-soft);border-color:var(--info-border);color:#0c4a6e}
+.a-warn{background:var(--warn-soft);border-color:var(--warn-border);color:#78350f}
+.a-err{background:var(--err-soft);border-color:var(--err-border);color:#7f1d1d}
+.a-ok{background:var(--ok-soft);border-color:var(--ok-border);color:#14532d}
+.a-neutral{background:var(--off-soft);border-color:var(--off-border);color:#334155}
+.recovery-banner{
+  display:flex;gap:12px;align-items:center;padding:12px 16px;margin-bottom:16px;
+  background:#fff1f2;border:1.5px solid #fda4af;border-radius:var(--radius);color:#881337;
+}
+
+/* ============ 模态框 ============ */
+.overlay{
+  position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:80;display:none;
+  align-items:flex-start;justify-content:center;padding:60px 20px 40px;backdrop-filter:blur(2px);
+}
+.overlay.open{display:flex}
+.modal{
+  background:#fff;border-radius:14px;box-shadow:var(--shadow-lg);width:100%;max-width:640px;
+  max-height:calc(100vh - 110px);display:flex;flex-direction:column;animation:pop .16s ease-out;
+}
+.modal-lg{max-width:860px}
+.modal-sm{max-width:460px}
+@keyframes pop{from{transform:translateY(10px) scale(.985);opacity:.4}to{transform:none;opacity:1}}
+.modal-head{display:flex;align-items:center;gap:10px;padding:15px 20px;border-bottom:1px solid var(--border)}
+.modal-title{font-size:15.5px;font-weight:700}
+.modal-body{padding:18px 20px;overflow-y:auto}
+.modal-foot{display:flex;justify-content:flex-end;gap:10px;padding:13px 20px;border-top:1px solid var(--border);background:var(--surface-2);border-radius:0 0 14px 14px}
+.modal-close{border:none;background:transparent;color:var(--muted);font-size:18px;line-height:1;padding:4px;border-radius:6px}
+.modal-close:hover{background:var(--surface-2);color:var(--text)}
+
+/* ============ 执行进度 ============ */
+.progress{height:7px;border-radius:999px;background:var(--off-soft);overflow:hidden;flex:1}
+.progress-bar{height:100%;background:var(--accent);border-radius:999px;transition:width .3s}
+.run-item{display:flex;gap:12px;align-items:flex-start;padding:11px 4px;border-bottom:1px solid var(--border)}
+.run-item:last-child{border-bottom:none}
+.run-ic{width:30px;height:30px;flex:none;border-radius:50%;display:flex;align-items:center;justify-content:center}
+.spin{width:16px;height:16px;border:2.5px solid #c7d2fe;border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;flex:none}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ============ 空状态 ============ */
+.empty{padding:38px 20px;text-align:center;color:var(--muted)}
+.empty-ic{width:52px;height:52px;margin:0 auto 12px;border-radius:14px;background:var(--surface-2);border:1px dashed var(--border-strong);display:flex;align-items:center;justify-content:center;color:var(--faint)}
+.empty-title{font-size:14.5px;font-weight:650;color:#3c4a63;margin-bottom:4px}
+.empty-sub{font-size:12.5px;max-width:420px;margin:0 auto 14px}
+
+/* ============ 统计 / 用量 ============ */
+.stat{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:13px 15px;box-shadow:var(--shadow)}
+.stat-num{font-size:20px;font-weight:750;font-variant-numeric:tabular-nums;letter-spacing:.2px}
+.stat-label{font-size:12px;color:var(--muted);margin-top:2px}
+.src-card{border:1px solid var(--border);border-radius:var(--radius);padding:14px 15px;background:#fff;box-shadow:var(--shadow)}
+.src-card .src-head{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.src-card .src-name{font-weight:650;font-size:13.5px}
+.cost-card{border-radius:var(--radius);padding:16px 18px;border:1.5px solid;background:#fff}
+.cost-official{border-color:#a7f3d0;background:linear-gradient(135deg,#f0fdf7,#fff)}
+.cost-est{border-color:#ddd6fe;background:linear-gradient(135deg,#f6f3ff,#fff)}
+.cost-num{font-size:24px;font-weight:780;font-variant-numeric:tabular-nums;margin:4px 0 2px}
+
+/* ============ 活动记录 ============ */
+.act-item{display:flex;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border);align-items:flex-start}
+.act-item:last-child{border-bottom:none}
+.act-ic{width:32px;height:32px;flex:none;border-radius:9px;display:flex;align-items:center;justify-content:center;background:var(--surface-2);border:1px solid var(--border);color:var(--muted)}
+.act-time{font-size:11.5px;color:var(--faint);font-family:var(--mono);white-space:nowrap;margin-top:3px}
+
+/* ============ Toast ============ */
+.toasts{position:fixed;right:18px;top:calc(var(--banner-h) + 12px);z-index:120;display:flex;flex-direction:column;gap:8px;max-width:380px}
+.toast{
+  display:flex;gap:9px;align-items:flex-start;background:#111a30;color:#e6eaf5;border-radius:10px;
+  padding:11px 14px;font-size:13px;box-shadow:var(--shadow-lg);animation:slidein .18s ease-out;
+}
+@keyframes slidein{from{transform:translateX(14px);opacity:0}to{transform:none;opacity:1}}
+.toast .t-ic{flex:none;margin-top:1px}
+.toast.t-ok{border-left:3px solid #34d399}
+.toast.t-err{border-left:3px solid #f87171}
+.toast.t-warn{border-left:3px solid #fbbf24}
+.toast.t-info{border-left:3px solid #60a5fa}
+
+/* ============ 其他 ============ */
+.list-item{display:flex;align-items:center;gap:12px;padding:11px 14px;border:1px solid var(--border);border-radius:var(--radius);background:#fff;margin-bottom:8px}
+.avatar{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#0ea5e9,#6366f1);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:700;flex:none}
+.diff-line{font-family:var(--mono);font-size:12px;padding:2px 10px;border-radius:5px;margin-bottom:3px;white-space:pre-wrap;word-break:break-all}
+.diff-add{background:var(--ok-soft);color:#14532d}
+.diff-mod{background:var(--warn-soft);color:#78350f}
+.diff-skip{background:var(--off-soft);color:#475569}
+.kbd{font-family:var(--mono);font-size:11.5px;border:1px solid var(--border-strong);border-bottom-width:2px;border-radius:5px;padding:0 5px;background:#fff;color:#475569}
+.step-list{counter-reset:s;margin:8px 0 0;padding-left:4px}
+.step-list li{list-style:none;counter-increment:s;position:relative;padding:4px 0 4px 30px;font-size:13px}
+.step-list li:before{content:counter(s);position:absolute;left:0;top:4px;width:20px;height:20px;border-radius:50%;background:var(--accent-soft);color:var(--accent);font-size:11.5px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.filter-bar{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+.filter-bar .field{margin-bottom:0;min-width:130px}
+.filter-bar .field .label{margin-bottom:3px}
+.next-item{display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius);background:#fff;margin-bottom:8px}
+.verify-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.verify-cell{border:1px solid var(--border);border-radius:8px;padding:9px 11px;background:var(--surface-2)}
+.verify-cell .v-t{font-size:11.5px;color:var(--muted);margin-bottom:4px}
+.demo-ctl{border:1px dashed #d9b45c;background:#fffdf3;border-radius:8px;padding:9px 12px;font-size:12.5px;color:#6b5310}
+.mcp-path{display:flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface-2);margin-bottom:6px;font-size:12.5px}
+
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:#c3ccd9;border-radius:6px;border:2px solid transparent;background-clip:content-box}
+::-webkit-scrollbar-thumb:hover{background:#a8b4c6;border:2px solid transparent;background-clip:content-box}
+::-webkit-scrollbar-track{background:transparent}
+
+@media (max-width:1100px){
+  .sidebar{width:60px}
+  .sidebar .logo-name,.sidebar .logo-sub,.sidebar .nav-item span,.sidebar .nav-foot{display:none}
+  .nav-item{justify-content:center;padding:10px}
+  .logo{justify-content:center;padding:14px 6px}
+  .page{padding:18px 16px 50px}
+  .grid-3,.grid-4{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .verify-grid{grid-template-columns:1fr}
+  .demo-banner .desc{display:none}
+}
+</style>
+</head>
+<body>
+
+<!-- 顶部演示横幅（始终可见，明确标注演示模式） -->
+<div class="demo-banner" id="demoBanner">
+  <span class="tag" id="demoTag"></span>
+  <span class="desc">所有数据均为模拟：不连接真实服务，不执行安装 / 登录 / 配置写入 / 日志采集。</span>
+  <span class="right"></span>
+  <label class="tiny" style="white-space:nowrap" for="scenarioSel">演示场景</label>
+  <select id="scenarioSel"></select>
+  <button class="bbtn" data-action="reset-scenario">重置场景</button>
+  <button class="bbtn" data-action="open-help">使用指南</button>
+</div>
+
+<div class="shell">
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-mark" id="logoMark"></div>
+      <div>
+        <div class="logo-name">Copilot BYOK<br>Manager</div>
+        <div class="logo-sub">交互原型 v0.9 · 演示</div>
+      </div>
+    </div>
+    <nav class="nav" id="nav"></nav>
+    <div class="nav-foot">预发布原型 · 仅用于交互评审</div>
+  </aside>
+  <div class="main">
+    <div id="globalBanner"></div>
+    <div class="page" id="page"></div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="modal" id="modalBox" role="dialog" aria-modal="true"></div>
+</div>
+<div class="toasts" id="toasts"></div>
+
+<script>
+"use strict";
+/* ================================================================
+   Copilot BYOK Manager — 交互原型（浏览器演示）
+   全部数据模拟；无任何真实网络 / 文件 / 进程操作。
+   ================================================================ */
+
+/* ---------------- 基础工具 ---------------- */
+const $ = (s, r) => (r || document).querySelector(s);
+const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
+const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const uid = p => (p || "id") + "-" + Math.random().toString(36).slice(2, 9);
+const clone = o => JSON.parse(JSON.stringify(o));
+const fmtInt = n => n == null ? "—" : Number(n).toLocaleString("en-US");
+function fmtTok(n){ if(n==null) return "—"; if(n>=1e6) return (n/1e6).toFixed(2)+"M"; if(n>=1e3) return (n/1e3).toFixed(1)+"k"; return String(n); }
+function fmtMoney(n){ if(n==null) return "不可用"; return "$"+Number(n).toFixed(2); }
+function pad2(n){ return String(n).padStart(2,"0"); }
+function fmtTime(ts){ const d=new Date(ts); return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`; }
+function fmtDate(ts){ const d=new Date(ts); return `${d.getMonth()+1}/${d.getDate()}`; }
+function ago(ts){
+  const s=(Date.now()-ts)/1e3;
+  if(s<60) return "刚刚";
+  if(s<3600) return Math.floor(s/60)+" 分钟前";
+  if(s<86400) return Math.floor(s/3600)+" 小时前";
+  return Math.floor(s/86400)+" 天前";
+}
+/* 可复现伪随机（演示数据稳定） */
+function mulberry32(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+
+/* ---------------- 内联 SVG 图标 ---------------- */
+const ICONS = {
+  home:'<path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M9 21v-6h6v6"/>',
+  link:'<path d="M10 14a5 5 0 0 0 7.5.5l2-2a5 5 0 0 0-7-7l-1.2 1.1"/><path d="M14 10a5 5 0 0 0-7.5-.5l-2 2a5 5 0 0 0 7 7l1.1-1"/>',
+  monitor:'<rect x="2.5" y="4" width="19" height="13" rx="2"/><path d="M8 21h8M12 17v4"/>',
+  users:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.2 3.4-5 6.5-5s5.7 1.8 6.5 5"/><circle cx="17.5" cy="9" r="2.5"/><path d="M16 15.2c2.6.3 4.7 1.9 5.5 4.8"/>',
+  layers:'<path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 13 9 5 9-5"/>',
+  chart:'<path d="M3 3v18h18"/><rect x="7" y="12" width="3.4" height="6" rx="1"/><rect x="12.8" y="8" width="3.4" height="10" rx="1"/><rect x="18" y="5" width="3" height="13" rx="1"/>',
+  list:'<path d="M8 6h13M8 12h13M8 18h13"/><circle cx="4" cy="6" r="1.3"/><circle cx="4" cy="12" r="1.3"/><circle cx="4" cy="18" r="1.3"/>',
+  sliders:'<path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2.2"/><circle cx="9" cy="17" r="2.2"/><path d="M12 3v4M12 13v8"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>',
+  refresh:'<path d="M20 12a8 8 0 1 1-2.34-5.66M20 4v5h-5"/>',
+  key:'<circle cx="8" cy="14" r="4.5"/><path d="m11 11 8-8M17 5l2.5 2.5M14 8l2 2"/>',
+  check:'<path d="m4.5 12.5 5 5 10-11"/>',
+  warn:'<path d="M12 3 2.5 20h19L12 3Z"/><path d="M12 9.5V14M12 17h.01"/>',
+  x:'<path d="M6 6l12 12M18 6 6 18"/>',
+  info:'<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.5h.01"/>',
+  play:'<path d="M7 4.5v15l13-7.5L7 4.5Z"/>',
+  upload:'<path d="M12 16V4M6.5 9.5 12 4l5.5 5.5"/><path d="M4 20h16"/>',
+  download:'<path d="M12 4v12M6.5 14.5 12 20l5.5-5.5"/><path d="M4 20h16" transform="translate(0,-1)" opacity="0"/>',
+  trash:'<path d="M4 7h16M9 7V4h6v3M6.5 7l1 13h9l1-13"/>',
+  edit:'<path d="M4 20h4L19.5 8.5a2.1 2.1 0 0 0-3-3L5 17v3Z"/><path d="m14 7 3 3"/>',
+  eye:'<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="3"/>',
+  lock:'<rect x="5" y="10.5" width="14" height="9.5" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/>',
+  bolt:'<path d="M13 2 4.5 13.5H11L10 22l8.5-11.5H12L13 2Z"/>',
+  book:'<path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15.5H6.5A2.5 2.5 0 0 0 4 21V5.5Z"/><path d="M20 18.5H6.5A2.5 2.5 0 0 0 4 21"/>',
+  gear:'<circle cx="12" cy="12" r="3.2"/><path d="M12 2.8v3M12 18.2v3M2.8 12h3M18.2 12h3M5.5 5.5l2.1 2.1M16.4 16.4l2.1 2.1M18.5 5.5l-2.1 2.1M7.6 16.4l-2.1 2.1"/>',
+  shield:'<path d="M12 2.5 20 6v6c0 5-3.4 8.4-8 9.5C7.4 20.4 4 17 4 12V6l8-3.5Z"/><path d="m8.5 12 2.4 2.4L15.5 9.8"/>',
+  external:'<path d="M14 4h6v6"/><path d="M20 4 11 13"/><path d="M19 13.5V20H4V5h6.5"/>',
+  clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5.2l3.4 2"/>',
+  db:'<ellipse cx="12" cy="5.5" rx="8" ry="3"/><path d="M4 5.5V18.5c0 1.7 3.6 3 8 3s8-1.3 8-3V5.5"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/>',
+  question:'<circle cx="12" cy="12" r="9"/><path d="M9.4 9.2a2.7 2.7 0 0 1 5.3.8c0 1.8-2.4 2.2-2.4 3.8M12 17h.01"/>',
+  send:'<path d="m3.5 11.5 17-7.5-6 17-3-7.5-8-2Z"/><path d="M20.5 4 11.5 13.5"/>',
+  stop:'<rect x="6" y="6" width="12" height="12" rx="2"/>',
+  file:'<path d="M6 2.5h8L19 8v13.5H6V2.5Z"/><path d="M13.5 2.5V8H19"/>',
+  puzzle:'<path d="M9 3.5h6v4a2 2 0 1 0 4 0v-4h0A1.5 1.5 0 0 1 20.5 5v5h-4a2 2 0 1 0 0 4h4v5a1.5 1.5 0 0 1-1.5 1.5h-5v-4a2 2 0 1 0-4 0v4H5A1.5 1.5 0 0 1 3.5 19v-5h4a2 2 0 1 0 0-4h-4V5A1.5 1.5 0 0 1 5 3.5h4Z"/>',
+  vscode:'<path d="m15.5 3.5-8 7-3-2-1.5 1 3.5 3L3 15.5l1.5 1 3-2 8 7 5-2.5v-13l-5-2.5Z"/><path d="m15.5 8 3.5-2.5M15.5 16l3.5 2.5"/>',
+  terminal:'<rect x="2.5" y="4" width="19" height="16" rx="2"/><path d="m6.5 9 3.5 3-3.5 3M12.5 15h5"/>',
+  jetbrains:'<rect x="3" y="3" width="18" height="18" rx="3"/><path d="M7 16.5h6M8 7.5v5.2c0 .9-.5 1.4-1.4 1.4M11.5 7.5h2.2a1.6 1.6 0 0 1 0 3.2h-2.2v3.8v-3.8l2.6 3.8"/>',
+  app:'<rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="8" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/><rect x="13" y="13" width="8" height="8" rx="2"/>'
+};
+function icon(name, size){
+  const s = size || 16;
+  return `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name] || ICONS.info}</svg>`;
+}
+
+/* ---------------- Toast ---------------- */
+function toast(msg, kind, ms){
+  const t = document.createElement("div");
+  t.className = "toast t-" + (kind || "info");
+  const ic = { ok: "check", err: "x", warn: "warn", info: "info" }[kind || "info"];
+  t.innerHTML = `<span class="t-ic">${icon(ic, 15)}</span><span>${msg}</span>`;
+  $("#toasts").appendChild(t);
+  setTimeout(() => { t.style.opacity = "0"; t.style.transition = "opacity .3s"; setTimeout(() => t.remove(), 320); }, ms || 3200);
+}
+
+/* ---------------- 领域常量 ---------------- */
+const PROVIDERS = { openai: "OpenAI 兼容", azure: "Azure OpenAI", anthropic: "Anthropic", local: "本地服务（Ollama 等）", custom: "自定义" };
+const PROTOCOLS = { "openai-chat": "OpenAI Chat Completions", "openai-responses": "OpenAI Responses", "anthropic-messages": "Anthropic Messages" };
+const KIND = {
+  vscode: { name: "VS Code Copilot", icon: "vscode" },
+  cli: { name: "GitHub Copilot CLI", icon: "terminal" },
+  jetbrains: { name: "JetBrains Copilot 插件", icon: "jetbrains" },
+  app: { name: "GitHub Copilot App", icon: "app" }
+};
+const CONFIG_TXT = {
+  "managed-current": ["b-ok", "已发布 · 最新"],
+  "managed-changed": ["b-warn", "配置已变化"],
+  "external-modified": ["b-err", "外部已修改"],
+  "not-configured": ["b-neutral", "未配置"],
+  "manual-pending": ["b-manual", "待手动配置"]
+};
+const CAP_TXT = { auto: ["b-ok", "自动写入"], manual: ["b-manual", "手动"], unsupported: ["b-off", "不支持"] };
+const ROUTE_TXT = { official: ["GitHub 官方", "b-info"], byok: ["BYOK", "b-accent"], unknown: ["未知", "b-neutral"] };
+const CONF_TXT = { explicit: "高（客户端明示）", identity: "中（连接标识精确匹配）", unknown: "低（无法判定）" };
+const QUALITY_TXT = { complete: ["完整", "b-ok"], partial: ["部分", "b-warn"], inferred: ["推断", "b-info"] };
+const ACT_TYPES = { detect: "环境检测", install: "安装", login: "登录协调", publish: "配置发布", resource: "资源发布", usage: "用量", auth: "授权", recovery: "恢复", settings: "设置" };
+const RESULT_TXT = { success: ["成功", "b-ok"], failed: ["失败", "b-err"], partial: ["部分成功", "b-warn"], interrupted: ["中断", "b-warn"], info: ["信息", "b-info"], manual: ["待手动", "b-manual"], skipped: ["已跳过", "b-neutral"] };
+const DAYS = 86400e3;
+
+/* ---------------- 模拟数据构造 ---------------- */
+function mkModel(o) { return Object.assign({ id: uid("m"), modelId: "", name: "", enabled: true, isDefault: false, ctx: null, maxOut: null, caps: { tool: false, vision: false, reason: false } }, o); }
+function mkConn(o) { return Object.assign({ id: uid("conn"), name: "", provider: "openai", baseUrl: "", protocol: "openai-chat", headers: [], apiKeySaved: false, models: [], updatedAt: Date.now() - 2 * DAYS }, o); }
+function mkClient(o) { return Object.assign({ id: uid("cl"), kind: "vscode", label: "", detail: "", installed: true, version: "", plugin: null, pluginReviewed: null, account: null, config: "not-configured", capability: "auto", detectError: null, lastChecked: Date.now() - 5 * 60e3, shareGroup: null }, o); }
+function mkAct(type, object, result, detail, next, tsOffset) {
+  return { id: uid("act"), ts: Date.now() - (tsOffset || 0), type, object, result, redacted: true, detail: detail || "", next: next || null };
+}
+function connsStandard() {
+  return [
+    mkConn({
+      id: "conn-galaxy", name: "星河网关 · Claude 专线", provider: "openai", baseUrl: "https://api.galaxy-llm.example.cn/v1",
+      protocol: "openai-chat", apiKeySaved: true, headers: [{ k: "X-Region", v: "cn-east-1" }],
+      models: [
+        mkModel({ id: "m-sonnet", modelId: "claude-sonnet-5", name: "Claude Sonnet 5", isDefault: true, ctx: 200000, maxOut: 64000, caps: { tool: true, vision: true, reason: true } }),
+        mkModel({ id: "m-haiku", modelId: "claude-haiku-4.5", name: "Claude Haiku 4.5", ctx: 200000, maxOut: 32000, caps: { tool: true, vision: true, reason: false } }),
+        mkModel({ id: "m-opus", modelId: "claude-opus-5", name: "Claude Opus 5", enabled: false, ctx: 200000, maxOut: 64000, caps: { tool: true, vision: true, reason: true } })
+      ]
+    }),
+    mkConn({
+      id: "conn-ollama", name: "本地 Ollama", provider: "local", baseUrl: "http://127.0.0.1:11434/v1",
+      protocol: "openai-chat", apiKeySaved: false,
+      models: [
+        mkModel({ id: "m-qwen", modelId: "qwen3-coder-32b", name: "Qwen3 Coder 32B", isDefault: true, ctx: 32768, maxOut: 8192, caps: { tool: true, vision: false, reason: false } }),
+        mkModel({ id: "m-r1", modelId: "deepseek-r1-14b", name: "DeepSeek R1 14B", enabled: false, ctx: 65536, maxOut: 8192, caps: { tool: false, vision: false, reason: true } })
+      ]
+    }),
+    mkConn({
+      id: "conn-or", name: "OpenRouter", provider: "openai", baseUrl: "https://openrouter.ai/api/v1",
+      protocol: "openai-responses", apiKeySaved: true,
+      models: [mkModel({ id: "m-gpt5", modelId: "openai/gpt-5.1", name: "GPT-5.1", isDefault: true, ctx: 400000, maxOut: 128000, caps: { tool: true, vision: true, reason: true } })]
+    })
+  ];
+}
+function clientsStandard() {
+  const t = Date.now() - 26 * 60e3;
+  return [
+    mkClient({ id: "vs-stable", kind: "vscode", label: "VS Code Stable", detail: "配置档案：默认", version: "1.95.2", account: { login: "octocat", trust: "high" }, config: "managed-current", capability: "auto", lastChecked: t }),
+    mkClient({ id: "vs-insiders", kind: "vscode", label: "VS Code Insiders", detail: "配置档案：工作", version: "1.96.0-insider", account: { login: "octocat", trust: "high" }, config: "managed-changed", capability: "auto", lastChecked: t }),
+    mkClient({ id: "cli", kind: "cli", label: "Copilot CLI", detail: "npm 全局安装", version: "0.9.4", account: { login: "octocat", trust: "medium" }, config: "not-configured", capability: "auto", lastChecked: t }),
+    mkClient({ id: "jb-idea", kind: "jetbrains", label: "IntelliJ IDEA", detail: "2025.2 · 插件 1.5.61（已审核）", plugin: "1.5.61", pluginReviewed: true, account: { login: "octocat", trust: "medium" }, config: "managed-current", capability: "auto", shareGroup: "jb-main", lastChecked: t }),
+    mkClient({ id: "jb-pycharm", kind: "jetbrains", label: "PyCharm", detail: "2025.2 · 插件 1.5.61（已审核）", plugin: "1.5.61", pluginReviewed: true, account: { login: "octocat", trust: "medium" }, config: "managed-current", capability: "auto", shareGroup: "jb-main", lastChecked: t }),
+    mkClient({ id: "jb-webstorm", kind: "jetbrains", label: "WebStorm", detail: "2025.1 · 插件 1.6.02（版本未审核）", plugin: "1.6.02", pluginReviewed: false, account: null, config: "not-configured", capability: "unsupported", lastChecked: t }),
+    mkClient({ id: "copilot-app", kind: "app", label: "Copilot App", detail: "桌面应用", version: "1.2.0", account: null, config: "not-configured", capability: "manual", lastChecked: t })
+  ];
+}
+const PRICES = {
+  version: "2026-09 目录", updatedDaysAgo: 6,
+  map: {
+    "claude-sonnet-5": { i: 3, o: 15, cr: 0.3, cw: 3.75 },
+    "claude-haiku-4.5": { i: 1, o: 5, cr: 0.1, cw: 1.25 },
+    "claude-opus-5": { i: 5, o: 25, cr: 0.5, cw: 6.25 },
+    "qwen3-coder-32b": { i: 0.2, o: 0.8, cr: 0.02, cw: 0.1 },
+    "deepseek-r1-14b": { i: 0.3, o: 1.2, cr: 0.03, cw: 0.15 },
+    "openai/gpt-5.1": { i: 5, o: 20, cr: 0.5, cw: 5 }
+  }
+};
+function usageRecordsFull() {
+  const rnd = mulberry32(20261011);
+  const recs = [];
+  const byokPairs = [
+    { client: "vs-stable", conn: "conn-galaxy", model: "claude-sonnet-5", conf: "explicit" },
+    { client: "vs-insiders", conn: "conn-galaxy", model: "claude-haiku-4.5", conf: "identity" },
+    { client: "cli", conn: "conn-galaxy", model: "claude-sonnet-5", conf: "identity" },
+    { client: "jb-idea", conn: "conn-ollama", model: "qwen3-coder-32b", conf: "explicit" }
+  ];
+  const officials = [
+    { client: "vs-stable", model: "gpt-5" },
+    { client: "vs-insiders", model: "gpt-5-codex" },
+    { client: "copilot-app", model: "gpt-4o" }
+  ];
+  for (let d = 13; d >= 0; d--) {
+    const dayStart = Date.now() - d * DAYS;
+    const n = 2 + Math.floor(rnd() * 4);
+    for (let i = 0; i < n; i++) {
+      const r = rnd();
+      const ts = dayStart - Math.floor(rnd() * 20 * 3600e3);
+      if (r < 0.58) {
+        const p = byokPairs[Math.floor(rnd() * byokPairs.length)];
+        const input = Math.floor(4e3 + rnd() * 90e3), out = Math.floor(1e3 + rnd() * 22e3);
+        recs.push({ id: uid("u"), ts, clientId: p.client, connId: p.conn, model: p.model, route: "byok", confidence: p.conf, requests: 1 + Math.floor(rnd() * 9), sessions: 1 + Math.floor(rnd() * 2), input, output: out, cacheRead: Math.floor(input * rnd() * 0.9), cacheWrite: Math.floor(input * rnd() * 0.3), quality: rnd() < 0.82 ? "complete" : "partial" });
+      } else if (r < 0.85) {
+        const p = officials[Math.floor(rnd() * officials.length)];
+        recs.push({ id: uid("u"), ts, clientId: p.client, connId: null, model: p.model, route: "official", confidence: "explicit", requests: 1 + Math.floor(rnd() * 6), sessions: 1, input: Math.floor(2e3 + rnd() * 40e3), output: Math.floor(800 + rnd() * 9e3), cacheRead: 0, cacheWrite: 0, quality: "complete" });
+      } else {
+        recs.push({ id: uid("u"), ts, clientId: ["vs-stable", "cli", "jb-idea"][Math.floor(rnd() * 3)], connId: null, model: rnd() < 0.5 ? "claude-sonnet-5" : "qwen3-coder-32b", route: "unknown", confidence: "unknown", requests: 1 + Math.floor(rnd() * 4), sessions: 1, input: null, output: null, cacheRead: null, cacheWrite: null, quality: "inferred" });
+      }
+    }
+  }
+  return recs.sort((a, b) => b.ts - a.ts);
+}
+function usageSourcesOk(recordCount) {
+  return {
+    official: { enabled: true, status: "available", plan: "Copilot Pro（个人版）", used: 128, total: 300, resetAt: "2026-11-01", models: ["GPT-5", "GPT-5-Codex", "Claude Sonnet 5", "Claude Opus 5", "GPT-4o"], updatedAt: Date.now() - 3 * 3600e3, note: "来自 VS Code 内置 Copilot 状态接口（只读）" },
+    billing: { enabled: true, status: "available", authorized: true, login: "octocat", period: "2026-10-01 ~ 2026-10-11", amount: 12.4, updatedAt: Date.now() - 5 * 3600e3, note: "GitHub 官方个人账单 API · 管理器独立授权" },
+    local: { enabled: true, status: "available", count: recordCount, range: "2026-09-28 ~ 2026-10-11", note: "从支持的本地来源导入 · 仅统计元数据" }
+  };
+}
+
+/* ---------------- 场景定义 ---------------- */
+const SCENARIOS = {
+  standard: {
+    name: "标准演示（日常使用中）",
+    build() {
+      return {
+        connections: connsStandard(),
+        clients: clientsStandard(),
+        accountTarget: "octocat",
+        draft: { connId: "conn-galaxy", modelIds: ["m-sonnet", "m-haiku"], targetIds: ["vs-stable", "cli", "jb-idea"] },
+        preview: null, run: null, lastRun: null,
+        resources: resourcesStandard(),
+        usage: { consent: true, records: usageRecordsFull(), sources: null, priceVersion: PRICES.version, priceUpdatedAt: Date.now() - 6 * DAYS },
+        githubAuth: { authorized: true, login: "octocat" },
+        recovery: { active: false },
+        loadErrors: {},
+        activity: seedActivityStandard(),
+        resPublish: null
+      };
+    }
+  },
+  empty: {
+    name: "空状态（首次使用）",
+    build() {
+      const t = Date.now() - 8 * 60e3;
+      return {
+        connections: [],
+        clients: [
+          mkClient({ id: "vs-stable", kind: "vscode", label: "VS Code Stable", detail: "配置档案：默认", version: "1.95.2", account: { login: "octocat", trust: "medium" }, config: "not-configured", lastChecked: t }),
+          mkClient({ id: "vs-insiders", kind: "vscode", label: "VS Code Insiders", detail: "配置档案：—", installed: false, notInstalledNote: "未检测到安装", lastChecked: t }),
+          mkClient({ id: "cli", kind: "cli", label: "Copilot CLI", detail: "npm 全局安装", installed: false, notInstalledNote: "未检测到可执行文件", lastChecked: t }),
+          mkClient({ id: "jb-idea", kind: "jetbrains", label: "IntelliJ IDEA", detail: "2025.2 · 插件 1.5.61（已审核）", plugin: "1.5.61", pluginReviewed: true, account: null, config: "not-configured", shareGroup: "jb-main", lastChecked: t }),
+          mkClient({ id: "jb-pycharm", kind: "jetbrains", label: "PyCharm", detail: "未安装", installed: false, notInstalledNote: "未检测到安装（JetBrains 为可选集成）", shareGroup: "jb-main", lastChecked: t }),
+          mkClient({ id: "jb-webstorm", kind: "jetbrains", label: "WebStorm", detail: "未安装", installed: false, notInstalledNote: "未检测到安装（JetBrains 为可选集成）", lastChecked: t }),
+          mkClient({ id: "copilot-app", kind: "app", label: "Copilot App", detail: "桌面应用", installed: false, notInstalledNote: "未检测到安装", capability: "manual", lastChecked: t })
+        ],
+        accountTarget: null,
+        draft: { connId: null, modelIds: [], targetIds: [] },
+        preview: null, run: null, lastRun: null,
+        resources: { mcp: [], skills: [], instructions: [] },
+        usage: { consent: false, records: [], sources: { official: { enabled: true, status: "missing", note: "等待首次刷新" }, billing: { enabled: true, status: "unauthorized", authorized: false, note: "需要管理器独立授权" }, local: { enabled: true, status: "successful-empty", count: 0, range: null, note: "暂无导入记录" } }, priceVersion: PRICES.version, priceUpdatedAt: Date.now() - 6 * DAYS },
+        githubAuth: { authorized: false },
+        recovery: { active: false },
+        loadErrors: {},
+        activity: [mkAct("detect", "首次启动 · 环境检测", "info", "发现 2 个已安装组件、5 个缺失组件；尚未配置任何连接。", { label: "添加第一个连接", page: "connections", action: "new-conn" }, 8 * 60e3)],
+        resPublish: null
+      };
+    }
+  },
+  "load-failure": {
+    name: "部分数据加载失败",
+    build() {
+      const s = SCENARIOS.standard.build();
+      s.usage.sources = usageSourcesOk(s.usage.records.length);
+      s.usage.sources.official = { enabled: true, status: "network-error", note: "请求 Copilot 状态接口超时（模拟）", updatedAt: Date.now() - 26 * 3600e3 };
+      s.usage.sources.billing = { enabled: true, status: "network-error", authorized: true, login: "octocat", note: "GitHub API 返回 502（模拟）", updatedAt: Date.now() - 26 * 3600e3 };
+      const ws = s.clients.find(c => c.id === "jb-webstorm");
+      ws.detectError = "读取配置目录被拒绝（模拟）：C:\\Users\\octocat\\.WebStorm2025.1";
+      s.loadErrors = { usage: true };
+      s.activity.unshift(mkAct("usage", "刷新官方数据", "failed", "Copilot 状态接口超时；GitHub 账单 API 返回 502。已保留上次成功数据，未用零值覆盖。", { label: "重试刷新", page: "usage", action: "refresh-official" }, 40 * 60e3));
+      return s;
+    }
+  },
+  "partial-success": {
+    name: "上次发布部分成功",
+    build() {
+      const s = SCENARIOS.standard.build();
+      const cli = s.clients.find(c => c.id === "cli");
+      cli.config = "not-configured";
+      s.lastRun = {
+        id: "run-1011-0902", at: Date.now() - 2.2 * 3600e3, connName: "星河网关 · Claude 专线", status: "partial",
+        items: [
+          { clientId: "vs-stable", status: "applied", detail: "写入 settings.json · 3 处变更" },
+          { clientId: "jb-idea", status: "applied", detail: "写入 github-copilot.xml（共享） · 需重启 IDE", shared: ["jb-pycharm"] },
+          { clientId: "jb-pycharm", status: "applied", detail: "随共享配置一并生效 · 需重启 IDE", shared: ["jb-idea"] },
+          { clientId: "cli", status: "failed", detail: "写入 ~/.copilot/config.json 失败：文件被另一进程占用（EBUSY，模拟）", recovery: { txId: "tx-20261011-0902", backup: "~/.copilot/config.json.bak-20261011-090214" } },
+          { clientId: "copilot-app", status: "manual", detail: "BYOK 为手动边界：已生成手动配置指引，未执行写入" }
+        ],
+        recovery: { txId: "tx-20261011-0902", backups: [{ client: "Copilot CLI", path: "~/.copilot/config.json.bak-20261011-090214" }], log: "%APPDATA%\\CopilotByokManager\\logs\\tx-20261011-0902.jsonl" }
+      };
+      s.activity.unshift(
+        mkAct("publish", "发布配置 → 5 个客户端", "partial", "3 个已写入；Copilot CLI 写入失败（文件占用）；Copilot App 需手动完成。API Key 未出现在任何日志与预览中。", { label: "查看结果与恢复", page: "workbench", action: "open-lastrun" }, 2.2 * 3600e3),
+      );
+      return s;
+    }
+  },
+  "stale-preview": {
+    name: "预览已过期",
+    build() {
+      const s = SCENARIOS.standard.build();
+      s.draft = { connId: "conn-galaxy", modelIds: ["m-sonnet"], targetIds: ["vs-stable", "cli"] };
+      const conn = s.connections.find(c => c.id === "conn-galaxy");
+      s.preview = buildPreviewFromDraft(s, Date.now() - 45 * 60e3);
+      conn.updatedAt = Date.now() - 5 * 60e3; // 预览之后连接被编辑
+      conn.models[0].maxOut = 32768;
+      s.activity.unshift(mkAct("settings", "编辑连接「星河网关 · Claude 专线」", "info", "修改了模型 claude-sonnet-5 的输出限制。保存连接不等于发布配置：此前生成的部署预览已失效。", { label: "回到工作台重新预览", page: "workbench" }, 5 * 60e3));
+      return s;
+    }
+  },
+  "account-conflict": {
+    name: "账号冲突",
+    build() {
+      const s = SCENARIOS.standard.build();
+      const cli = s.clients.find(c => c.id === "cli");
+      cli.account = { login: "dev-alt-02", trust: "medium" };
+      const ws = s.clients.find(c => c.id === "jb-webstorm");
+      ws.account = { login: "dev-alt-02", trust: "low" };
+      s.activity.unshift(mkAct("login", "账号一致性检查", "failed", "Copilot CLI、WebStorm 登录为 dev-alt-02，与目标账号 octocat 不一致。不会自动切换或退出任何账号，请按引导完成官方登录流程。", { label: "去协调账号", page: "clients", action: "goto-accounts" }, 18 * 60e3));
+      return s;
+    }
+  },
+  interrupted: {
+    name: "发布中断待恢复",
+    build() {
+      const s = SCENARIOS.standard.build();
+      s.lastRun = {
+        id: "run-1011-0917", at: Date.now() - 38 * 60e3, connName: "星河网关 · Claude 专线", status: "interrupted",
+        txId: "tx-20261011-0917",
+        items: [
+          { clientId: "vs-stable", status: "applied", detail: "写入 settings.json · 3 处变更（已完成，可回滚）" },
+          { clientId: "cli", status: "interrupted", detail: "写入过程中被取消：config.json 处于写入一半的安全挂起状态，未生效" },
+          { clientId: "jb-idea", status: "not-run", detail: "未执行" },
+          { clientId: "jb-pycharm", status: "not-run", detail: "未执行（共享配置随 IDEA 项）" }
+        ],
+        recovery: {
+          txId: "tx-20261011-0917",
+          backups: [{ client: "VS Code Stable", path: "%APPDATA%\\Code\\User\\settings.json.bak-20261011-091655" }],
+          log: "%APPDATA%\\CopilotByokManager\\logs\\tx-20261011-0917.jsonl"
+        }
+      };
+      s.activity.unshift(mkAct("recovery", "发布事务 tx-20261011-0917", "interrupted", "发布在 Copilot CLI 写入阶段中断。已完成 1 项（可回滚），1 项挂起未生效，2 项未执行。不会自动重试或覆盖，请选择恢复方式。", { label: "查看恢复选项", page: "workbench", action: "open-recovery" }, 38 * 60e3));
+      return s;
+    }
+  }
+};
+function resourcesStandard() {
+  return {
+    mcp: [
+      { id: "mcp-ctx7", name: "context7", type: "http", enabled: true, content: '{\n  "type": "http",\n  "url": "https://mcp.context7.example.com/mcp"\n}', note: "远程 HTTP 型，可发布到支持的公开客户端路径" },
+      { id: "mcp-localfs", name: "local-fs（本地命令型）", type: "command", enabled: true, content: '{\n  "type": "stdio",\n  "command": "node",\n  "args": ["C:/tools/mcp-fs/index.js"]\n}', note: "本地命令型 MCP 依赖本机路径与配套脚本，仍需手动处理" }
+    ],
+    skills: [{ id: "sk-review", name: "code-review-zh", enabled: true, content: "# 代码评审（中文）\n\n- 先列出正确性问题，再给风格建议\n- 引用文件与行号\n- 不修改无关代码", note: "可复用技能说明" }],
+    instructions: [{ id: "ins-user", name: "个人指令（用户级）", enabled: true, content: "始终使用简体中文回答。\n提交信息遵循 Conventional Commits。", note: "用户级指令，发布时保留客户端原有内容" }]
+  };
+}
+function seedActivityStandard() {
+  return [
+    mkAct("detect", "环境检测完成", "success", "发现 7 个客户端实例：VS Code ×2、Copilot CLI、JetBrains ×3、Copilot App。", null, 26 * 60e3),
+    mkAct("usage", "导入本地用量记录", "success", "从 Copilot CLI 本地日志导入 84 条统计记录。仅保存元数据（模型、Token、时间），不包含提示词或代码内容。", { label: "查看用量", page: "usage" }, 5 * 3600e3),
+    mkAct("publish", "发布配置 → VS Code Stable / IDEA / PyCharm", "success", "连接「星河网关 · Claude 专线」· 2 个模型。IDEA 与 PyCharm 共享配置文件，已提示重启 IDE。", { label: "查看结果", page: "workbench", action: "open-lastrun" }, 26 * 3600e3),
+    mkAct("login", "协调登录 · Copilot CLI", "success", "按官方流程完成登录（octocat）。管理器不复制凭据，仅引导与重新检查。", null, 2 * DAYS),
+    mkAct("resource", "发布共享资源 · MCP「context7」", "partial", "已写入 VS Code Stable 与 Copilot CLI 的公开配置路径；JetBrains 与 Copilot App 需手动处理。保留了客户端原有 MCP 条目。", { label: "查看资源", page: "resources" }, 2.4 * DAYS),
+    mkAct("publish", "发布配置 → Copilot App", "manual", "App 的 BYOK 为手动边界：已生成手动配置指引，未显示为自动完成。", null, 3 * DAYS),
+    mkAct("auth", "GitHub 独立授权（账单/用量）", "success", "已授权管理器读取个人用量与账单（只读），与各客户端登录相互独立。", null, 4 * DAYS)
+  ];
+}
+
+/* ---------------- 预览指纹与失效判定 ---------------- */
+function computeFingerprint(st) {
+  const d = st.draft;
+  const conn = st.connections.find(c => c.id === d.connId);
+  const targets = d.targetIds.slice().sort().map(id => {
+    const c = st.clients.find(x => x.id === id);
+    return id + ":" + (c ? c.config : "gone");
+  });
+  return JSON.stringify({
+    c: d.connId, rev: conn ? conn.updatedAt : 0,
+    m: d.modelIds.slice().sort(), t: targets
+  });
+}
+function previewStale(st) {
+  if (!st.preview) return false;
+  return st.preview.fingerprint !== computeFingerprint(st);
+}
+/* 由当前草稿生成预览项（生成时快照） */
+function buildPreviewFromDraft(st, atTime) {
+  const d = st.draft;
+  const conn = st.connections.find(c => c.id === d.connId);
+  const models = conn ? conn.models.filter(m => d.modelIds.includes(m.id)) : [];
+  const items = d.targetIds.map(tid => {
+    const c = st.clients.find(x => x.id === tid);
+    if (!c) return null;
+    const item = { clientId: c.id, capability: c.capability, changes: [], warnings: [], external: c.config === "external-modified", allowBackupWrite: false, supported: true };
+    const mNames = models.map(m => m.name || m.modelId).join("、");
+    if (!c.installed) {
+      item.supported = false;
+      item.warnings.push("客户端未安装，无法写入。可先在「客户端与账号」中预览安装。");
+      return item;
+    }
+    if (c.capability === "unsupported") {
+      item.supported = false;
+      item.warnings.push("插件版本 " + (c.plugin || "未知") + " 尚未审核，不支持自动写入，将跳过。可手动配置或等待审核。");
+      return item;
+    }
+    if (c.capability === "manual") {
+      item.changes.push("不执行任何写入：生成手动配置指引（BYOK 为 App 的手动边界）");
+      item.warnings.push("需要你在 Copilot App 设置中手动填写连接信息，完成后回到管理器标记。");
+      return item;
+    }
+    if (c.kind === "vscode") {
+      item.changes.push("更新 " + c.label + " 的用户 settings.json：写入连接地址、协议与 " + models.length + " 个模型（" + mNames + "）");
+      item.changes.push("API Key 写入系统密钥库并仅保存引用，不以明文进入 settings.json");
+      item.changes.push("设置默认模型：" + (models.find(m => m.isDefault) || models[0] || { name: "—" }).name);
+    } else if (c.kind === "cli") {
+      item.changes.push("写入 ~/.copilot/config.json：连接、协议与默认模型（新会话生效）");
+      item.changes.push("API Key 写入系统密钥库并保存引用");
+    } else if (c.kind === "jetbrains") {
+      item.changes.push("写入 github-copilot.xml：连接与 " + models.length + " 个模型");
+      const peers = st.clients.filter(x => x.shareGroup && x.shareGroup === c.shareGroup && x.id !== c.id);
+      if (peers.length) item.warnings.push("共享配置：与 " + peers.map(p => p.label).join("、") + " 共用同一个 github-copilot.xml，写入将同时影响这些 IDE。");
+      item.warnings.push("写入后需关闭并重新打开 IDE，并在模型选择器中刷新。");
+    }
+    if (item.external) item.warnings.push("检测到该配置在管理器之外被修改。默认跳过、绝不直接覆盖；如确认要以管理器内容为准，请逐项勾选「备份后覆盖」。");
+    return item;
+  }).filter(Boolean);
+  return { id: uid("pv"), at: atTime || Date.now(), fingerprint: computeFingerprint(st), connName: conn ? conn.name : "—", connId: d.connId, modelIds: d.modelIds.slice(), items };
+}
+
+/* ---------------- 徽章与通用渲染 ---------------- */
+function badge(cls, text, dot) { return `<span class="badge ${cls}">${dot === false ? "" : '<span class="dot"></span>'}${esc(text)}</span>`; }
+function configBadge(c) { const t = CONFIG_TXT[c.config] || ["b-neutral", c.config]; return badge(t[0], t[1]); }
+function capBadge(cap) { const t = CAP_TXT[cap]; return badge(t[0], t[1]); }
+function resultBadge(r) { const t = RESULT_TXT[r] || ["b-neutral", r]; return badge(t[0], t[1]); }
+function accountBadge(c) {
+  if (!c.account) return badge("b-neutral", "未登录");
+  const t = { high: "b-ok", medium: "b-info", low: "b-warn" }[c.account.trust] || "b-neutral";
+  const tt = { high: "高可信", medium: "中可信", low: "低可信" }[c.account.trust] || "未知";
+  return badge(t, "@" + c.account.login + " · " + tt);
+}
+function routeBadge(r, conf) {
+  const t = ROUTE_TXT[r] || ROUTE_TXT.unknown;
+  const confShort = { explicit: "高置信", identity: "中置信", unknown: "低置信" }[conf] || "";
+  return badge(t[1], t[0]) + (confShort ? ` <span class="tiny faint" title="路线推断可信程度：${esc(CONF_TXT[conf] || "")}">${confShort}</span>` : "");
+}
+function kindIcon(kind, size) { return icon((KIND[kind] || {}).icon || "app", size || 16); }
+function clientName(st, id) { const c = st.clients.find(x => x.id === id); return c ? c.label : id; }
+function connName(st, id) { const c = st.connections.find(x => x.id === id); return c ? c.name : "—"; }
+
+/* ---------------- 全局状态与视图状态 ---------------- */
+let state = null;
+let ui = null;
+function defaultUi() {
+  return {
+    connEditId: null, connEditor: null, resTab: "mcp", sysTab: "activity",
+    actFilter: "all", usageFilters: { range: "7d", client: "all", conn: "all", model: "all", route: "all" },
+    modal: null, scanning: false, installing: null, loginGuide: null, fetchModels: null,
+    runSim: null, expandedAct: {}, resEditor: {}, pendingDelete: null
+  };
+}
+function loadScenario(key) {
+  state = SCENARIOS[key].build();
+  state.scenario = key;
+  if (!state.usage.sources) state.usage.sources = usageSourcesOk(state.usage.records.length);
+  ui = defaultUi();
+  if (!state.page) state.page = "workbench";
+  const firstConn = state.connections[0];
+  ui.connEditId = firstConn ? firstConn.id : null;
+  render();
+}
+function addAct(type, object, result, detail, next) {
+  state.activity.unshift(mkAct(type, object, result, detail, next, 0));
+}
+
+/* ---------------- 渲染总控 ---------------- */
+const PAGES = [
+  { id: "workbench", name: "工作台", icon: "home" },
+  { id: "connections", name: "连接与模型", icon: "link" },
+  { id: "clients", name: "客户端与账号", icon: "monitor" },
+  { id: "resources", name: "共享资源", icon: "layers" },
+  { id: "usage", name: "用量与费用", icon: "chart" },
+  { id: "system", name: "活动与设置", icon: "sliders" }
+];
+function navHints() {
+  const h = {};
+  h.connections = state.connections.length || "";
+  let attn = 0;
+  state.clients.forEach(c => {
+    if (!c.installed) attn++;
+    else if (c.config === "external-modified" || c.config === "managed-changed" || c.detectError) attn++;
+  });
+  if (accountStatus().kind === "conflict") attn++;
+  h.clients = attn || "";
+  if (previewStale(state) || (state.lastRun && (state.lastRun.status === "interrupted" || state.lastRun.status === "partial"))) h.workbench = "!";
+  return h;
+}
+function render() {
+  $("#demoTag").innerHTML = icon("warn", 14) + " 浏览器演示模式";
+  const sel = $("#scenarioSel");
+  sel.innerHTML = Object.keys(SCENARIOS).map(k => `<option value="${k}" ${k === state.scenario ? "selected" : ""}>${esc(SCENARIOS[k].name)}</option>`).join("");
+  const hints = navHints();
+  $("#nav").innerHTML = PAGES.map(p => `
+    <button class="nav-item ${state.page === p.id ? "active" : ""}" data-action="nav" data-page="${p.id}" title="${esc(p.name)}">
+      ${icon(p.icon, 17)}<span>${esc(p.name)}</span>${hints[p.id] ? `<span class="nav-hint">${hints[p.id]}</span>` : ""}
+    </button>`).join("");
+  $("#logoMark").innerHTML = icon("bolt", 17);
+  $("#globalBanner").innerHTML = renderGlobalBanner();
+  const fn = { workbench: renderWorkbench, connections: renderConnections, clients: renderClients, resources: renderResources, usage: renderUsage, system: renderSystem }[state.page];
+  $("#page").innerHTML = fn();
+  if (ui.modal) renderModal(); else { $("#overlay").classList.remove("open"); $("#modalBox").innerHTML = ""; }
+}
+function renderGlobalBanner() {
+  let out = "";
+  if (state.recovery.active) {
+    out += `<div style="padding:14px 26px 0"><div class="recovery-banner">${icon("lock", 20)}<div class="grow"><b>只读恢复模式</b> · 检测到本地数据损坏（模拟）。已停止一切写入，防止继续破坏。${esc(state.recovery.reason || "")}</div><button class="btn btn-sm btn-danger" data-action="restore-backup">从备份恢复</button></div></div>`;
+  }
+  return out;
+}
+function pageHead(title, sub, actions) {
+  return `<div class="page-head"><div><div class="page-title">${esc(title)}</div>${sub ? `<div class="page-sub">${sub}</div>` : ""}</div><div class="page-actions">${actions || ""}</div></div>`;
+}
+
+/* ---------------- 模态框 ---------------- */
+function openModal(name, data) { ui.modal = Object.assign({ name }, data || {}); renderModal(); }
+function closeModal() { ui.modal = null; ui.runSim = null; render(); }
+function renderModal() {
+  const m = ui.modal;
+  if (!m) { $("#overlay").classList.remove("open"); return; }
+  const builders = {
+    preview: modalPreview, run: modalRun, lastrun: modalLastRun, recovery: modalRecovery,
+    install: modalInstall, loginGuide: modalLoginGuide, deleteConn: modalDeleteConn,
+    modelEdit: modalModelEdit, help: modalHelp, confirm: modalConfirm, resPreview: modalResPreview,
+    manualGuide: modalManualGuide, clearUsage: modalClearUsage, corrupt: modalCorrupt
+  };
+  const b = builders[m.name];
+  $("#modalBox").innerHTML = b ? b(m) : "";
+  $("#modalBox").className = "modal" + (m.size === "lg" ? " modal-lg" : m.size === "sm" ? " modal-sm" : "");
+  $("#overlay").classList.add("open");
+}
+function modalShell(title, body, foot, iconName) {
+  return `<div class="modal-head">${iconName ? `<span style="color:var(--accent);display:inline-flex">${icon(iconName, 18)}</span>` : ""}<div class="modal-title">${esc(title)}</div><span class="right"></span><button class="modal-close" data-action="close-modal" aria-label="关闭">✕</button></div>
+  <div class="modal-body">${body}</div>${foot ? `<div class="modal-foot">${foot}</div>` : ""}`;
+}
+
+/* ---------------- 账号一致性 ---------------- */
+function accountStatus() {
+  const seen = {};
+  state.clients.forEach(c => { if (c.installed && c.account) seen[c.account.login] = true; });
+  const logins = Object.keys(seen);
+  if (!logins.length) return { kind: "none", logins };
+  if (logins.length > 1) return { kind: "conflict", logins };
+  if (state.accountTarget && logins[0] !== state.accountTarget) return { kind: "conflict", logins };
+  const lowTrust = state.clients.some(c => c.account && c.account.trust === "low");
+  if (lowTrust) return { kind: "confirm", logins };
+  return { kind: "consistent", logins };
+}
+
+/* ================================================================
+   页面：工作台（核心发布流程）
+   ================================================================ */
+function nextSteps() {
+  const s = [];
+  if (state.lastRun && state.lastRun.status === "interrupted") s.push({ icon: "warn", cls: "a-err", text: "上一次发布中断，存在未完成的写入事务。不会自动重试，请显式选择恢复方式。", btn: { label: "查看恢复选项", action: "open-recovery" }, danger: true });
+  if (!state.connections.length) s.push({ icon: "link", text: "还没有任何连接。添加一套模型服务配置（地址、API Key、模型）后，即可发布到各客户端。", btn: { label: "添加第一个连接", page: "connections", action: "new-conn" }, primary: true });
+  const missing = state.clients.filter(c => !c.installed);
+  if (missing.length && state.connections.length) s.push({ icon: "download", text: `${missing.length} 个组件未安装（${missing.slice(0, 3).map(c => c.label).join("、")}${missing.length > 3 ? " 等" : ""}）。安装完成后会重新检测，而不是仅凭安装程序退出判定成功。`, btn: { label: "预览安装缺失组件", page: "clients", action: "install-all" } });
+  const acc = accountStatus();
+  if (acc.kind === "conflict") s.push({ icon: "users", text: `各客户端登录的 GitHub 账号不一致（${acc.logins.map(l => "@" + l).join(" / ")}）。协调官方登录流程，不会复制凭据或强制退出。`, btn: { label: "协调账号", page: "clients", action: "goto-accounts" }, danger: true });
+  else if (acc.kind === "confirm") s.push({ icon: "users", text: "部分账号来源可信度低，建议重新检查确认。", btn: { label: "重新检查账号", page: "clients", action: "recheck-accounts" } });
+  const ext = state.clients.filter(c => c.config === "external-modified");
+  if (ext.length) s.push({ icon: "shield", text: `${ext.map(c => c.label).join("、")} 的配置在管理器之外被修改。发布时默认跳过、绝不直接覆盖。`, btn: { label: "查看", page: "clients" } });
+  const changed = state.clients.filter(c => c.config === "managed-changed");
+  if (changed.length) s.push({ icon: "refresh", text: `${changed.map(c => c.label).join("、")} 的配置已变化（连接更新后未重新发布）。`, btn: { label: "重新发布", action: "focus-deploy" }, primary: !s.some(x => x.primary) });
+  const unconf = state.clients.filter(c => c.installed && c.config === "not-configured" && c.capability === "auto");
+  if (unconf.length && state.connections.length) s.push({ icon: "send", text: `${unconf.map(c => c.label).join("、")} 支持自动写入但尚未配置，可作为发布目标。`, btn: { label: "选择目标客户端", action: "focus-deploy" } });
+  if (previewStale(state)) s.push({ icon: "clock", text: "连接或目标在生成预览后被修改，部署预览已失效，需要重新生成。", btn: { label: "重新生成预览", action: "gen-preview" } });
+  if (!state.usage.consent) s.push({ icon: "chart", text: "本地用量采集未开启。开启后仅保存统计元数据，不保存提示词、回答或代码内容。", btn: { label: "隐私与用量设置", page: "system", action: "sys-settings" } });
+  if (!state.githubAuth.authorized) s.push({ icon: "key", text: "读取 GitHub 个人账单 / 用量需要管理器的独立授权（可选），与各客户端登录无关，也不是配置 BYOK 的前提。", btn: { label: "了解独立授权", page: "system", action: "sys-settings" } });
+  return s.slice(0, 5);
+}
+function renderWorkbench() {
+  const steps = nextSteps();
+  const acc = accountStatus();
+  const lr = state.lastRun;
+  return pageHead("工作台", "日常核心流程：选择连接 → 选择目标客户端 → 预览 → 确认发布 → 查看结果与待验证事项。",
+    `<button class="btn" data-action="rescan" ${ui.scanning ? "disabled" : ""}>${ui.scanning ? '<span class="spin"></span> 检测中（模拟）…' : icon("refresh", 15) + " 刷新检测"}</button>`)
+  + (lr && lr.status === "interrupted" ? `<div class="recovery-banner mb16">${icon("warn", 20)}<div class="grow"><b>发布中断</b> · 事务 <span class="mono">${esc(lr.txId || lr.id)}</span> 存在挂起写入。已完成的项可回滚，未完成的项不会自动执行。</div><button class="btn btn-sm btn-danger" data-action="open-recovery">恢复选项</button></div>` : "")
+  + (steps.length ? `<div class="card mb16"><div class="card-head"><span style="color:var(--accent)">${icon("bolt", 16)}</span><div class="card-title">下一步建议</div></div><div class="card-body" style="padding-top:12px">` +
+      steps.map(s => `<div class="next-item"><span style="color:${s.danger ? "var(--err)" : "var(--accent)"}">${icon(s.icon, 16)}</span><span class="grow small">${s.text}</span><button class="btn btn-sm ${s.primary ? "btn-primary" : ""}" data-action="next-go" data-page="${s.btn.page || ""}" data-do="${s.btn.action || ""}">${esc(s.btn.label)}</button></div>`).join("") + `</div></div>` : "")
+  + renderDeployCard()
+  + `<div class="grid grid-2 mt16">`
+  + `<div class="card"><div class="card-head"><span style="color:var(--accent)">${icon("monitor", 16)}</span><div class="card-title">客户端状态</div><span class="right"></span><button class="btn btn-xs" data-action="nav" data-page="clients">管理</button></div><div class="card-body" style="padding-top:10px">${state.clients.map(c => renderClientRowCompact(c)).join("") || `<div class="empty"><div class="empty-title">未检测到客户端</div></div>`}</div></div>`
+  + `<div class="card"><div class="card-head"><span style="color:var(--accent)">${icon("list", 16)}</span><div class="card-title">最近活动</div><span class="right"></span><button class="btn btn-xs" data-action="nav" data-page="system">全部</button></div><div style="max-height:420px" class="scroll">${state.activity.slice(0, 5).map(a => renderActItem(a, true)).join("")}</div></div>`
+  + `</div>`;
+}
+function renderClientRowCompact(c) {
+  const k = KIND[c.kind];
+  return `<div class="row g12" style="padding:7px 0;border-bottom:1px solid var(--border)">
+    <span class="target-ic" style="width:30px;height:30px">${kindIcon(c.kind, 15)}</span>
+    <div class="grow"><div style="font-weight:600;font-size:13px">${esc(c.label)} ${c.installed ? "" : badge("b-neutral", "未安装")}</div>
+    <div class="tiny muted">${esc(c.detail)}</div></div>
+    ${c.installed ? configBadge(c) + accountBadge(c) : `<span class="tiny faint">${esc(c.notInstalledNote || "")}</span>`}
+  </div>`;
+}
+function renderDeployCard() {
+  const d = state.draft;
+  const conn = state.connections.find(c => c.id === d.connId);
+  const pv = state.preview, stale = previewStale(state);
+  const step1Done = !!conn && d.modelIds.length > 0, step2Done = d.targetIds.length > 0;
+  let stepState = 1;
+  if (step1Done) stepState = 2;
+  if (step1Done && step2Done) stepState = 3;
+  const stepsHtml = ["选择连接与模型", "选择目标客户端", "预览与确认", "结果"].map((t, i) => {
+    const n = i + 1;
+    const cls = n < stepState ? "done" : n === stepState ? "active" : "";
+    return `<div class="step ${cls}"><div class="step-num">${n < stepState ? "✓" : n}</div><div class="step-label">${t}</div></div>${n < 4 ? '<div class="step-bar"></div>' : ""}`;
+  }).join("");
+  let body = "";
+  if (!state.connections.length) {
+    body = `<div class="empty"><div class="empty-ic">${icon("link", 24)}</div><div class="empty-title">先添加一个连接</div><div class="empty-sub">连接是一套模型服务配置：接口地址、API Key、协议与模型列表。只维护一份，再发布到各客户端。</div><button class="btn btn-primary" data-action="new-conn">${icon("plus", 14)} 新建连接</button></div>`;
+  } else {
+    body = `<div class="grid" style="grid-template-columns:minmax(0,5fr) minmax(0,7fr)">
+      <div>
+        <div class="label">第 1 步 · 连接与模型</div>
+        <div class="col g6" style="max-height:300px;overflow-y:auto;padding-right:4px">${state.connections.map(c => renderConnPick(c, d.connId)).join("")}</div>
+        <button class="btn btn-sm btn-ghost mt8" data-action="new-conn">${icon("plus", 13)} 新建连接</button>
+      </div>
+      <div>
+        <div class="label">发布模型（点击切换，★ 为默认模型）</div>
+        <div class="row wrap g6" style="min-height:40px;align-content:flex-start">${conn ? conn.models.map(m => renderModelChip(m, d.modelIds.includes(m.id))).join("") : '<span class="muted small">先选择左侧连接</span>'}</div>
+        <div class="label mt16">第 2 步 · 目标客户端（自动 / 手动 / 不支持分别标注）</div>
+        <div style="max-height:260px;overflow-y:auto;padding-right:4px">${state.clients.map(c => renderTargetRow(c, d.targetIds.includes(c.id))).join("")}</div>
+      </div>
+    </div>`;
+  }
+  const foot = state.connections.length ? `
+    <div class="row wrap g12">
+      <div class="col g4 grow">
+        <div class="row g8">
+          <button class="btn btn-primary btn-lg" data-action="gen-preview" ${step1Done && step2Done ? "" : "disabled"}>${icon("eye", 15)} 生成部署预览</button>
+          ${pv ? `<button class="btn" data-action="open-preview">${icon("file", 14)} 查看预览（${ago(pv.at)}）</button>` : ""}
+        </div>
+        ${pv ? (stale
+          ? `<div class="alert a-err mt8" style="padding:7px 11px"><span class="alert-ic">${icon("warn", 14)}</span><span><b>预览已失效</b>：连接、模型或目标在 ${fmtTime(pv.at)} 之后被修改，请重新生成后再确认发布。</span></div>`
+          : `<div class="alert a-ok mt8" style="padding:7px 11px"><span class="alert-ic">${icon("check", 14)}</span><span>预览有效 · 生成于 ${fmtTime(pv.at)} · 可在预览中确认发布。修改任何连接或目标都会使其失效。</span></div>`)
+        : `<div class="hint">预览会说明改动对象、影响范围、哪些可自动执行、哪些需要手动处理；确认前不会写入任何内容。</div>`}
+      </div>
+      ${state.lastRun && state.lastRun.status !== "interrupted" ? `<div class="col g4" style="min-width:240px"><div class="label">上次发布 · ${ago(state.lastRun.at)}</div><div class="row g8">${resultBadge(state.lastRun.status === "done" ? "success" : state.lastRun.status)}<span class="small muted">${esc(state.lastRun.connName)} → ${state.lastRun.items.length} 个目标</span><button class="btn btn-xs" data-action="open-lastrun">查看结果</button></div></div>` : ""}
+    </div>` : "";
+  return `<div class="card" id="deployCard"><div class="card-head"><span style="color:var(--accent)">${icon("send", 16)}</span><div class="card-title">发布配置</div><span class="right"></span><span class="tiny muted">保存连接 ≠ 发布配置 · 确认前不写入</span></div>
+  <div class="card-body"><div class="steps">${stepsHtml}</div>${body}</div>${foot ? `<div class="card-foot">${foot}</div>` : ""}</div>`;
+}
+function renderConnPick(c, activeId) {
+  const def = c.models.find(m => m.isDefault) || c.models[0];
+  return `<button class="pick ${c.id === activeId ? "active" : ""}" data-action="draft-conn" data-id="${c.id}">
+    <div class="row between"><span class="pick-name">${esc(c.name)}</span>${c.apiKeySaved ? badge("b-ok", "Key 已保存") : badge("b-neutral", "无密钥")}</div>
+    <div class="pick-meta">${esc(PROVIDERS[c.provider])} · <span class="mono">${esc(c.baseUrl)}</span></div>
+    <div class="pick-meta">${c.models.filter(m => m.enabled).length}/${c.models.length} 个模型启用 · 默认 ${def ? esc(def.name) : "—"}</div>
+  </button>`;
+}
+function renderModelChip(m, on) {
+  const caps = [m.caps.tool ? "工具" : "", m.caps.vision ? "视觉" : "", m.caps.reason ? "推理" : ""].filter(Boolean).join("/");
+  return `<button class="chip ${on ? "on" : ""} ${m.enabled ? "" : "disabled"}" data-action="draft-model" data-id="${m.id}" ${m.enabled ? "" : "disabled"} title="${esc(m.modelId)}${caps ? " · " + caps : ""}${m.enabled ? "" : "（未启用，需先在连接中启用）"}">
+    ${m.isDefault ? '<span class="star">★</span>' : ""}${esc(m.name)}${m.ctx ? ` <span class="tiny faint">${fmtTok(m.ctx)}</span>` : ""}</button>`;
+}
+function renderTargetRow(c, on) {
+  const sub = [];
+  if (c.config === "external-modified") sub.push(`<span class="tiny" style="color:var(--err)">外部已修改：默认跳过，不覆盖</span>`);
+  if (c.shareGroup) { const peers = state.clients.filter(x => x.shareGroup === c.shareGroup && x.id !== c.id); if (peers.length) sub.push(`<span class="tiny" style="color:var(--warn)">与 ${esc(peers.map(p => p.label).join("、"))} 共享配置文件</span>`); }
+  return `<label class="target-row ${c.installed ? "" : "disabled"}">
+    <input type="checkbox" data-action-change="draft-target" data-id="${c.id}" ${on ? "checked" : ""} ${c.installed ? "" : "disabled"}>
+    <span class="target-ic">${kindIcon(c.kind, 16)}</span>
+    <div class="grow"><div style="font-weight:600;font-size:13px">${esc(c.label)}</div>
+      <div class="tiny muted">${esc(c.detail)}</div>${sub.join("")}</div>
+    ${c.installed ? capBadge(c.capability) + accountBadge(c) + configBadge(c) : badge("b-neutral", "未安装")}
+  </label>`;
+}
+
+/* ---------------- 部署预览模态 ---------------- */
+function modalPreview() {
+  const pv = state.preview;
+  if (!pv) return modalShell("部署预览", `<div class="empty"><div class="empty-title">尚未生成预览</div></div>`, null, "eye");
+  const stale = previewStale(state);
+  const conn = state.connections.find(c => c.id === pv.connId);
+  const models = conn ? conn.models.filter(m => pv.modelIds.includes(m.id)) : [];
+  const writable = pv.items.filter(i => i.supported && i.capability === "auto" && !(i.external && !i.allowBackupWrite));
+  const manual = pv.items.filter(i => i.supported && i.capability === "manual");
+  const skipped = pv.items.filter(i => !i.supported || (i.external && !i.allowBackupWrite));
+  const body = `
+    ${stale ? `<div class="alert a-err mb12"><span class="alert-ic">${icon("warn", 16)}</span><div><b>此预览已失效。</b>连接、所选模型或目标客户端在生成后被修改（或目标配置被外部改动）。为保证安全，不能按旧预览发布，请关闭后重新生成。</div></div>` : ""}
+    <div class="row wrap g8 mb12">
+      ${badge("b-accent", "连接：" + pv.connName)}
+      ${models.map(m => badge("b-neutral", (m.isDefault ? "★ " : "") + m.name)).join("")}
+      <span class="tiny faint">生成于 ${fmtTime(pv.at)} · 指纹 <span class="mono">${esc(pv.fingerprint.length.toString(36) + pv.id.slice(-4))}</span></span>
+    </div>
+    <div class="row g12 mb12 small">
+      ${badge("b-ok", writable.length + " 个可自动执行")}${manual.length ? badge("b-manual", manual.length + " 个需手动") : ""}${skipped.length ? badge("b-neutral", skipped.length + " 个将跳过") : ""}
+    </div>
+    ${pv.items.map(it => renderPreviewItem(it)).join("")}
+    <div class="demo-ctl mt12">演示注入（仅用于试用异常流程，真实版本不存在）：<select id="injectSel" class="select" style="width:auto;display:inline-block;padding:3px 8px;margin-left:6px">
+      <option value="none">全部成功</option><option value="fail-cli">模拟 CLI 写入失败（文件占用）</option><option value="interrupt">模拟执行中途被中断</option>
+    </select></div>`;
+  const foot = `<button class="btn" data-action="close-modal">关闭</button>
+    ${stale ? `<button class="btn btn-primary" data-action="regen-preview">${icon("refresh", 14)} 重新生成预览</button>`
+      : `<button class="btn btn-primary" data-action="confirm-run" ${writable.length + manual.length ? "" : "disabled"}>${icon("check", 15)} 明确确认，发布 ${pv.items.length} 个目标</button>`}`;
+  return modalShell("部署预览 · " + pv.connName, body, foot, "eye");
+}
+function renderPreviewItem(it) {
+  const c = state.clients.find(x => x.id === it.clientId);
+  if (!c) return "";
+  const head = `<div class="row g8 wrap"><span class="target-ic" style="width:28px;height:28px">${kindIcon(c.kind, 14)}</span><b style="font-size:13.5px">${esc(c.label)}</b>${capBadge(it.capability)}${it.external ? badge("b-err", "外部已修改") : ""}${it.supported ? "" : badge("b-off", "将跳过")}</div>`;
+  const changes = it.changes.map(t => `<div class="diff-line diff-mod">~ ${esc(t)}</div>`).join("");
+  const warns = it.warnings.map(w => `<div class="alert a-warn mt8" style="padding:7px 11px"><span class="alert-ic">${icon("warn", 13)}</span><span class="small">${esc(w)}</span></div>`).join("");
+  const extCtl = it.external ? `<label class="check-row mt8 small" style="color:var(--err)"><input type="checkbox" data-action-change="pv-backup-write" data-id="${c.id}" ${it.allowBackupWrite ? "checked" : ""}> 我已了解风险：先备份再以管理器内容覆盖写入（默认不覆盖）</label>` : "";
+  return `<div class="card mb12" style="box-shadow:none"><div class="card-body" style="padding:13px 15px">${head}<div class="mt8">${changes}</div>${warns}${extCtl}</div></div>`;
+}
+
+/* ---------------- 执行与结果 ---------------- */
+function backupPathFor(c) {
+  const tag = new Date().toISOString().slice(0, 19).replace(/[-:T]/g, "").slice(0, 12);
+  if (c.kind === "vscode") return `%APPDATA%\\${c.label.includes("Insiders") ? "Code - Insiders" : "Code"}\\User\\settings.json.bak-${tag}`;
+  if (c.kind === "cli") return `~/.copilot/config.json.bak-${tag}`;
+  if (c.kind === "jetbrains") return `%APPDATA%\\JetBrains\\${c.label.replace(/\s/g, "")}\\options\\github-copilot.xml.bak-${tag}`;
+  return "";
+}
+function appliedDetail(c) {
+  if (c.kind === "vscode") return "写入 settings.json · 连接与模型已生效（新开窗口生效）";
+  if (c.kind === "cli") return "写入 ~/.copilot/config.json · 新会话生效";
+  if (c.kind === "jetbrains") return "写入 github-copilot.xml · 需重启 IDE 并刷新模型列表";
+  return "已写入";
+}
+function startRun(inject) {
+  const pv = state.preview;
+  if (!pv) return;
+  if (previewStale(state)) { toast("预览已失效，请重新生成", "warn"); return; }
+  const run = {
+    id: uid("run"), at: Date.now(), connName: pv.connName, connId: pv.connId, status: "running", inject: inject || "none",
+    txId: "tx-" + new Date().toISOString().slice(0, 10).replace(/-/g, "") + "-" + Math.random().toString(36).slice(2, 6),
+    items: pv.items.map(it => ({ clientId: it.clientId, capability: it.capability, supported: it.supported, external: it.external, allowBackupWrite: it.allowBackupWrite, status: "queued", detail: "等待执行", shared: [] })),
+    recovery: null
+  };
+  state.run = run;
+  ui.runSim = { i: 0 };
+  openModal("run", { size: "lg" });
+  setTimeout(runTick, 550);
+}
+function runTick() {
+  const run = state.run, sim = ui.runSim;
+  if (!run || run.status !== "running" || !sim) return;
+  if (sim.i >= run.items.length) { finishRun(); return; }
+  const item = run.items[sim.i];
+  const client = state.clients.find(c => c.id === item.clientId);
+  const rerender = () => { if (ui.modal && ui.modal.name === "run") renderModal(); };
+  if (!client || !item.supported) {
+    item.status = "skipped";
+    item.detail = client ? (client.capability === "unsupported" ? "插件版本未审核，不支持自动写入（已跳过）" : "客户端未安装（已跳过）") : "客户端已不存在";
+    sim.i++; rerender(); setTimeout(runTick, 380); return;
+  }
+  if (item.capability === "manual") {
+    item.status = "manual";
+    item.detail = "BYOK 为 Copilot App 的手动边界：未执行写入，已生成手动配置指引";
+    sim.i++; rerender(); setTimeout(runTick, 480); return;
+  }
+  if (item.external && !item.allowBackupWrite) {
+    item.status = "skipped";
+    item.detail = "检测到外部修改，按默认保护策略跳过，未覆盖";
+    sim.i++; rerender(); setTimeout(runTick, 380); return;
+  }
+  /* 共享配置去重：同组已有项写入成功，则本项随其生效，不重复写 */
+  if (client.shareGroup) {
+    const peer = run.items.find(x => x.clientId !== item.clientId && x.status === "applied" && (state.clients.find(p => p.id === x.clientId) || {}).shareGroup === client.shareGroup);
+    if (peer) {
+      item.status = "applied";
+      item.shared = [peer.clientId];
+      item.detail = `随共享配置生效（与${clientName(state, peer.clientId)}同一文件，未重复写入）`;
+      client.config = "managed-current";
+      sim.i++; rerender(); setTimeout(runTick, 380); return;
+    }
+  }
+  item.status = "writing";
+  item.detail = item.external && item.allowBackupWrite ? "已确认覆盖：先创建备份，再写入…" : "正在写入配置…";
+  rerender();
+  setTimeout(() => {
+    if (run.status !== "running") return;
+    if (run.inject === "fail-cli" && item.clientId === "cli") {
+      item.status = "failed";
+      item.detail = "写入 ~/.copilot/config.json 失败：文件被另一进程占用（EBUSY，模拟注入）";
+      item.recovery = { backup: backupPathFor(client) };
+      if (!run.recovery) run.recovery = { txId: run.txId, backups: [], log: `%APPDATA%\\CopilotByokManager\\logs\\${run.txId}.jsonl` };
+      run.recovery.backups.push({ client: client.label, path: backupPathFor(client) });
+    } else if (run.inject === "interrupt" && sim.i === 1) {
+      interruptRun("模拟注入：执行中途被中断");
+      return;
+    } else {
+      item.status = "applied";
+      item.detail = (item.external && item.allowBackupWrite ? "已备份并覆盖 · " : "") + appliedDetail(client);
+      client.config = "managed-current";
+      if (!run.recovery) run.recovery = { txId: run.txId, backups: [], log: `%APPDATA%\\CopilotByokManager\\logs\\${run.txId}.jsonl` };
+      run.recovery.backups.push({ client: client.label, path: backupPathFor(client) });
+    }
+    sim.i++; rerender(); setTimeout(runTick, 420);
+  }, 820);
+}
+function interruptRun(reason) {
+  const run = state.run, sim = ui.runSim;
+  if (!run) return;
+  run.items.forEach((it, idx) => {
+    if (idx < sim.i) return;
+    if (idx === sim.i && it.status === "writing") { it.status = "interrupted"; it.detail = "写入过程中被取消：文件处于安全挂起状态，未生效"; }
+    else if (it.status === "queued") { it.status = "not-run"; it.detail = "未执行"; }
+  });
+  run.status = "interrupted";
+  run.interruptReason = reason || "用户取消";
+  if (!run.recovery) run.recovery = { txId: run.txId, backups: [], log: `%APPDATA%\\CopilotByokManager\\logs\\${run.txId}.jsonl` };
+  state.lastRun = run; state.run = null;
+  addAct("recovery", "发布事务 " + run.txId, "interrupted", `发布中断（${run.interruptReason}）。已完成 ${run.items.filter(i => i.status === "applied").length} 项（可回滚），其余未生效。不会自动重试或覆盖。`, { label: "查看恢复选项", page: "workbench", action: "open-recovery" });
+  if (ui.modal && ui.modal.name === "run") renderModal(); else render();
+}
+function finishRun() {
+  const run = state.run;
+  if (!run) return;
+  const failed = run.items.some(i => i.status === "failed");
+  run.status = failed ? "partial" : "done";
+  state.lastRun = run; state.run = null;
+  const applied = run.items.filter(i => i.status === "applied").length;
+  const manual = run.items.filter(i => i.status === "manual").length;
+  addAct("publish", `发布配置 → ${run.items.length} 个目标`, failed ? "partial" : "success",
+    `${esc(run.connName)}：${applied} 个已写入${manual ? `，${manual} 个待手动` : ""}${failed ? "，含失败项（可查看恢复信息）" : ""}。API Key 写入系统密钥库，未出现在日志与预览中。`, { label: "查看结果", page: "workbench", action: "open-lastrun" });
+  if (ui.modal && ui.modal.name === "run") renderModal(); else render();
+}
+function runStatusBadge(it) {
+  const map = { queued: ["b-neutral", "排队中"], writing: ["b-info", "写入中"], applied: ["b-ok", "已写入"], failed: ["b-err", "失败"], skipped: ["b-neutral", "已跳过"], manual: ["b-manual", "待手动"], interrupted: ["b-warn", "中断"], "not-run": ["b-neutral", "未执行"] };
+  const t = map[it.status] || ["b-neutral", it.status];
+  return badge(t[0], t[1]);
+}
+function renderRunItems(run) {
+  return run.items.map(it => {
+    const c = state.clients.find(x => x.id === it.clientId);
+    const ic = it.status === "writing" ? `<span class="spin"></span>` :
+      it.status === "applied" ? icon("check", 15) : it.status === "failed" ? icon("x", 15) :
+      it.status === "manual" ? icon("users", 15) : it.status === "interrupted" ? icon("warn", 15) : icon("clock", 14);
+    const icBg = { applied: "var(--ok-soft);color:var(--ok)", failed: "var(--err-soft);color:var(--err)", manual: "var(--manual-soft);color:var(--manual)", interrupted: "var(--warn-soft);color:var(--warn)", writing: "var(--accent-soft)" }[it.status] || "var(--surface-2);color:var(--muted)";
+    const verify = (it.status === "applied" || it.status === "manual") ? renderVerifyCells(c, it) : "";
+    return `<div class="run-item"><span class="run-ic" style="background:${icBg}">${ic}</span>
+      <div class="grow"><div class="row g8 wrap"><b style="font-size:13.5px">${esc(c ? c.label : it.clientId)}</b>${runStatusBadge(it)}${it.shared && it.shared.length ? badge("b-info", "共享生效") : ""}</div>
+      <div class="small muted mt4">${esc(it.detail)}</div>${verify}</div></div>`;
+  }).join("");
+}
+function renderVerifyCells(c, it) {
+  if (!c) return "";
+  const acc = c.account;
+  const accCell = !acc ? badge("b-neutral", "未登录")
+    : state.accountTarget && acc.login !== state.accountTarget ? badge("b-err", "@" + acc.login + " · 与目标不一致")
+    : badge("b-ok", "已确认 @" + acc.login);
+  const writeCell = it.status === "manual" ? badge("b-manual", "待手动完成") : badge("b-ok", "已写入");
+  return `<div class="verify-grid mt8">
+    <div class="verify-cell"><div class="v-t">① 配置写入</div>${writeCell}</div>
+    <div class="verify-cell"><div class="v-t">② 账号确认</div>${accCell}</div>
+    <div class="verify-cell"><div class="v-t">③ 模型调用</div>${badge("b-neutral", "未验证")}<div class="tiny faint mt4">需在客户端中实际发送一次请求验证；管理器不替你判定调用成功。</div></div>
+  </div>`;
+}
+function modalRun() {
+  const run = state.run || state.lastRun;
+  if (!run) return modalShell("执行发布", "<div class='empty'>无执行记录</div>", null, "send");
+  const total = run.items.length;
+  const settled = run.items.filter(i => !["queued", "writing"].includes(i.status)).length;
+  const pct = Math.round(settled / Math.max(1, total) * 100);
+  let head = "";
+  if (run.status === "running") {
+    head = `<div class="row g12 mb12"><span class="spin"></span><div class="grow"><b>正在发布（模拟执行，不会写入本机）…</b><div class="tiny muted">事务 ${esc(run.txId)} · 逐项执行，已完成项均有备份</div></div><span class="mono small">${settled}/${total}</span></div>
+    <div class="progress mb8"><div class="progress-bar" style="width:${pct}%"></div></div>`;
+  } else if (run.status === "interrupted") {
+    head = `<div class="alert a-err mb12"><span class="alert-ic">${icon("warn", 16)}</span><div><b>发布已中断</b>（${esc(run.interruptReason || "取消")}）。已完成的写入可回滚；挂起与未执行的项不会自动继续。</div></div>`;
+  } else if (run.status === "partial") {
+    head = `<div class="alert a-warn mb12"><span class="alert-ic">${icon("warn", 16)}</span><div><b>部分成功。</b>失败项未写入任何内容，可查看恢复信息后重试。</div></div>`;
+  } else {
+    head = `<div class="alert a-ok mb12"><span class="alert-ic">${icon("check", 16)}</span><div><b>发布流程执行完毕。</b>注意：「配置已写入」「账号已确认」「模型调用成功」是三件独立的事——前两项见下方逐项状态，第三项需要你在客户端中实际验证。</div></div>`;
+  }
+  const body = head + renderRunItems(run) + (run.recovery && run.recovery.backups.length && run.status !== "running" ? renderRecoveryBox(run) : "");
+  let foot = "";
+  if (run.status === "running") foot = `<span class="tiny muted grow" style="align-self:center">演示：可点击右侧按钮模拟中断</span><button class="btn btn-danger" data-action="run-interrupt">${icon("stop", 14)} 中断</button>`;
+  else {
+    const hasManual = run.items.some(i => i.status === "manual");
+    const hasFail = run.items.some(i => i.status === "failed") || run.status === "interrupted";
+    foot = `${hasManual ? `<button class="btn" data-action="open-manual-guide">${icon("users", 14)} 查看手动指引</button>` : ""}${hasFail ? `<button class="btn" data-action="open-recovery">${icon("shield", 14)} 恢复选项</button>` : ""}<button class="btn btn-primary" data-action="close-modal">完成</button>`;
+  }
+  return modalShell(run.status === "running" ? "正在发布 · " + run.connName : "发布结果 · " + run.connName, body, foot, "send");
+}
+function renderRecoveryBox(run) {
+  const r = run.recovery;
+  return `<div class="card mt12" style="box-shadow:none;border-color:var(--warn-border)"><div class="card-body" style="padding:12px 15px">
+    <div class="row g8 mb8"><span style="color:var(--warn)">${icon("shield", 15)}</span><b class="small">安全恢复信息</b></div>
+    <div class="small">事务 ID：<span class="mono">${esc(r.txId)}</span></div>
+    ${r.backups.length ? `<div class="small mt4">写入前备份：</div>${r.backups.map(b => `<div class="path mt4">${esc(b.client)} → ${esc(b.path)}</div>`).join("")}` : ""}
+    <div class="small mt4">事务日志（脱敏）：<span class="path">${esc(r.log)}</span></div>
+  </div></div>`;
+}
+function modalLastRun() { return modalRun(); }
+function modalRecovery() {
+  const run = state.lastRun;
+  if (!run || !run.recovery) return modalShell("恢复选项", `<div class="empty"><div class="empty-title">没有待恢复的事务</div></div>`, `<button class="btn" data-action="close-modal">关闭</button>`, "shield");
+  const pending = run.items.filter(i => ["failed", "interrupted", "not-run"].includes(i.status));
+  const applied = run.items.filter(i => i.status === "applied");
+  const body = `
+    <div class="alert a-warn mb12"><span class="alert-ic">${icon("info", 15)}</span><div>恢复是显式操作：管理器不会自动重试、回滚或覆盖。请选择下面的方式之一。</div></div>
+    ${renderRecoveryBox(run)}
+    <div class="grid grid-2 mt12">
+      <div class="card" style="box-shadow:none"><div class="card-body" style="padding:13px 15px">
+        <b class="small">重试未完成的 ${pending.length} 项</b>
+        <div class="tiny muted mt4 mb8">${pending.map(i => esc(clientName(state, i.clientId))).join("、") || "无"}</div>
+        <button class="btn btn-primary btn-sm" data-action="recover-retry" ${pending.length ? "" : "disabled"}>${icon("refresh", 13)} 重试</button>
+      </div></div>
+      <div class="card" style="box-shadow:none"><div class="card-body" style="padding:13px 15px">
+        <b class="small">回滚已写入的 ${applied.length} 项</b>
+        <div class="tiny muted mt4 mb8">${applied.map(i => esc(clientName(state, i.clientId))).join("、") || "无"}（从上方备份还原）</div>
+        <button class="btn btn-danger btn-sm" data-action="recover-rollback" ${applied.length ? "" : "disabled"}>${icon("trash", 13)} 回滚</button>
+      </div></div>
+    </div>`;
+  return modalShell("恢复选项 · 事务 " + run.txId, body, `<button class="btn" data-action="close-modal">暂不处理</button>`, "shield");
+}
+function modalManualGuide() {
+  const conn = state.connections.find(c => c.id === (state.lastRun ? state.lastRun.connId : state.draft.connId)) || state.connections[0];
+  const models = conn ? conn.models.filter(m => m.enabled) : [];
+  const body = `
+    <div class="alert a-info mb12"><span class="alert-ic">${icon("info", 15)}</span><div>Copilot App 的 BYOK 目前是<b>手动边界</b>：管理器不写入其配置，也不会把这一步显示为「自动完成」。请按以下步骤操作，完成后回到这里标记。</div></div>
+    <ol class="step-list">
+      <li>打开 Copilot App → <b>Settings → Model Providers</b></li>
+      <li>选择 <b>Custom (OpenAI-compatible)</b></li>
+      <li>接口地址填写：<span class="path">${esc(conn ? conn.baseUrl : "—")}</span></li>
+      <li>API Key 请在 App 中直接输入。管理器不回显、不代填已保存的密钥。</li>
+      <li>逐个添加模型 ID：${models.map(m => `<span class="path">${esc(m.modelId)}</span>`).join(" ") || "—"}</li>
+      <li>保存后在 App 内发送一条测试消息，确认模型调用成功（第 ③ 项验证）。</li>
+    </ol>`;
+  return modalShell("手动配置指引 · Copilot App", body, `<button class="btn" data-action="close-modal">稍后</button><button class="btn btn-primary" data-action="manual-done">${icon("check", 14)} 我已完成手动配置</button>`, "users");
+}
+
+/* ================================================================
+   页面：连接与模型
+   ================================================================ */
+function editorConn() {
+  if (!ui.connEditor && ui.connEditId) {
+    const c = state.connections.find(x => x.id === ui.connEditId);
+    if (c) ui.connEditor = clone(c);
+  }
+  return ui.connEditor;
+}
+function renderConnections() {
+  const ed = editorConn();
+  return pageHead("连接与模型", "连接 = 服务商地址 + API Key + 协议 + 模型列表，只维护一份。保存连接不等于发布配置——修改后需回到工作台重新预览部署。",
+    `<button class="btn btn-primary" data-action="new-conn">${icon("plus", 14)} 新建连接</button>`)
+  + `<div class="grid" style="grid-template-columns:minmax(0,4fr) minmax(0,8fr);align-items:start">
+    <div class="card"><div class="card-head"><div class="card-title">连接列表</div><span class="right"></span><span class="tiny muted">${state.connections.length} 个</span></div>
+      <div class="card-body" style="padding-top:10px">${state.connections.map(c => `
+        <button class="pick ${ui.connEditId === c.id ? "active" : ""} mb8" data-action="sel-conn" data-id="${c.id}">
+          <div class="row between"><span class="pick-name">${esc(c.name)}</span>${c.apiKeySaved ? badge("b-ok", "Key 已保存") : badge("b-neutral", "无密钥")}</div>
+          <div class="pick-meta">${esc(PROVIDERS[c.provider])} · <span class="mono">${esc(c.baseUrl)}</span></div>
+          <div class="pick-meta">${c.models.length} 个模型 · 更新于 ${ago(c.updatedAt)}</div>
+        </button>`).join("") || `<div class="empty"><div class="empty-ic">${icon("link", 22)}</div><div class="empty-title">暂无连接</div><div class="empty-sub">添加服务商地址、API Key 与模型列表，即可在各客户端间复用。</div><button class="btn btn-primary" data-action="new-conn">${icon("plus", 14)} 新建连接</button></div>`}
+      </div></div>
+    <div class="card"><div class="card-head"><div class="card-title">${ed ? (ui.connNew ? "新建连接" : "编辑连接") : "连接详情"}</div>${ed && !ui.connNew ? `<span class="right"></span><span class="tiny faint">ID: ${esc(ed.id)}</span>` : ""}</div>
+      <div class="card-body">${ed ? renderConnEditor(ed) : `<div class="empty"><div class="empty-title">选择左侧连接进行编辑</div></div>`}</div>
+      ${ed ? `<div class="card-foot row g8"><button class="btn btn-primary" data-action="save-conn">${icon("check", 14)} 保存连接</button><span class="tiny muted">保存不等于发布；发布在工作台进行</span><span class="right"></span>${ui.connNew ? `<button class="btn" data-action="cancel-new-conn">取消</button>` : `<button class="btn btn-danger" data-action="ask-delete-conn">${icon("trash", 14)} 删除连接</button>`}</div>` : ""}
+    </div>
+  </div>`;
+}
+function renderConnEditor(ed) {
+  return `
+  <div class="grid grid-2">
+    <div class="field"><label class="label">连接名称 <span class="req">*</span></label><input class="input" data-field="name" value="${esc(ed.name)}" placeholder="例如：星河网关 · Claude 专线"></div>
+    <div class="field"><label class="label">服务商类型</label><select class="select" data-field="provider">${Object.keys(PROVIDERS).map(k => `<option value="${k}" ${ed.provider === k ? "selected" : ""}>${esc(PROVIDERS[k])}</option>`).join("")}</select></div>
+  </div>
+  <div class="grid grid-2">
+    <div class="field"><label class="label">接口地址（Base URL）<span class="req">*</span></label><input class="input mono" data-field="baseUrl" value="${esc(ed.baseUrl)}" placeholder="https://api.example.com/v1"></div>
+    <div class="field"><label class="label">请求协议</label><select class="select" data-field="protocol">${Object.keys(PROTOCOLS).map(k => `<option value="${k}" ${ed.protocol === k ? "selected" : ""}>${esc(PROTOCOLS[k])}</option>`).join("")}</select></div>
+  </div>
+  <div class="field"><label class="label">API Key</label>
+    <div class="row g8">
+      <input class="input mono" type="password" data-field="apiKeyDraft" value="" placeholder="${ed.apiKeySaved ? "已保存 · 不回显；输入新值以替换" : "粘贴 API Key（保存后不回显）"}" autocomplete="off">
+      ${ed.apiKeySaved ? `<button class="btn btn-sm btn-danger" data-action="clear-key">${icon("trash", 13)} 清除已保存密钥</button>` : ""}
+    </div>
+    <div class="hint">密钥遮蔽输入；保存后永不回显，也不会出现在预览、日志或诊断信息中。</div>
+  </div>
+  <div class="field"><label class="label">自定义请求头</label>
+    ${ed.headers.map((h, i) => `<div class="kv-row"><input class="input mono" data-hdr-k="${i}" value="${esc(h.k)}" placeholder="Header 名"><input class="input mono" data-hdr-v="${i}" value="${esc(h.v)}" placeholder="值"><button class="btn btn-xs btn-ghost" data-action="hdr-del" data-idx="${i}" title="删除">${icon("x", 13)}</button></div>`).join("")}
+    <button class="btn btn-xs" data-action="hdr-add">${icon("plus", 12)} 添加请求头</button>
+  </div>
+  <div class="hr"></div>
+  <div class="row between mb8 wrap g8">
+    <div class="label" style="margin:0">模型列表（${ed.models.length}）</div>
+    <div class="row g8">
+      <button class="btn btn-sm" data-action="fetch-models" ${ui.fetchModels && ui.fetchModels.running ? "disabled" : ""}>${ui.fetchModels && ui.fetchModels.running ? '<span class="spin"></span> 获取中（模拟）…' : icon("download", 13) + " 从接口获取模型列表"}</button>
+      <button class="btn btn-sm" data-action="model-add">${icon("plus", 13)} 手动添加模型</button>
+    </div>
+  </div>
+  <div class="hint mb8">「从接口获取模型列表」只读取模型元数据，<b>不发送聊天请求</b>，不产生任何费用。</div>
+  ${ed.models.length ? `<div class="table-wrap"><table class="tbl"><thead><tr><th>启用</th><th>默认</th><th>模型</th><th>上下文 / 输出</th><th>能力</th><th></th></tr></thead><tbody>
+    ${ed.models.map(m => `<tr>
+      <td><input type="checkbox" data-action-change="model-enable" data-id="${m.id}" ${m.enabled ? "checked" : ""}></td>
+      <td><input type="radio" name="defModel" data-action-change="model-default" data-id="${m.id}" ${m.isDefault ? "checked" : ""} ${m.enabled ? "" : "disabled"}></td>
+      <td><div style="font-weight:600">${esc(m.name)}</div><div class="tiny faint mono">${esc(m.modelId)}</div></td>
+      <td class="num">${m.ctx ? fmtTok(m.ctx) : "—"} / ${m.maxOut ? fmtTok(m.maxOut) : "—"}</td>
+      <td>${[m.caps.tool ? badge("b-info", "工具") : "", m.caps.vision ? badge("b-info", "视觉") : "", m.caps.reason ? badge("b-info", "推理") : ""].filter(Boolean).join(" ") || '<span class="tiny faint">—</span>'}</td>
+      <td style="white-space:nowrap"><button class="btn btn-xs btn-ghost" data-action="model-edit" data-id="${m.id}">${icon("edit", 13)}</button><button class="btn btn-xs btn-ghost" data-action="model-del" data-id="${m.id}">${icon("trash", 13)}</button></td>
+    </tr>`).join("")}</tbody></table></div>`
+  : `<div class="empty" style="padding:22px"><div class="empty-title">还没有模型</div><div class="empty-sub">从接口获取，或手动添加。至少需要 1 个启用的模型才能发布。</div></div>`}`;
+}
+function modalModelEdit(m) {
+  const ed = editorConn();
+  const md = ed.models.find(x => x.id === m.modelId) || mkModel({});
+  const isNew = !ed.models.find(x => x.id === m.modelId);
+  ui.editingModel = { id: md.id, isNew };
+  const body = `<div class="grid grid-2">
+    <div class="field"><label class="label">模型 ID（上游）<span class="req">*</span></label><input class="input mono" id="fm-modelId" value="${esc(md.modelId)}" placeholder="claude-sonnet-5"></div>
+    <div class="field"><label class="label">显示名称</label><input class="input" id="fm-name" value="${esc(md.name)}" placeholder="默认同模型 ID"></div>
+    <div class="field"><label class="label">上下文长度（tokens）</label><input class="input" id="fm-ctx" type="number" min="0" value="${md.ctx || ""}" placeholder="未知可留空"></div>
+    <div class="field"><label class="label">输出上限（tokens）</label><input class="input" id="fm-maxout" type="number" min="0" value="${md.maxOut || ""}" placeholder="未知可留空"></div>
+  </div>
+  <div class="row g16 wrap">
+    <label class="check-row"><input type="checkbox" id="fm-enabled" ${md.enabled ? "checked" : ""}> 启用</label>
+    <label class="check-row"><input type="checkbox" id="fm-default" ${md.isDefault ? "checked" : ""}> 设为默认模型</label>
+  </div>
+  <div class="label mt12">能力信息（可用时）</div>
+  <div class="row g16 wrap">
+    <label class="check-row"><input type="checkbox" id="fm-tool" ${md.caps.tool ? "checked" : ""}> 工具调用</label>
+    <label class="check-row"><input type="checkbox" id="fm-vision" ${md.caps.vision ? "checked" : ""}> 视觉</label>
+    <label class="check-row"><input type="checkbox" id="fm-reason" ${md.caps.reason ? "checked" : ""}> 推理</label>
+  </div>`;
+  return modalShell(isNew ? "添加模型" : "编辑模型", body, `<button class="btn" data-action="close-modal">取消</button><button class="btn btn-primary" data-action="model-save">${icon("check", 14)} 保存模型</button>`, "puzzle");
+}
+function modalDeleteConn() {
+  const ed = editorConn();
+  const managed = state.clients.filter(c => c.installed && (c.config === "managed-current" || c.config === "managed-changed") && c.capability === "auto");
+  const body = `
+    <div class="alert a-warn mb12"><span class="alert-ic">${icon("warn", 15)}</span><div>删除连接「<b>${esc(ed.name)}</b>」前，请选择如何处理已发布到客户端的配置。</div></div>
+    <label class="check-row mb8" style="align-items:flex-start"><input type="radio" name="delMode" value="revoke" checked style="margin-top:3px"><span><b>撤销配置后删除（推荐）</b><br><span class="small muted">撤销本软件在支持自动写入的客户端中管理的配置，再删除连接。影响：${managed.map(c => esc(c.label)).join("、") || "无"}。</span></span></label>
+    <label class="check-row" style="align-items:flex-start"><input type="radio" name="delMode" value="keep" style="margin-top:3px"><span><b>仅停止管理</b><br><span class="small muted">保留客户端中已有的配置内容，管理器不再维护它们（之后这些配置会被视为外部内容）。</span></span></label>`;
+  return modalShell("删除连接", body, `<button class="btn" data-action="close-modal">取消</button><button class="btn btn-danger" data-action="do-delete-conn">${icon("trash", 14)} 确认删除</button>`, "trash");
+}
+
+/* ================================================================
+   页面：客户端与账号
+   ================================================================ */
+function renderClients() {
+  const missing = state.clients.filter(c => !c.installed);
+  const acc = accountStatus();
+  return pageHead("客户端与账号", "每个客户端实例的安装、版本、配置档案、插件、账号与配置状态。JetBrains 为可选集成，不强制安装任何 IDE。",
+    `<button class="btn" data-action="rescan" ${ui.scanning ? "disabled" : ""}>${ui.scanning ? '<span class="spin"></span> 检测中（模拟）…' : icon("refresh", 15) + " 刷新检测"}</button>
+     <button class="btn btn-primary" data-action="install-all" ${missing.length ? "" : "disabled"}>${icon("download", 14)} 预览安装全部缺失（${missing.length}）</button>`)
+  + `<div class="card mb16"><div class="card-head"><span style="color:var(--accent)">${icon("monitor", 16)}</span><div class="card-title">客户端与环境</div><span class="right"></span><span class="tiny muted">最近检查：${ago(Math.max.apply(null, state.clients.map(c => c.lastChecked)))}</span></div>
+    <div class="card-body" style="padding-top:10px">${state.clients.map(c => renderClientRow(c)).join("")}</div></div>`
+  + renderAccountSection(acc);
+}
+function renderClientRow(c) {
+  const actions = [];
+  if (!c.installed) actions.push(`<button class="btn btn-sm" data-action="install-one" data-id="${c.id}">${icon("download", 13)} 预览安装</button>`);
+  if (c.installed && (c.config === "managed-current" || c.config === "managed-changed")) actions.push(`<button class="btn btn-xs btn-ghost" data-action="sim-external" data-id="${c.id}" title="演示：模拟该配置在管理器之外被修改">模拟外部修改</button>`);
+  if (c.detectError) actions.push(`<button class="btn btn-xs" data-action="retry-detect" data-id="${c.id}">重试检测</button>`);
+  const stateBits = [];
+  if (c.installed) {
+    stateBits.push(capBadge(c.capability), accountBadge(c), configBadge(c));
+    if (c.plugin) stateBits.push(badge(c.pluginReviewed ? "b-info" : "b-off", "插件 " + c.plugin + (c.pluginReviewed ? " · 已审核" : " · 未审核")));
+  }
+  return `<div class="list-item" style="align-items:flex-start">
+    <span class="target-ic">${kindIcon(c.kind, 16)}</span>
+    <div class="grow">
+      <div class="row g8 wrap"><b style="font-size:13.5px">${esc(c.label)}</b>${c.installed ? badge("b-neutral", "v" + esc(c.version || c.plugin || ""), false) : badge("b-neutral", "未安装")}${stateBits.join("")}</div>
+      <div class="tiny muted mt4">${esc(c.detail)} · 最近检查 ${ago(c.lastChecked)}</div>
+      ${c.shareGroup ? `<div class="tiny mt4" style="color:var(--warn)">${icon("warn", 11)} 与 ${esc(state.clients.filter(x => x.shareGroup === c.shareGroup && x.id !== c.id).map(x => x.label).join("、"))} 共享 github-copilot.xml</div>` : ""}
+      ${c.detectError ? `<div class="alert a-err mt8" style="padding:7px 11px"><span class="alert-ic">${icon("x", 13)}</span><span class="small"><b>检测失败：</b>${esc(c.detectError)}</span></div>` : ""}
+      ${!c.installed ? `<div class="tiny faint mt4">${esc(c.notInstalledNote || "")}</div>` : ""}
+    </div>
+    <div class="row g6" style="flex:none">${actions.join("")}</div>
+  </div>`;
+}
+function renderAccountSection(acc) {
+  const seen = {};
+  state.clients.forEach(c => { if (c.installed && c.account) { (seen[c.account.login] = seen[c.account.login] || { login: c.account.login, clients: [], trust: c.account.trust }).clients.push(c.label); } });
+  const observed = Object.values(seen);
+  const banner = acc.kind === "consistent" ? `<div class="alert a-ok mb12"><span class="alert-ic">${icon("check", 15)}</span><div><b>账号一致：</b>所有已登录客户端均使用 @${esc(acc.logins[0])}。</div></div>`
+    : acc.kind === "conflict" ? `<div class="alert a-err mb12"><span class="alert-ic">${icon("warn", 15)}</span><div><b>账号冲突：</b>检测到多个账号（${acc.logins.map(l => "@" + esc(l)).join(" / ")}）。管理器不会自动切换或强制退出任何账号，请逐个客户端走官方登录流程统一到目标账号。</div></div>`
+    : acc.kind === "confirm" ? `<div class="alert a-warn mb12"><span class="alert-ic">${icon("warn", 15)}</span><div><b>需要手动确认：</b>部分账号来源可信度低（缓存信息可能过期），建议重新检查。</div></div>`
+    : `<div class="alert a-neutral mb12"><span class="alert-ic">${icon("info", 15)}</span><div>尚未观察到任何已登录账号。</div></div>`;
+  return `<div class="card"><div class="card-head"><span style="color:var(--accent)">${icon("users", 16)}</span><div class="card-title">账号与登录协调</div><span class="right"></span><button class="btn btn-sm" data-action="recheck-accounts">${icon("refresh", 13)} 重新检查账号</button></div>
+  <div class="card-body">
+    ${banner}
+    <div class="grid grid-2" style="align-items:start">
+      <div>
+        <div class="label">观察到的账号（含可信程度）</div>
+        ${observed.length ? observed.map(o => `<div class="list-item" style="padding:9px 12px"><span class="avatar">${esc(o.login.slice(0, 2).toUpperCase())}</span><div class="grow"><b class="small">@${esc(o.login)}</b><div class="tiny muted">${esc(o.clients.join("、"))}</div></div>${badge({ high: "b-ok", medium: "b-info", low: "b-warn" }[o.trust], { high: "高可信", medium: "中可信", low: "低可信" }[o.trust])}${state.accountTarget === o.login ? badge("b-accent", "目标账号") : `<button class="btn btn-xs" data-action="set-target-account" data-login="${esc(o.login)}">设为目标</button>`}</div>`).join("") : '<div class="empty" style="padding:18px"><div class="empty-title">未观察到账号</div></div>'}
+        <div class="hint mt8">可信度依据：多来源一致 + 最近验证 = 高；单一来源 = 中；仅缓存记录 = 低。</div>
+      </div>
+      <div>
+        <div class="label">官方登录引导（协调，不复制凭据）</div>
+        ${state.clients.filter(c => c.installed).map(c => `<div class="list-item" style="padding:9px 12px"><span class="target-ic" style="width:28px;height:28px">${kindIcon(c.kind, 14)}</span><div class="grow"><b class="small">${esc(c.label)}</b></div>${accountBadge(c)}<button class="btn btn-xs" data-action="login-guide" data-id="${c.id}">${icon("external", 12)} 官方登录引导</button></div>`).join("")}
+        <div class="alert a-info mt12"><span class="alert-ic">${icon("info", 14)}</span><div class="small">「同步登录」= 协调各客户端的<b>官方登录流程</b>并重新检查结果；不会复制凭据、不会自动覆盖或强制退出。读取 GitHub 个人账单 / 用量需要管理器<b>独立授权</b>（见「活动与设置」），与客户端登录无关，也不是配置 BYOK 的前提。</div></div>
+      </div>
+    </div>
+  </div></div>`;
+}
+/* ---------------- 安装模态 ---------------- */
+function modalInstall() {
+  const ins = ui.installing;
+  if (!ins) return "";
+  const items = ins.items;
+  let body = "";
+  if (!items.length) {
+    body = `<div class="empty"><div class="empty-ic">${icon("check", 22)}</div><div class="empty-title">没有缺失组件</div><div class="empty-sub">所有受支持的客户端均已安装。JetBrains 为可选集成。</div></div>`;
+    return modalShell("安装计划", body, `<button class="btn btn-primary" data-action="close-modal">好</button>`, "download");
+  }
+  if (!ins.started) {
+    body = `<div class="alert a-info mb12"><span class="alert-ic">${icon("info", 15)}</span><div>这是<b>安装预览</b>：演示模式下不会真实安装。安装结束后会<b>重新检测</b>确认结果——仅凭安装程序退出不会显示成功。</div></div>
+    ${items.map((it, i) => { const c = state.clients.find(x => x.id === it.clientId); return `<label class="list-item" style="padding:10px 12px"><input type="checkbox" data-action-change="inst-toggle" data-idx="${i}" ${it.selected ? "checked" : ""}><span class="target-ic" style="width:28px;height:28px">${kindIcon(c.kind, 14)}</span><div class="grow"><b class="small">${esc(c.label)}</b><div class="tiny muted">${esc(it.plan)}</div></div>${c.kind === "jetbrains" ? badge("b-info", "可选集成") : ""}</label>`; }).join("")}`;
+    return modalShell("安装计划 · 预览", body, `<button class="btn" data-action="close-modal">取消</button><button class="btn btn-primary" data-action="install-start" ${items.some(i => i.selected) ? "" : "disabled"}>${icon("play", 14)} 开始安装（模拟）</button>`, "download");
+  }
+  const done = items.filter(i => ["done", "failed", "canceled"].includes(i.status)).length;
+  body = `<div class="row g12 mb12"><div class="progress grow"><div class="progress-bar" style="width:${Math.round(done / items.length * 100)}%"></div></div><span class="mono small">${done}/${items.length}</span></div>
+  ${ins.rechecking ? `<div class="alert a-info mb12"><span class="alert-ic"><span class="spin"></span></span><div>安装程序已退出，<b>正在重新检测</b>以确认真实结果…</div></div>` : ""}
+  ${items.map(it => { const c = state.clients.find(x => x.id === it.clientId);
+    const st = { queued: ["排队中", "b-neutral"], running: ["安装中（模拟）…", "b-info"], done: ["已安装并重新检测确认", "b-ok"], failed: ["失败", "b-err"], canceled: ["已取消", "b-neutral"], skipped: ["未选择，跳过", "b-neutral"] }[it.status];
+    return `<div class="run-item"><span class="run-ic" style="background:${it.status === "done" ? "var(--ok-soft);color:var(--ok)" : it.status === "failed" ? "var(--err-soft);color:var(--err)" : "var(--surface-2);color:var(--muted)"}">${it.status === "running" ? '<span class="spin"></span>' : it.status === "done" ? icon("check", 14) : it.status === "failed" ? icon("x", 14) : icon("clock", 13)}</span>
+    <div class="grow"><div class="row g8"><b style="font-size:13px">${esc(c.label)}</b>${badge(st[1], st[0])}</div><div class="tiny muted">${esc(it.detail || it.plan)}</div></div></div>`; }).join("")}`;
+  const running = items.some(i => i.status === "running" || i.status === "queued") || ins.rechecking;
+  const foot = running ? `<button class="btn btn-danger" data-action="install-cancel">${icon("stop", 13)} 取消剩余安装</button>` : `<button class="btn btn-primary" data-action="close-modal">完成</button>`;
+  return modalShell("安装计划 · 执行中" , body, foot, "download");
+}
+function installPlansFor(clients) {
+  return clients.map(c => ({ clientId: c.id, selected: true, status: "queued", detail: "", plan: c.kind === "cli" ? "winget 安装 GitHub Copilot CLI → 安装后重新检测可执行文件" : c.kind === "app" ? "下载 Copilot App 安装包 → 静默安装 → 重新检测" : c.kind === "vscode" ? "winget 安装 " + c.label + " → 重新检测版本" : "通过 JetBrains Toolbox 安装（可选集成）→ 重新检测" }));
+}
+function runInstallTick() {
+  const ins = ui.installing;
+  if (!ins || !ins.started) return;
+  const it = ins.items.find(i => i.status === "queued" && i.selected);
+  if (!it) {
+    if (!ins.rechecking) {
+      ins.rechecking = true;
+      renderModal();
+      setTimeout(() => {
+        ins.rechecking = false; ins.done = true;
+        ins.items.forEach(i => {
+          const c = state.clients.find(x => x.id === i.clientId);
+          if (i.status === "running" || (i.status === "queued" && !i.selected)) i.status = i.selected ? "done" : "skipped";
+          if (i.status === "done" && c) { c.installed = true; c.version = c.kind === "cli" ? "0.9.4" : c.kind === "app" ? "1.2.0" : c.kind === "jetbrains" ? "2025.2" : c.version || "1.96.0"; if (c.kind === "jetbrains") { c.plugin = "1.5.61"; c.pluginReviewed = true; c.detail = "2025.2 · 插件 1.5.61（已审核）"; } c.notInstalledNote = ""; c.lastChecked = Date.now(); }
+          if (c) c.lastChecked = Date.now();
+        });
+        const okN = ins.items.filter(i => i.status === "done").length, failN = ins.items.filter(i => i.status === "failed").length;
+        addAct("install", "安装缺失组件", failN ? "partial" : okN ? "success" : "info", `完成 ${okN} 项${failN ? `，失败 ${failN} 项` : ""}。安装程序退出后已重新检测确认，未仅凭退出码判定成功。`, { label: "查看客户端", page: "clients" });
+        if (ui.modal && ui.modal.name === "install") renderModal(); else render();
+      }, 1100);
+    }
+    return;
+  }
+  it.status = "running";
+  renderModal();
+  setTimeout(() => {
+    if (!ui.installing || ui.installing !== ins || !ins.started) return;
+    const c = state.clients.find(x => x.id === it.clientId);
+    if (c && c.kind === "app" && state.scenario === "empty") { it.status = "failed"; it.detail = "下载校验失败（模拟）。可重试或改为手动安装。"; }
+    else { it.status = "done"; it.detail = "安装程序退出 · 等待重新检测"; }
+    renderModal();
+    setTimeout(runInstallTick, 300);
+  }, 1000);
+}
+/* ---------------- 登录引导模态 ---------------- */
+function modalLoginGuide() {
+  const g = ui.loginGuide;
+  const c = state.clients.find(x => x.id === g.clientId);
+  const steps = {
+    vscode: ["打开 " + c.label, "命令面板（Ctrl+Shift+P）→ 执行 “GitHub Copilot: Sign in”", "在浏览器中完成 GitHub 设备码授权", "返回编辑器，确认右下角 Copilot 图标无警告"],
+    cli: ["打开终端，运行 copilot", "在提示符中执行 /login", "在浏览器中完成 GitHub 授权", "返回终端确认登录成功提示"],
+    jetbrains: ["打开 " + c.label, "Settings → Tools → GitHub Copilot", "点击 “Sign in to GitHub” 完成浏览器授权", "确认状态栏 Copilot 图标正常"],
+    app: ["打开 Copilot App", "点击 “Sign in with GitHub”", "在浏览器中完成授权", "返回 App 确认头像出现"]
+  }[c.kind] || ["打开客户端完成官方登录"];
+  let body = `<div class="alert a-info mb12"><span class="alert-ic">${icon("shield", 15)}</span><div>管理器只<b>引导</b>官方流程并重新检查结果，不接触、不复制你的凭据。目标账号：<b>@${esc(state.accountTarget || "（未设置，先在账号区选择）")}</b></div></div>
+  <ol class="step-list">${steps.map(s => `<li>${esc(s)}</li>`).join("")}</ol>`;
+  if (g.phase === "waiting") body += `<div class="row g8 mt16"><span class="spin"></span><span class="small muted">正在重新检查登录状态（模拟）…</span></div>`;
+  if (g.phase === "done") body += `<div class="alert a-ok mt16"><span class="alert-ic">${icon("check", 15)}</span><div>已重新检查：${esc(c.label)} 登录为 <b>@${esc(c.account.login)}</b>。</div></div>`;
+  const foot = g.phase === "done" ? `<button class="btn btn-primary" data-action="close-modal">完成</button>`
+    : `<button class="btn" data-action="close-modal">取消</button><button class="btn btn-primary" data-action="login-done" data-id="${c.id}" ${g.phase === "waiting" ? "disabled" : ""}>${icon("check", 14)} 我已完成官方登录</button>`;
+  return modalShell("官方登录引导 · " + c.label, body, foot, "external");
+}
+
+/* ================================================================
+   页面：共享资源（MCP / Skills / Instructions）
+   ================================================================ */
+const RES_TABS = { mcp: { name: "MCP（外部工具）", icon: "puzzle" }, skills: { name: "Skills（技能）", icon: "bolt" }, instructions: { name: "Instructions（指令）", icon: "book" } };
+function resTargets(tab) {
+  return [
+    { clientId: "vs-stable", path: tab === "mcp" ? "%APPDATA%\\Code\\User\\mcp.json" : tab === "skills" ? "%APPDATA%\\Code\\User\\prompts\\" : ".github\\copilot-instructions.md（用户级）", support: "auto" },
+    { clientId: "cli", path: tab === "mcp" ? "~/.copilot/mcp-config.json" : "~/.copilot/prompts/", support: "auto" },
+    { clientId: "jb-idea", path: "JetBrains 设置界面内配置", support: "manual" },
+    { clientId: "copilot-app", path: "—", support: "unsupported" }
+  ];
+}
+function renderResources() {
+  const tab = ui.resTab;
+  const list = state.resources[tab] || [];
+  return pageHead("共享资源", "统一编写 MCP / Skills / Instructions，通过预览发布到已支持的公开客户端路径；保留客户端原有内容，未支持的客户端不会被标成已同步。",
+    `<button class="btn btn-primary" data-action="res-add">${icon("plus", 14)} 添加${esc(RES_TABS[tab].name.split("（")[0])}</button>`)
+  + `<div class="seg mb16">${Object.keys(RES_TABS).map(k => `<button class="seg-item ${k === tab ? "active" : ""}" data-action="res-tab" data-tab="${k}">${esc(RES_TABS[k].name)}</button>`).join("")}</div>`
+  + `<div class="grid" style="grid-template-columns:minmax(0,7fr) minmax(0,5fr);align-items:start">
+    <div class="col g12">${list.map(r => renderResCard(tab, r)).join("") || `<div class="card"><div class="empty"><div class="empty-ic">${icon(RES_TABS[tab].icon, 22)}</div><div class="empty-title">暂无${esc(RES_TABS[tab].name.split("（")[0])}</div><div class="empty-sub">点击右上角「添加」创建。</div></div></div>`}</div>
+    <div class="col g12">
+      <div class="card"><div class="card-head"><div class="card-title">发布目标路径</div></div><div class="card-body">
+        ${resTargets(tab).map(t => `<div class="mcp-path"><span class="grow path" style="border:none;background:transparent;padding:0">${esc(t.path)}</span>${t.support === "auto" ? badge("b-ok", "自动写入") : t.support === "manual" ? badge("b-manual", "手动") : badge("b-off", "不支持")}</div>`).join("")}
+        <div class="hint">发布到公开客户端路径并保留原有内容；不会把所有客户端标成「已同步」。</div>
+      </div></div>
+      <div class="alert a-warn"><span class="alert-ic">${icon("warn", 15)}</span><div class="small">以下内容<b>仍需手动处理</b>：秘密信息（Token / 密码）、本地命令型 MCP、自定义路径、配套脚本 / 资源文件，以及未支持客户端。</div></div>
+      <div class="card"><div class="card-head"><div class="card-title">发布</div></div><div class="card-body">
+        <button class="btn btn-primary" data-action="res-preview" ${list.filter(r => r.enabled).length ? "" : "disabled"}>${icon("eye", 14)} 预览发布到支持的客户端</button>
+        ${state.resPublish ? `<div class="hr"></div><div class="label">最近发布 · ${ago(state.resPublish.at)}</div>${state.resPublish.results.map(r => `<div class="row g8 small" style="padding:3px 0">${resultBadge(r.status)}<span>${esc(r.target)}</span><span class="tiny muted">${esc(r.detail)}</span></div>`).join("")}` : ""}
+      </div></div>
+    </div>
+  </div>`;
+}
+function renderResCard(tab, r) {
+  return `<div class="card"><div class="card-body" style="padding:13px 15px">
+    <div class="row g8 mb8"><span style="color:var(--accent)">${icon(RES_TABS[tab].icon, 15)}</span><b class="grow" style="font-size:13.5px">${esc(r.name)}</b>
+      ${r.type === "command" ? badge("b-warn", "本地命令型 · 需手动") : ""}
+      <label class="row g4 tiny muted">启用 <span class="switch"><input type="checkbox" data-action-change="res-enable" data-tab="${tab}" data-id="${r.id}" ${r.enabled ? "checked" : ""}><span class="sl"></span></span></label>
+      <button class="btn btn-xs btn-ghost" data-action="res-save" data-tab="${tab}" data-id="${r.id}">${icon("check", 12)} 保存</button>
+      <button class="btn btn-xs btn-ghost" data-action="res-del" data-tab="${tab}" data-id="${r.id}">${icon("trash", 12)}</button>
+    </div>
+    <textarea class="textarea" data-res-content="${r.id}" rows="${tab === "mcp" ? 5 : 4}">${esc(r.content)}</textarea>
+    <div class="hint">${esc(r.note || "")}</div>
+  </div></div>`;
+}
+function modalResPreview() {
+  const tab = ui.resTab;
+  const list = (state.resources[tab] || []).filter(r => r.enabled);
+  const targets = resTargets(tab);
+  const lines = [];
+  list.forEach(r => {
+    if (tab === "mcp" && r.type === "command") { lines.push({ r, t: null, cls: "diff-skip", txt: `跳过「${r.name}」：本地命令型 MCP 依赖本机路径与脚本，不自动发布` }); return; }
+    targets.forEach(t => {
+      const cname = clientName(state, t.clientId);
+      if (t.support === "auto") lines.push({ r, t, cls: "diff-add", txt: `+ ${cname} ←「${r.name}」：合并写入 ${t.path}（保留已有条目）` });
+      else if (t.support === "manual") lines.push({ r, t, cls: "diff-skip", txt: `~ ${cname}：需手动配置「${r.name}」（${t.path}）` });
+      else lines.push({ r, t, cls: "diff-skip", txt: `× ${cname}：不支持该资源类型，跳过` });
+    });
+  });
+  const body = `<div class="alert a-info mb12"><span class="alert-ic">${icon("info", 15)}</span><div>待发布变化如下（模拟）。确认后仅写入「自动写入」目标，并保留客户端原有内容。</div></div>
+    ${lines.map(l => `<div class="diff-line ${l.cls}">${esc(l.txt)}</div>`).join("")}`;
+  return modalShell("资源发布预览 · " + RES_TABS[tab].name.split("（")[0], body,
+    `<button class="btn" data-action="close-modal">取消</button><button class="btn btn-primary" data-action="res-publish">${icon("check", 14)} 确认发布</button>`, "eye");
+}
+
+/* ================================================================
+   页面：用量与费用
+   ================================================================ */
+function filteredUsage() {
+  const f = ui.usageFilters, now = Date.now();
+  const start = new Date(); start.setHours(0, 0, 0, 0);
+  const minTs = f.range === "today" ? start.getTime() : f.range === "7d" ? now - 7 * DAYS : f.range === "14d" ? now - 14 * DAYS : 0;
+  const localOk = state.usage.consent && state.usage.sources.local.enabled;
+  return state.usage.records.filter(r => localOk && r.ts >= minTs
+    && (f.client === "all" || r.clientId === f.client)
+    && (f.conn === "all" || (f.conn === "none" ? !r.connId : r.connId === f.conn))
+    && (f.model === "all" || r.model === f.model)
+    && (f.route === "all" || r.route === f.route));
+}
+function estimateCost(recs) {
+  let sum = 0; const missing = {};
+  recs.filter(r => r.route === "byok").forEach(r => {
+    const p = PRICES.map[r.model];
+    if (!p) { missing[r.model] = true; return; }
+    sum += (r.input || 0) / 1e6 * p.i + (r.output || 0) / 1e6 * p.o + (r.cacheRead || 0) / 1e6 * p.cr + (r.cacheWrite || 0) / 1e6 * p.cw;
+  });
+  return { sum, missing: Object.keys(missing) };
+}
+function srcStatusBadge(s) {
+  const map = { available: ["b-ok", "可用"], "successful-empty": ["b-neutral", "无记录"], "network-error": ["b-err", "加载失败"], unauthorized: ["b-warn", "未授权"], disabled: ["b-off", "已停用"], missing: ["b-neutral", "未获取"] };
+  const t = map[s.status] || ["b-neutral", s.status];
+  return badge(t[0], t[1]);
+}
+function renderUsage() {
+  const U = state.usage, S = U.sources;
+  const recs = filteredUsage();
+  const f = ui.usageFilters;
+  const clientsInRecs = [...new Set(state.usage.records.map(r => r.clientId))];
+  const modelsInRecs = [...new Set(state.usage.records.map(r => r.model))];
+  const tot = recs.reduce((a, r) => ({ req: a.req + r.requests, ses: a.ses + r.sessions, i: a.i + (r.input || 0), o: a.o + (r.output || 0), cr: a.cr + (r.cacheRead || 0), cw: a.cw + (r.cacheWrite || 0) }), { req: 0, ses: 0, i: 0, o: 0, cr: 0, cw: 0 });
+  const hitRate = (tot.cr + tot.cw) > 0 ? Math.round(tot.cr / (tot.cr + tot.cw + tot.i) * 100) : (tot.i ? 0 : null);
+  const est = estimateCost(recs);
+  const q = { complete: 0, partial: 0, inferred: 0 }; recs.forEach(r => q[r.quality] = (q[r.quality] || 0) + 1);
+  return pageHead("用量与费用", "三类信息严格分开：官方配额与权益、GitHub 官方个人账单、本地导入的使用记录。无法获取的数据显示为「不可用」，绝不显示成零。",
+    `<button class="btn" data-action="refresh-official">${icon("refresh", 14)} 刷新官方数据</button>
+     <button class="btn" data-action="refresh-prices">${icon("refresh", 14)} 刷新价格目录</button>
+     <button class="btn" data-action="usage-import" ${U.consent ? "" : "disabled"}>${icon("upload", 14)} 导入本地记录</button>
+     <button class="btn btn-danger" data-action="usage-clear" ${U.records.length ? "" : "disabled"}>${icon("trash", 14)} 清除已导入记录</button>`)
+  + (!U.consent ? `<div class="alert a-warn mb16"><span class="alert-ic">${icon("lock", 15)}</span><div><b>本地用量采集未开启。</b>开启前不会导入任何本地记录；开启后仅保存统计元数据（时间、模型、Token 数），不保存提示词、回答、代码或工具内容。<span class="right"></span><button class="btn btn-sm btn-primary" data-action="consent-on">开启采集（仅元数据）</button></div></div>` : "")
+  + `<div class="grid grid-3 mb16">
+    ${renderSrcOfficial(S.official)}
+    ${renderSrcBilling(S.billing)}
+    ${renderSrcLocal(S.local, U)}
+  </div>
+  <div class="card mb16"><div class="card-body" style="padding:13px 16px">
+    <div class="filter-bar">
+      <div class="field"><label class="label">日期范围</label><select class="select" data-filter="range">${[["today", "今天"], ["7d", "近 7 天"], ["14d", "近 14 天"], ["all", "全部"]].map(([v, t]) => `<option value="${v}" ${f.range === v ? "selected" : ""}>${t}</option>`).join("")}</select></div>
+      <div class="field"><label class="label">客户端</label><select class="select" data-filter="client"><option value="all">全部客户端</option>${clientsInRecs.map(id => `<option value="${esc(id)}" ${f.client === id ? "selected" : ""}>${esc(clientName(state, id))}</option>`).join("")}</select></div>
+      <div class="field"><label class="label">连接</label><select class="select" data-filter="conn"><option value="all">全部路线</option><option value="none" ${f.conn === "none" ? "selected" : ""}>非 BYOK（无连接）</option>${state.connections.map(c => `<option value="${c.id}" ${f.conn === c.id ? "selected" : ""}>${esc(c.name)}</option>`).join("")}</select></div>
+      <div class="field"><label class="label">模型</label><select class="select" data-filter="model">${modelsInRecs.map(m => `<option value="${esc(m)}" ${f.model === m ? "selected" : ""}>${esc(m)}</option>`).join("")}<option value="all" ${f.model === "all" ? "selected" : ""}>全部模型</option></select></div>
+      <div class="field"><label class="label">调用路线</label><select class="select" data-filter="route"><option value="all">全部路线</option>${Object.keys(ROUTE_TXT).map(k => `<option value="${k}" ${f.route === k ? "selected" : ""}>${ROUTE_TXT[k][0]}</option>`).join("")}</select></div>
+      <span class="right"></span><span class="tiny muted">${recs.length} 条记录 · 覆盖 ${clientsInRecs.length} 个客户端</span>
+    </div>
+  </div></div>
+  <div class="grid grid-4 mb16">
+    <div class="stat"><div class="stat-num">${fmtInt(tot.req)}</div><div class="stat-label">请求数</div></div>
+    <div class="stat"><div class="stat-num">${fmtInt(tot.ses)}</div><div class="stat-label">会话数</div></div>
+    <div class="stat"><div class="stat-num">${fmtTok(tot.i)} / ${fmtTok(tot.o)}</div><div class="stat-label">输入 / 输出 Token</div></div>
+    <div class="stat"><div class="stat-num">${hitRate == null ? "—" : hitRate + "%"}</div><div class="stat-label">缓存命中率（读 ${fmtTok(tot.cr)} / 写 ${fmtTok(tot.cw)}）</div></div>
+  </div>
+  <div class="grid grid-2 mb16">
+    <div class="cost-card cost-official">
+      <div class="row g8"><span style="color:var(--ok)">${icon("shield", 16)}</span><b>官方金额（权威）</b>${srcStatusBadge(S.billing)}</div>
+      ${S.billing.status === "available" && S.billing.enabled ? `<div class="cost-num">${fmtMoney(S.billing.amount)}</div><div class="tiny muted">GitHub 返回的个人账单 · ${esc(S.billing.period)} · 更新于 ${ago(S.billing.updatedAt)}</div>`
+      : `<div class="cost-num" style="color:var(--faint)">不可用</div><div class="tiny muted">${S.billing.enabled ? esc(S.billing.note || "未获取") : "数据源已停用"}——不显示为零</div>`}
+    </div>
+    <div class="cost-card cost-est">
+      <div class="row g8"><span style="color:var(--manual)">${icon("chart", 16)}</span><b>API 等价估算（参考）</b>${badge("b-neutral", PRICES.version)}</div>
+      ${U.consent && S.local.enabled && recs.length ? `<div class="cost-num">≈ ${fmtMoney(est.sum)}</div><div class="tiny muted">按本地 Token × 价格目录（${PRICES.version}，更新于 ${ago(state.usage.priceUpdatedAt)}）计算的参考值${est.missing.length ? ` · <span style="color:var(--warn)">${est.missing.length} 个模型缺少价格未计入：${esc(est.missing.join("、"))}</span>` : ""}</div>`
+      : `<div class="cost-num" style="color:var(--faint)">不可用</div><div class="tiny muted">${U.consent ? (S.local.enabled ? "当前筛选范围内没有记录" : "本地来源已停用") : "本地采集未开启"}——不显示为零</div>`}
+    </div>
+  </div>
+  <div class="alert a-info mb16"><span class="alert-ic">${icon("info", 15)}</span><div class="small"><b>两个口径不可相加。</b>「官方金额」是 GitHub 返回的权威账单；「API 等价估算」是按本地 Token 与公开价格计算的参考值，<b>不是实际花费</b>。历史估算保留当时的价格依据（当前目录：${PRICES.version}）。数据质量：完整 ${q.complete || 0} 条 / 部分 ${q.partial || 0} 条 / 推断 ${q.inferred || 0} 条；推断路线的记录已标注可信程度。</div></div>
+  <div class="card"><div class="card-head"><div class="card-title">使用记录</div><span class="right"></span><span class="tiny muted">本地导入 · 仅统计元数据</span></div>
+  ${recs.length ? `<div class="table-wrap" style="border:none;border-radius:0;max-height:420px;overflow:auto"><table class="tbl tbl-compact"><thead><tr><th>时间</th><th>客户端</th><th>连接</th><th>模型</th><th>路线（置信度）</th><th class="num">请求</th><th class="num">会话</th><th class="num">输入</th><th class="num">输出</th><th class="num">缓存读</th><th class="num">缓存写</th><th>质量</th></tr></thead><tbody>
+    ${recs.slice(0, 120).map(r => `<tr>
+      <td class="tiny mono" style="white-space:nowrap">${fmtTime(r.ts)}</td>
+      <td>${esc(clientName(state, r.clientId))}</td>
+      <td class="small">${r.connId ? esc(connName(state, r.connId)) : '<span class="faint">—</span>'}</td>
+      <td class="mono small">${esc(r.model)}</td>
+      <td>${routeBadge(r.route, r.confidence)}</td>
+      <td class="num">${r.requests}</td><td class="num">${r.sessions}</td>
+      <td class="num">${fmtTok(r.input)}</td><td class="num">${fmtTok(r.output)}</td>
+      <td class="num">${fmtTok(r.cacheRead)}</td><td class="num">${fmtTok(r.cacheWrite)}</td>
+      <td>${badge(QUALITY_TXT[r.quality][1], QUALITY_TXT[r.quality][0])}</td>
+    </tr>`).join("")}</tbody></table></div>`
+  : `<div class="empty"><div class="empty-ic">${icon("chart", 22)}</div><div class="empty-title">当前筛选范围内没有记录</div><div class="empty-sub">${U.consent ? "调整筛选条件，或点击「导入本地记录」（模拟）。" : "先在上方开启本地用量采集。"}</div></div>`}
+  </div>`;
+}
+function renderSrcOfficial(s) {
+  return `<div class="src-card"><div class="src-head"><span style="color:var(--info)">${icon("star" in ICONS ? "star" : "bolt", 15)}</span><span class="src-name">官方 Copilot 配额与权益</span><span class="right"></span>${srcStatusBadge(s)}</div>
+    ${s.enabled === false ? `<div class="small muted">数据源已停用。</div>`
+    : s.status === "available" ? `<div class="row between small mb4"><span>${esc(s.plan)}</span><span class="mono">${s.used}/${s.total} 高级请求</span></div>
+      <div class="progress mb8"><div class="progress-bar" style="width:${Math.round(s.used / s.total * 100)}%"></div></div>
+      <div class="tiny muted">重置日 ${esc(s.resetAt)} · 更新于 ${ago(s.updatedAt)}</div>
+      <div class="row wrap g4 mt8">${s.models.map(m => badge("b-neutral", m)).join("")}</div>`
+    : s.status === "network-error" ? `<div class="alert a-err" style="padding:8px 10px"><span class="alert-ic">${icon("x", 14)}</span><div class="small"><b>加载失败：</b>${esc(s.note)}<br>上次成功：${ago(s.updatedAt)}（已保留旧数据标记，不显示为零）</div></div><button class="btn btn-sm mt8" data-action="refresh-official">${icon("refresh", 13)} 重试</button>`
+    : `<div class="small muted">${esc(s.note || "未获取")}</div><button class="btn btn-sm mt8" data-action="refresh-official">${icon("refresh", 13)} 获取</button>`}
+    <div class="hr"></div><label class="row g8 tiny muted">数据源启用 <span class="switch right"><input type="checkbox" data-action-change="src-toggle" data-src="official" ${s.enabled !== false ? "checked" : ""}><span class="sl"></span></span></label></div>`;
+}
+function renderSrcBilling(s) {
+  return `<div class="src-card"><div class="src-head"><span style="color:var(--ok)">${icon("db", 15)}</span><span class="src-name">GitHub 个人账单（官方）</span><span class="right"></span>${srcStatusBadge(s)}</div>
+    ${s.enabled === false ? `<div class="small muted">数据源已停用。</div>`
+    : !s.authorized ? `<div class="small muted">需要管理器的<b>独立 GitHub 授权</b>（只读），与各客户端登录分开，不是配置 BYOK 的前提。</div><button class="btn btn-sm btn-primary mt8" data-action="nav" data-page="system">${icon("key", 13)} 去设置页授权</button>`
+    : s.status === "available" ? `<div class="cost-num" style="font-size:20px">${fmtMoney(s.amount)}</div><div class="tiny muted">${esc(s.period)} · 更新于 ${ago(s.updatedAt)}</div><div class="tiny muted mt4">${esc(s.note)}</div>`
+    : s.status === "network-error" ? `<div class="alert a-err" style="padding:8px 10px"><span class="alert-ic">${icon("x", 14)}</span><div class="small"><b>加载失败：</b>${esc(s.note)}</div></div><button class="btn btn-sm mt8" data-action="refresh-official">${icon("refresh", 13)} 重试</button>`
+    : `<div class="small muted">${esc(s.note || "尚未获取")}</div><button class="btn btn-sm mt8" data-action="refresh-official">${icon("refresh", 13)} 获取账单数据</button>`}
+    <div class="hr"></div><label class="row g8 tiny muted">数据源启用 <span class="switch right"><input type="checkbox" data-action-change="src-toggle" data-src="billing" ${s.enabled !== false ? "checked" : ""}><span class="sl"></span></span></label></div>`;
+}
+function renderSrcLocal(s, U) {
+  return `<div class="src-card"><div class="src-head"><span style="color:var(--accent)">${icon("upload", 15)}</span><span class="src-name">本地导入的使用记录</span><span class="right"></span>${srcStatusBadge(U.consent ? s : { status: "disabled" })}</div>
+    ${!U.consent ? `<div class="small muted">采集未开启（隐私设置）。开启前不导入、不统计。</div>`
+    : s.enabled === false ? `<div class="small muted">数据源已停用。</div>`
+    : s.status === "available" ? `<div class="cost-num" style="font-size:20px">${fmtInt(s.count)} 条</div><div class="tiny muted">覆盖 ${esc(s.range)} · 仅元数据（模型 / Token / 时间）</div>`
+    : `<div class="small muted">${esc(s.note || "暂无记录")}</div>`}
+    <div class="hr"></div><label class="row g8 tiny muted">数据源启用 <span class="switch right"><input type="checkbox" data-action-change="src-toggle" data-src="local" ${s.enabled !== false ? "checked" : ""} ${U.consent ? "" : "disabled"}><span class="sl"></span></span></label></div>`;
+}
+function modalClearUsage() {
+  return modalShell("清除已导入记录", `<div class="alert a-warn"><span class="alert-ic">${icon("warn", 15)}</span><div>将删除管理器已导入的 <b>${state.usage.records.length}</b> 条本地使用统计（不影响客户端自身的任何数据）。此操作不可撤销。</div></div>`,
+    `<button class="btn" data-action="close-modal">取消</button><button class="btn btn-danger" data-action="usage-clear-do">${icon("trash", 14)} 确认清除</button>`, "trash");
+}
+
+/* ================================================================
+   页面：活动与设置
+   ================================================================ */
+const ACT_ICONS = { detect: "monitor", install: "download", login: "users", publish: "send", resource: "layers", usage: "chart", auth: "key", recovery: "shield", settings: "gear" };
+function renderActItem(a, compact) {
+  const expanded = ui.expandedAct[a.id];
+  const detail = compact && !expanded && a.detail.length > 90 ? a.detail.slice(0, 90) + "…" : a.detail;
+  return `<div class="act-item">
+    <span class="act-ic">${icon(ACT_ICONS[a.type] || "info", 15)}</span>
+    <div class="grow">
+      <div class="row g8 wrap"><b class="small">${esc(a.object)}</b>${badge("b-neutral", ACT_TYPES[a.type] || a.type)}${resultBadge(a.result)}</div>
+      ${detail ? `<div class="tiny muted mt4">${esc(detail)}</div>` : ""}
+      <div class="row g6 mt4 wrap">
+        ${a.redacted ? `<span class="tiny faint row g4">${icon("lock", 11)} 敏感信息已脱敏</span>` : ""}
+        ${a.next ? `<button class="btn btn-xs" data-action="next-go" data-page="${a.next.page || ""}" data-do="${a.next.action || ""}">${esc(a.next.label)} →</button>` : ""}
+        ${!compact && a.detail.length > 90 ? `<button class="btn btn-xs btn-ghost" data-action="act-expand" data-id="${a.id}">${expanded ? "收起" : "展开"}</button>` : ""}
+      </div>
+    </div>
+    <span class="act-time">${fmtTime(a.ts)}</span>
+  </div>`;
+}
+function renderSystem() {
+  const tab = ui.sysTab;
+  const seg = `<div class="seg mb16">${[["activity", "活动记录"], ["settings", "设置"]].map(([k, t]) => `<button class="seg-item ${tab === k ? "active" : ""}" data-action="sys-tab" data-tab="${k}">${t}</button>`).join("")}</div>`;
+  if (tab === "settings") return pageHead("活动与设置", "独立授权、隐私选项、存储与恢复状态。") + seg + renderSettings();
+  const types = ["all", ...new Set(state.activity.map(a => a.type))];
+  const list = state.activity.filter(a => ui.actFilter === "all" || a.type === ui.actFilter);
+  return pageHead("活动与设置", "安装、登录、配置发布、资源发布、用量导入、刷新与恢复的统一时间线：时间、对象、结果、脱敏说明与下一步。") + seg
+    + `<div class="card"><div class="card-head"><div class="card-title">活动记录</div><span class="right"></span><div class="seg">${types.map(t => `<button class="seg-item ${ui.actFilter === t ? "active" : ""}" data-action="act-filter" data-t="${t}" style="padding:3px 10px;font-size:12px">${t === "all" ? "全部" : (ACT_TYPES[t] || t)}</button>`).join("")}</div></div>
+    <div class="scroll" style="max-height:560px">${list.map(a => renderActItem(a, false)).join("") || `<div class="empty"><div class="empty-title">暂无记录</div></div>`}</div></div>`;
+}
+function renderSettings() {
+  const g = state.githubAuth;
+  return `<div class="grid grid-2" style="align-items:start">
+    <div class="col g16">
+      <div class="card"><div class="card-head"><span style="color:var(--accent)">${icon("key", 16)}</span><div class="card-title">GitHub 独立授权（账单 / 用量）</div><span class="right"></span>${g.authorized ? badge("b-ok", "已授权 @" + g.login) : badge("b-neutral", "未授权")}</div>
+      <div class="card-body">
+        <div class="small muted mb12">用于读取 GitHub 官方个人用量与账单（只读）。与各客户端的登录<b>完全独立</b>，不是配置 BYOK 的必经步骤。</div>
+        ${g.authorized ? `<button class="btn btn-danger" data-action="revoke-github">${icon("x", 13)} 解除授权</button>` : `<button class="btn btn-primary" data-action="auth-github">${icon("key", 14)} 完成 OAuth 授权（模拟）</button>`}
+      </div></div>
+      <div class="card"><div class="card-head"><span style="color:var(--accent)">${icon("lock", 16)}</span><div class="card-title">用量隐私</div><span class="right"></span>${state.usage.consent ? badge("b-ok", "已开启（仅元数据）") : badge("b-neutral", "未开启")}</div>
+      <div class="card-body">
+        <label class="row g8"><span class="switch"><input type="checkbox" data-action-change="consent-toggle" ${state.usage.consent ? "checked" : ""}><span class="sl"></span></span><span class="small">允许导入本地用量统计</span></label>
+        <div class="hint mt8">明确同意后才会采集；仅保存统计元数据（时间、客户端、模型、Token 数、缓存量）。<b>永不保存</b>提示词、回答、代码片段或工具调用内容。可随时在「用量与费用」中清除已导入记录。</div>
+      </div></div>
+    </div>
+    <div class="col g16">
+      <div class="card"><div class="card-head"><span style="color:var(--accent)">${icon("db", 16)}</span><div class="card-title">存储与恢复</div><span class="right"></span>${state.recovery.active ? badge("b-err", "数据损坏 · 只读") : badge("b-ok", "正常")}</div>
+      <div class="card-body">
+        <div class="small muted mb12">本地存储路径 <span class="path">%APPDATA%\\CopilotByokManager\\manager.db</span> · 每次写入前自动备份最近 5 代。检测到损坏时进入<b>只读恢复状态</b>，不会静默清空后继续写入。</div>
+        <div class="row g8 wrap">
+          ${state.recovery.active ? `<button class="btn btn-primary" data-action="restore-backup">${icon("refresh", 13)} 从备份恢复</button>` : `<button class="btn" data-action="sim-corrupt">模拟数据损坏（演示）</button>`}
+        </div>
+      </div></div>
+      <div class="card"><div class="card-head"><span style="color:var(--accent)">${icon("info", 16)}</span><div class="card-title">关于本原型</div></div>
+      <div class="card-body small muted">
+        这是 Copilot BYOK Manager 的<b>浏览器交互原型</b>：所有数据为模拟，不访问真实服务，不执行安装、登录、写入或采集。真实产品为 Windows 桌面应用（保留 macOS / Linux 检测能力）。当前为预发布阶段，「原型中可用」不代表「所有版本均已验证」。
+        <div class="row g8 mt12"><button class="btn btn-sm" data-action="open-help">${icon("question", 13)} 使用指南</button><button class="btn btn-sm" data-action="reset-scenario">${icon("refresh", 13)} 重置当前场景</button></div>
+      </div></div>
+    </div>
+  </div>`;
+}
+/* ---------------- 其余模态 ---------------- */
+function modalHelp() {
+  const body = `
+  <div class="alert a-warn mb12"><span class="alert-ic">${icon("warn", 15)}</span><div><b>浏览器演示模式</b>：全部数据为模拟，不连接真实服务，不执行任何本机写入。</div></div>
+  <div class="label">打开方式</div>
+  <p class="small muted mb12">直接双击本 HTML 文件（或拖入 Edge / Chrome / Firefox）。无需安装依赖、无需启动开发服务、无需账号或 API Key。</p>
+  <div class="label">建议试用步骤</div>
+  <ol class="step-list">
+    <li><b>核心发布流</b>：工作台选择连接「星河网关 · Claude 专线」→ 勾选模型 → 勾选目标客户端 → 生成部署预览 → 明确确认 → 查看逐项结果。注意「配置已写入 / 账号已确认 / 模型调用成功」三种状态是分开的。</li>
+    <li><b>预览失效</b>：生成预览后，到「连接与模型」修改任意内容并保存，回工作台查看「预览已失效」提示。</li>
+    <li><b>失败与中断</b>：在预览左下角的「演示注入」中选择「模拟 CLI 写入失败」或「模拟中断」，发布后查看恢复信息（事务 ID、备份路径、重试 / 回滚）。</li>
+    <li><b>外部修改保护</b>：在「客户端与账号」对 VS Code Insiders 点「模拟外部修改」，再生成预览——该目标默认跳过，需显式勾选「备份后覆盖」。</li>
+    <li><b>首次设置流</b>：顶部场景切换为「空状态」，依次体验：预览安装缺失组件（含取消与逐项结果、安装后重新检测）→ 官方登录引导 → 新建连接 → 发布。</li>
+    <li><b>账号冲突</b>：切换到「账号冲突」场景，在「客户端与账号」中协调登录。</li>
+    <li><b>用量两口径</b>：在「用量与费用」切换日期 / 客户端 / 连接 / 路线筛选；对比「官方金额（权威）」与「API 等价估算（参考）」——两者不可相加；试试导入、清除与停用数据源。</li>
+    <li><b>共享资源</b>：编辑一个 MCP 配置，预览发布，观察自动 / 手动 / 不支持的边界与「保留原有内容」说明。</li>
+    <li><b>只读恢复</b>：「活动与设置 → 设置 → 模拟数据损坏」，进入只读恢复模式后再从备份恢复。</li>
+  </ol>
+  <div class="label mt12">演示场景</div>
+  <p class="small muted">顶部横幅的「演示场景」下拉可切换：标准 / 空状态 / 部分数据加载失败 / 上次发布部分成功 / 预览已过期 / 账号冲突 / 发布中断待恢复。「重置场景」回到该场景初始状态。</p>`;
+  return modalShell("使用指南", body, `<button class="btn btn-primary" data-action="close-modal">开始试用</button>`, "question");
+}
+function modalConfirm(m) {
+  return modalShell(m.title || "确认", `<div class="alert ${m.danger ? "a-warn" : "a-info"}"><span class="alert-ic">${icon("warn", 15)}</span><div>${m.message || ""}</div></div>`,
+    `<button class="btn" data-action="close-modal">取消</button><button class="btn ${m.danger ? "btn-danger" : "btn-primary"}" data-action="confirm-ok">${esc(m.confirmLabel || "确认")}</button>`, "warn");
+}
+function modalCorrupt() {
+  return modalShell("模拟数据损坏", `<div class="alert a-warn"><span class="alert-ic">${icon("warn", 15)}</span><div>演示存储损坏后的行为：应用将进入<b>只读恢复模式</b>——所有写操作被禁止，顶部出现恢复横幅，不会静默清空数据继续写入。可随时「从备份恢复」。</div></div>`,
+    `<button class="btn" data-action="close-modal">取消</button><button class="btn btn-danger" data-action="do-corrupt">${icon("warn", 13)} 进入只读恢复模式</button>`, "db");
+}
+
+/* ================================================================
+   事件处理（委托）
+   ================================================================ */
+const RECOVERY_OK = new Set(["nav", "reset-scenario", "restore-backup", "open-help", "close-modal", "act-expand", "res-tab", "sys-tab", "act-filter", "scenario-change"]);
+function doNext(doAction) {
+  if (!doAction) return;
+  const map = {
+    "new-conn": () => startNewConn(),
+    "install-all": () => openInstall(state.clients.filter(c => !c.installed)),
+    "goto-accounts": () => setTimeout(() => { const cards = $$(".page > .card, .page .grid > .card"); const el = cards[cards.length - 1]; if (el) el.scrollIntoView({ behavior: "smooth" }); }, 60),
+    "open-lastrun": () => openModal("lastrun", { size: "lg" }),
+    "open-recovery": () => openModal("recovery"),
+    "focus-deploy": () => setTimeout(() => { const el = $("#deployCard"); if (el) el.scrollIntoView({ behavior: "smooth" }); }, 60),
+    "gen-preview": () => genPreview(),
+    "sys-settings": () => { ui.sysTab = "settings"; },
+    "refresh-official": () => refreshOfficial()
+  };
+  if (map[doAction]) map[doAction]();
+}
+function startNewConn() {
+  ui.connEditor = mkConn({ name: "", baseUrl: "" });
+  ui.connNew = true; ui.connEditId = null;
+  if (state.page !== "connections") state.page = "connections";
+  render();
+}
+function genPreview() {
+  const d = state.draft;
+  if (!d.connId || !d.modelIds.length) { toast("请先选择连接与至少一个模型", "warn"); return; }
+  if (!d.targetIds.length) { toast("请先勾选至少一个目标客户端", "warn"); return; }
+  state.preview = buildPreviewFromDraft(state);
+  openModal("preview", { size: "lg" });
+}
+function refreshOfficial() {
+  toast("正在刷新官方数据（模拟）…", "info", 1500);
+  setTimeout(() => {
+    const ok = usageSourcesOk(state.usage.records.length);
+    state.usage.sources.official = ok.official;
+    if (state.githubAuth.authorized) state.usage.sources.billing = Object.assign(ok.billing, { authorized: true, login: state.githubAuth.login });
+    addAct("usage", "刷新官方数据", "success", "Copilot 配额与 GitHub 账单已刷新（模拟）。失败时保留旧数据并标记，不以零值展示。", null);
+    toast("官方数据已刷新（模拟）", "ok");
+    render();
+  }, 900);
+}
+function openInstall(list) {
+  ui.installing = { items: installPlansFor(list), started: false, rechecking: false, done: false };
+  openModal("install");
+}
+
+document.addEventListener("click", e => {
+  const el = e.target.closest("[data-action]");
+  if (e.target === $("#overlay")) { if (!(state.run && state.run.status === "running")) closeModal(); return; }
+  if (!el) return;
+  const a = el.dataset.action, id = el.dataset.id;
+  if (a === "close-modal") { closeModal(); return; }
+  if (state.recovery.active && !RECOVERY_OK.has(a)) { toast("只读恢复模式：写入操作已禁止，请先「从备份恢复」。", "err"); return; }
+  switch (a) {
+    /* 导航与演示控制 */
+    case "nav": state.page = el.dataset.page; render(); break;
+    case "reset-scenario": loadScenario(state.scenario); toast("场景已重置：" + SCENARIOS[state.scenario].name, "info"); break;
+    case "open-help": openModal("help", { size: "lg" }); break;
+    case "next-go": { const p = el.dataset.page; if (p) state.page = p; render(); doNext(el.dataset.do); const noRerender = ["new-conn", "install-all", "open-lastrun", "open-recovery", "gen-preview", "goto-accounts", "focus-deploy", "refresh-official"]; if (el.dataset.do && !noRerender.includes(el.dataset.do)) render(); break; }
+    /* 工作台草稿 */
+    case "draft-conn": {
+      state.draft.connId = id;
+      const conn = state.connections.find(c => c.id === id);
+      state.draft.modelIds = conn ? conn.models.filter(m => m.enabled).map(m => m.id) : [];
+      render(); break;
+    }
+    case "draft-model": {
+      const arr = state.draft.modelIds, i = arr.indexOf(id);
+      if (i >= 0) arr.splice(i, 1); else arr.push(id);
+      render(); break;
+    }
+    case "gen-preview": genPreview(); break;
+    case "open-preview": openModal("preview", { size: "lg" }); break;
+    case "regen-preview": state.preview = buildPreviewFromDraft(state); openModal("preview", { size: "lg" }); toast("已按当前连接与目标重新生成预览", "ok"); break;
+    case "confirm-run": { const sel = $("#injectSel"); const inject = sel ? sel.value : "none"; startRun(inject); break; }
+    case "run-interrupt": interruptRun("用户取消（演示模拟）"); break;
+    case "open-lastrun": openModal("lastrun", { size: "lg" }); break;
+    case "open-recovery": openModal("recovery"); break;
+    case "open-manual-guide": openModal("manualGuide"); break;
+    case "manual-done": {
+      const app = state.clients.find(c => c.kind === "app");
+      if (app) { app.config = "managed-current"; }
+      addAct("publish", "手动配置确认 · Copilot App", "info", "用户声明已按指引在 App 内完成 BYOK 手动配置。管理器未写入、未验证实际调用，请在 App 中发送测试请求。", null);
+      closeModal(); toast("已标记为手动完成（管理器未验证实际调用）", "ok"); render(); break;
+    }
+    case "focus-deploy": { const elc = $("#deployCard"); if (elc) elc.scrollIntoView({ behavior: "smooth" }); break; }
+    /* 恢复 */
+    case "recover-retry": {
+      const run = state.lastRun; if (!run) break;
+      run.items.filter(i => ["failed", "interrupted", "not-run"].includes(i.status)).forEach(i => {
+        i.status = "applied"; i.detail = "恢复重试成功 · " + appliedDetail(state.clients.find(c => c.id === i.clientId) || {});
+        const c = state.clients.find(x => x.id === i.clientId); if (c && c.capability === "auto") c.config = "managed-current";
+      });
+      run.status = "done";
+      addAct("recovery", "恢复事务 " + (run.txId || run.id), "success", "已重试并完成所有未完成的项。", null);
+      closeModal(); toast("恢复重试完成（模拟）", "ok"); render(); break;
+    }
+    case "recover-rollback": {
+      const run = state.lastRun; if (!run) break;
+      run.items.filter(i => i.status === "applied").forEach(i => {
+        i.status = "rolled-back"; i.detail = "已从备份回滚";
+        const c = state.clients.find(x => x.id === i.clientId); if (c) c.config = "managed-changed";
+      });
+      run.status = "done";
+      addAct("recovery", "回滚事务 " + (run.txId || run.id), "success", "已写入的项从备份还原；这些客户端标记为「配置已变化」。", null);
+      closeModal(); toast("已回滚（模拟）", "ok"); render(); break;
+    }
+    /* 连接编辑 */
+    case "new-conn": startNewConn(); break;
+    case "sel-conn": ui.connEditId = id; ui.connEditor = null; ui.connNew = false; render(); break;
+    case "cancel-new-conn": ui.connEditor = null; ui.connNew = false; ui.connEditId = state.connections[0] ? state.connections[0].id : null; render(); break;
+    case "save-conn": saveConn(); break;
+    case "ask-delete-conn": openModal("deleteConn"); break;
+    case "do-delete-conn": deleteConn(); break;
+    case "clear-key": { const ed = editorConn(); ed.apiKeySaved = false; render(); toast("已清除保存的密钥（模拟）", "ok"); break; }
+    case "hdr-add": editorConn().headers.push({ k: "", v: "" }); render(); break;
+    case "hdr-del": editorConn().headers.splice(Number(el.dataset.idx), 1); render(); break;
+    case "fetch-models": fetchModels(); break;
+    case "model-add": openModal("modelEdit", { modelId: null }); break;
+    case "model-edit": openModal("modelEdit", { modelId: id }); break;
+    case "model-del": { const ed = editorConn(); ed.models = ed.models.filter(m => m.id !== id); render(); break; }
+    case "model-save": saveModel(); break;
+    /* 客户端与账号 */
+    case "rescan": doRescan(); break;
+    case "install-all": openInstall(state.clients.filter(c => !c.installed)); break;
+    case "install-one": { const c = state.clients.find(x => x.id === id); openInstall(c ? [c] : []); break; }
+    case "install-start": ui.installing.started = true; renderModal(); setTimeout(runInstallTick, 400); break;
+    case "install-cancel": { const ins = ui.installing; ins.items.forEach(i => { if (i.status === "queued" || i.status === "running") i.status = "canceled"; }); addAct("install", "安装计划", "interrupted", "用户取消；已完成项保留，已重新检测确认真实状态。", null); runInstallTick(); break; }
+    case "sim-external": { const c = state.clients.find(x => x.id === id); if (c) { c.config = "external-modified"; c.lastChecked = Date.now(); addAct("detect", "外部修改检测 · " + c.label, "info", "配置文件在管理器之外被修改。后续发布默认跳过该目标，绝不直接覆盖。", { label: "去工作台", page: "workbench" }); toast("已模拟外部修改：" + c.label, "warn"); render(); } break; }
+    case "retry-detect": { const c = state.clients.find(x => x.id === id); if (c) { c.detectError = null; c.lastChecked = Date.now(); toast("重新检测成功（模拟）", "ok"); render(); } break; }
+    case "set-target-account": state.accountTarget = el.dataset.login; toast("目标账号设为 @" + state.accountTarget, "ok"); render(); break;
+    case "recheck-accounts": {
+      toast("正在重新检查各客户端登录状态（模拟）…", "info", 1500);
+      setTimeout(() => { state.clients.forEach(c => { if (c.account && c.account.trust === "low") c.account.trust = "medium"; c.lastChecked = Date.now(); }); addAct("detect", "账号一致性检查", "success", "已重新检查全部客户端。", null); render(); }, 900); break;
+    }
+    case "login-guide": ui.loginGuide = { clientId: id, phase: "steps" }; openModal("loginGuide"); break;
+    case "login-done": {
+      const g = ui.loginGuide; g.phase = "waiting"; renderModal();
+      setTimeout(() => {
+        const c = state.clients.find(x => x.id === g.clientId);
+        if (c) { c.account = { login: state.accountTarget || "octocat", trust: "high" }; c.lastChecked = Date.now(); }
+        g.phase = "done";
+        addAct("login", "协调登录 · " + (c ? c.label : ""), "success", "按官方流程完成登录并重新检查确认。管理器未接触凭据。", null);
+        renderModal();
+      }, 1000); break;
+    }
+    /* 资源 */
+    case "res-tab": ui.resTab = el.dataset.tab; render(); break;
+    case "res-add": { const tab = ui.resTab; state.resources[tab].push({ id: uid("res"), name: tab === "mcp" ? "new-mcp-server" : tab === "skills" ? "new-skill" : "new-instruction", type: tab === "mcp" ? "http" : undefined, enabled: true, content: "", note: "" }); render(); break; }
+    case "res-save": { const r = state.resources[ui.resTab].find(x => x.id === id); const ta = $(`[data-res-content="${id}"]`); if (r && ta) { r.content = ta.value; toast("资源已保存（未发布）", "ok"); } break; }
+    case "res-del": ui.pendingConfirm = { action: "res-del-do", args: { id } }; openModal("confirm", { title: "删除资源", message: "删除该资源定义？已发布到客户端的内容不会被移除。", confirmLabel: "删除", danger: true }); break;
+    case "res-preview": openModal("resPreview", { size: "lg" }); break;
+    case "res-publish": resPublish(); break;
+    /* 用量 */
+    case "refresh-official": refreshOfficial(); break;
+    case "refresh-prices": state.usage.priceUpdatedAt = Date.now(); addAct("usage", "刷新价格目录", "success", "价格目录已检查：当前仍为 " + PRICES.version + "（模拟）。历史估算保留原价格依据。", null); toast("价格目录已是最新：" + PRICES.version, "ok"); render(); break;
+    case "usage-import": usageImport(); break;
+    case "usage-clear": openModal("clearUsage"); break;
+    case "usage-clear-do": { state.usage.records = []; state.usage.sources.local = { enabled: true, status: "successful-empty", count: 0, range: null, note: "已清除，暂无记录" }; addAct("usage", "清除已导入记录", "success", "已删除管理器导入的全部本地使用统计；不影响客户端自身数据。", null); closeModal(); toast("已清除导入记录", "ok"); render(); break; }
+    case "consent-on": state.usage.consent = true; addAct("settings", "开启本地用量采集", "info", "用户明确同意。仅保存统计元数据。", null); toast("已开启（仅元数据）", "ok"); render(); break;
+    /* 活动与设置 */
+    case "sys-tab": ui.sysTab = el.dataset.tab; render(); break;
+    case "act-filter": ui.actFilter = el.dataset.t; render(); break;
+    case "act-expand": ui.expandedAct[id] = !ui.expandedAct[id]; render(); break;
+    case "auth-github": state.githubAuth = { authorized: true, login: state.accountTarget || "octocat" }; state.usage.sources.billing.authorized = true; if (state.usage.sources.billing.status === "unauthorized") state.usage.sources.billing = { enabled: true, status: "missing", authorized: true, login: state.githubAuth.login, note: "已授权，点击「刷新官方数据」获取" }; addAct("auth", "GitHub 独立授权（账单/用量）", "success", "OAuth 完成（模拟）。与客户端登录相互独立。", null); toast("授权完成（模拟）", "ok"); render(); break;
+    case "revoke-github": ui.pendingConfirm = { action: "revoke-github-do", args: {} }; openModal("confirm", { title: "解除独立授权", message: "解除后无法读取 GitHub 官方个人账单（显示为「不可用」，不会显示为零）。各客户端登录不受影响。", confirmLabel: "解除授权", danger: true }); break;
+    case "sim-corrupt": openModal("corrupt"); break;
+    case "do-corrupt": state.recovery = { active: true, reason: "manager.db 校验和不匹配（模拟）" }; addAct("recovery", "存储完整性检查", "failed", "检测到本地数据损坏，进入只读恢复模式。已停止一切写入。", null); closeModal(); render(); break;
+    case "restore-backup": state.recovery = { active: false }; addAct("recovery", "从备份恢复", "success", "已从最近一代备份还原 manager.db（模拟），退出只读恢复模式。", null); toast("已从备份恢复", "ok"); render(); break;
+    case "confirm-ok": {
+      const p = ui.pendingConfirm; ui.pendingConfirm = null; closeModal();
+      if (p && p.action === "res-del-do") { state.resources[ui.resTab] = state.resources[ui.resTab].filter(x => x.id !== p.args.id); toast("资源已删除", "ok"); render(); }
+      if (p && p.action === "revoke-github-do") { state.githubAuth = { authorized: false }; state.usage.sources.billing = { enabled: true, status: "unauthorized", authorized: false, note: "需要管理器独立授权" }; addAct("auth", "解除 GitHub 独立授权", "info", "账单数据将不再获取，显示为「不可用」。", null); render(); }
+      break;
+    }
+  }
+});
+/* change 事件（表单、筛选、开关） */
+document.addEventListener("change", e => {
+  const el = e.target;
+  if (el.id === "scenarioSel") { loadScenario(el.value); toast("已切换场景：" + SCENARIOS[el.value].name, "info"); return; }
+  if (state.recovery.active && !el.closest(".demo-banner")) { toast("只读恢复模式：修改未生效。", "err"); render(); return; }
+  const ca = el.dataset.actionChange;
+  if (ca === "draft-target") { const arr = state.draft.targetIds, i = arr.indexOf(el.dataset.id); if (el.checked && i < 0) arr.push(el.dataset.id); if (!el.checked && i >= 0) arr.splice(i, 1); render(); return; }
+  if (ca === "pv-backup-write" && state.preview) { const it = state.preview.items.find(x => x.clientId === el.dataset.id); if (it) it.allowBackupWrite = el.checked; renderModal(); return; }
+  if (ca === "model-enable") { const m = editorConn().models.find(x => x.id === el.dataset.id); if (m) { m.enabled = el.checked; if (!m.enabled && m.isDefault) m.isDefault = false; } render(); return; }
+  if (ca === "model-default") { editorConn().models.forEach(m => m.isDefault = m.id === el.dataset.id); render(); return; }
+  if (ca === "inst-toggle") { ui.installing.items[Number(el.dataset.idx)].selected = el.checked; return; }
+  if (ca === "res-enable") { const r = state.resources[el.dataset.tab].find(x => x.id === el.dataset.id); if (r) r.enabled = el.checked; return; }
+  if (ca === "src-toggle") { const s = state.usage.sources[el.dataset.src]; s.enabled = el.checked; toast(el.checked ? "数据源已启用" : "数据源已停用（数据保留，不参与统计）", "info"); render(); return; }
+  if (ca === "consent-toggle") { state.usage.consent = el.checked; addAct("settings", el.checked ? "开启本地用量采集" : "关闭本地用量采集", "info", el.checked ? "用户明确同意。仅保存统计元数据。" : "已停止导入；已导入数据保留，可在用量页清除。", null); render(); return; }
+  if (el.dataset.filter) { ui.usageFilters[el.dataset.filter] = el.value; render(); return; }
+  if (el.dataset.field !== undefined && editorConn()) { const ed = editorConn(); if (el.dataset.field === "apiKeyDraft") { ed.apiKeyDraft = el.value; } else ed[el.dataset.field] = el.value; return; }
+  if (el.dataset.hdrK !== undefined) { editorConn().headers[Number(el.dataset.hdrK)].k = el.value; return; }
+  if (el.dataset.hdrV !== undefined) { editorConn().headers[Number(el.dataset.hdrV)].v = el.value; return; }
+});
+document.addEventListener("keydown", e => { if (e.key === "Escape" && ui.modal && !(state.run && state.run.status === "running")) closeModal(); });
+
+/* ---------------- 连接保存 / 模型保存 / 删除 / 获取模型 ---------------- */
+function saveConn() {
+  const ed = editorConn();
+  if (!ed.name.trim()) { toast("连接名称不能为空", "err"); return; }
+  if (!/^https?:\/\/.+/.test(ed.baseUrl.trim())) { toast("接口地址需以 http(s):// 开头", "err"); return; }
+  ed.headers = ed.headers.filter(h => h.k.trim());
+  if (ed.apiKeyDraft && ed.apiKeyDraft.trim()) { ed.apiKeySaved = true; }
+  delete ed.apiKeyDraft; /* 密钥不落状态、不回显 */
+  if (ed.models.length && !ed.models.some(m => m.isDefault && m.enabled)) { const f = ed.models.find(m => m.enabled); if (f) f.isDefault = true; }
+  ed.updatedAt = Date.now();
+  if (ui.connNew) { state.connections.push(ed); addAct("settings", "新建连接「" + ed.name + "」", "info", "已保存（未发布）。保存连接不等于发布配置。", { label: "去工作台发布", page: "workbench" }); }
+  else {
+    const i = state.connections.findIndex(c => c.id === ed.id);
+    if (i >= 0) state.connections[i] = ed;
+    addAct("settings", "编辑连接「" + ed.name + "」", "info", "已保存（未发布）。此前生成的部署预览如涉及该连接已失效，需重新预览。", { label: "去工作台", page: "workbench" });
+  }
+  ui.connNew = false; ui.connEditId = ed.id; ui.connEditor = null;
+  toast("连接已保存（未发布）。修改需重新预览部署。", "ok");
+  render();
+}
+function saveModel() {
+  const ed = editorConn();
+  const em = ui.editingModel;
+  const val = id => ($("#" + id) ? $("#" + id).value : "");
+  const chk = id => ($("#" + id) ? $("#" + id).checked : false);
+  const modelId = val("fm-modelId").trim();
+  if (!modelId) { toast("模型 ID 不能为空", "err"); return; }
+  const data = { modelId, name: val("fm-name").trim() || modelId, ctx: Number(val("fm-ctx")) || null, maxOut: Number(val("fm-maxout")) || null, enabled: chk("fm-enabled"), isDefault: chk("fm-default"), caps: { tool: chk("fm-tool"), vision: chk("fm-vision"), reason: chk("fm-reason") } };
+  if (em.isNew) ed.models.push(mkModel(Object.assign({ id: em.id }, data)));
+  else { const m = ed.models.find(x => x.id === em.id); if (m) Object.assign(m, data); }
+  if (data.isDefault) ed.models.forEach(m => { if (m.id !== em.id) m.isDefault = false; });
+  closeModal(); render(); toast("模型已保存（未发布）", "ok");
+}
+function deleteConn() {
+  const ed = editorConn();
+  const mode = ($('input[name="delMode"]:checked') || {}).value || "revoke";
+  const managed = state.clients.filter(c => c.installed && (c.config === "managed-current" || c.config === "managed-changed") && c.capability === "auto");
+  if (mode === "revoke") managed.forEach(c => { c.config = "not-configured"; });
+  state.connections = state.connections.filter(c => c.id !== ed.id);
+  if (state.draft.connId === ed.id) state.draft = { connId: state.connections[0] ? state.connections[0].id : null, modelIds: [], targetIds: state.draft.targetIds };
+  if (state.preview && state.preview.connId === ed.id) state.preview = null;
+  addAct("settings", "删除连接「" + ed.name + "」", "info", mode === "revoke" ? `已先撤销 ${managed.length} 个客户端中由本软件管理的配置，再删除连接。` : "仅停止管理；客户端已有配置保留，之后将被视为外部内容。", null);
+  ui.connEditor = null; ui.connNew = false; ui.connEditId = state.connections[0] ? state.connections[0].id : null;
+  closeModal(); toast(mode === "revoke" ? "已撤销受管配置并删除连接（模拟）" : "已删除连接，客户端配置保留", "ok");
+  render();
+}
+function fetchModels() {
+  const ed = editorConn();
+  if (!ed.baseUrl.trim()) { toast("请先填写接口地址", "warn"); return; }
+  ui.fetchModels = { running: true };
+  render();
+  setTimeout(() => {
+    const pool = ed.baseUrl.includes("11434")
+      ? [{ modelId: "qwen3-max", name: "Qwen3 Max", caps: { tool: true, vision: false, reason: false }, ctx: 131072, maxOut: 8192 }, { modelId: "llama4-scout", name: "Llama 4 Scout", caps: { tool: true, vision: true, reason: false }, ctx: 131072, maxOut: 8192 }]
+      : [{ modelId: "claude-sonnet-5-20251015", name: "Claude Sonnet 5（最新快照）", caps: { tool: true, vision: true, reason: true }, ctx: 200000, maxOut: 64000 }, { modelId: "gpt-5-mini", name: "GPT-5 Mini", caps: { tool: true, vision: true, reason: false }, ctx: 128000, maxOut: 16384 }, { modelId: "claude-opus-5.1", name: "Claude Opus 5.1", caps: { tool: true, vision: true, reason: true }, ctx: 200000, maxOut: 64000 }];
+    let added = 0, existed = 0;
+    pool.forEach(p => {
+      if (ed.models.some(m => m.modelId === p.modelId)) { existed++; return; }
+      ed.models.push(mkModel(Object.assign({ enabled: false }, p))); added++;
+    });
+    ui.fetchModels = null;
+    toast(`获取完成（模拟）：新增 ${added} 个，已存在 ${existed} 个。未发送聊天请求。`, "ok", 4200);
+    render();
+  }, 1200);
+}
+function doRescan() {
+  ui.scanning = true; render();
+  setTimeout(() => {
+    ui.scanning = false;
+    state.clients.forEach(c => { c.lastChecked = Date.now(); if (c.detectError && state.scenario !== "load-failure") c.detectError = null; });
+    addAct("detect", "环境检测完成", "success", "重新检测 " + state.clients.length + " 个客户端实例（模拟）。", null);
+    toast("检测完成（模拟）", "ok");
+    render();
+  }, 1300);
+}
+function usageImport() {
+  const rnd = mulberry32(Date.now() % 2147483647);
+  const added = [];
+  for (let i = 0; i < 16; i++) {
+    const byok = rnd() < 0.7;
+    added.push({
+      id: uid("u"), ts: Date.now() - Math.floor(rnd() * 20 * 3600e3),
+      clientId: ["cli", "vs-stable", "jb-idea"][Math.floor(rnd() * 3)],
+      connId: byok ? "conn-galaxy" : null, model: byok ? "claude-sonnet-5" : "gpt-5",
+      route: byok ? "byok" : "official", confidence: byok ? "identity" : "explicit",
+      requests: 1 + Math.floor(rnd() * 5), sessions: 1, input: Math.floor(3e3 + rnd() * 50e3), output: Math.floor(800 + rnd() * 8e3),
+      cacheRead: Math.floor(rnd() * 20e3), cacheWrite: Math.floor(rnd() * 5e3), quality: "complete"
+    });
+  }
+  state.usage.records = added.concat(state.usage.records);
+  state.usage.sources.local = { enabled: true, status: "available", count: state.usage.records.length, range: "2026-09-28 ~ 2026-10-11", note: "从支持的本地来源导入 · 仅统计元数据" };
+  addAct("usage", "导入本地用量记录", "success", "新导入 " + added.length + " 条（模拟）。仅保存元数据（模型、Token、时间），不含提示词或代码。", null);
+  toast("已导入 " + added.length + " 条本地记录（模拟）", "ok");
+  render();
+}
+function resPublish() {
+  const tab = ui.resTab;
+  const list = (state.resources[tab] || []).filter(r => r.enabled);
+  const targets = resTargets(tab);
+  const results = [];
+  targets.forEach(t => {
+    const c = state.clients.find(x => x.id === t.clientId);
+    const writable = list.filter(r => !(tab === "mcp" && r.type === "command"));
+    if (t.support === "auto" && writable.length && c && c.installed) results.push({ target: c.label, status: "success", detail: `合并写入 ${writable.length} 项（保留原有内容）` });
+    else if (t.support === "manual") results.push({ target: clientName(state, t.clientId), status: "manual", detail: "需在客户端设置中手动配置" });
+    else if (t.support === "unsupported") results.push({ target: clientName(state, t.clientId), status: "skipped", detail: "不支持该资源类型" });
+    else results.push({ target: clientName(state, t.clientId), status: "skipped", detail: "无可自动发布的内容" });
+  });
+  state.resPublish = { at: Date.now(), tab, results };
+  addAct("resource", "发布共享资源 · " + RES_TABS[tab].name.split("（")[0], results.some(r => r.status !== "success") ? "partial" : "success",
+    results.map(r => `${r.target}：${r.detail}`).join("；") + "。未将所有客户端标记为已同步。", { label: "查看资源", page: "resources" });
+  closeModal(); toast("资源发布完成（部分目标需手动，见结果）", "ok");
+  render();
+}
+
+/* ---------------- 初始化 ---------------- */
+loadScenario("standard");
+
+</script>
+</body>
+</html>
