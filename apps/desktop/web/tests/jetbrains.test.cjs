@@ -8,9 +8,11 @@ const target = { id: "jb-idea", kind: "jetbrains-copilot", name: "IntelliJ IDEA 
 
 test("JetBrains guide includes real configuration steps but not credentials or completion controls", () => {
   const html = guide(connection, target, { description: "Manual only", changes: ["Enable model: allowed-model"] });
-  for (const text of ["Manage Models", "Add Models", "Login to GitHub", "OpenAI-compatible", "example.invalid/v1", "allowed-model", "Password Safe"]) assert.ok(html.includes(text));
+  for (const text of ["Manage Models", "Add Models", "Login to GitHub", "OpenAI 兼容", "example.invalid/v1", "allowed-model", "Password Safe"]) assert.ok(html.includes(text));
   assert.doesNotMatch(html, /SENSITIVE|disabled-model|confirm-manual|apply-deployment|<input/);
-  assert.match(guide(null, target), /Add a Connection/);
+  assert.match(html, /仅在 IDE 中配置其界面支持的字段/);
+  assert.doesNotMatch(html, /确认发布后仅在原生 BYOK 配置中写入/);
+  assert.match(guide(null, target), /请先添加连接/);
 });
 test("untrusted names, endpoints, models and native runbook fields are escaped", () => {
   const html = guide({ ...connection, name: "<script>name</script>", baseUrl: '<img src=x onerror="bad">', models: [{ modelId: "<script>model</script>", enabled: true }] }, { ...target, detail: "<script>plugin</script>", path: '<img src="x">' }, { description: "<script>native</script>", changes: ["<img src=x>"] });
@@ -19,12 +21,14 @@ test("untrusted names, endpoints, models and native runbook fields are escaped",
 });
 test("writable JetBrains review exposes real automatic fields without showing secrets", () => {
   const html = guide(connection, { ...target, supportsWrite: true, status: "available" }, { supported: true, description: "Deploy dedicated BYOK namespace", changes: ["Enable model: allowed-model"] });
-  assert.match(html, /Automatic BYOK deployment is available/);
+  assert.match(html, /可自动发布 BYOK/);
   assert.match(html, /byok\.json/);
-  assert.match(html, /written once/);
-  assert.match(html, /reopen them/);
-  assert.match(html, /you do not need to re-enter them in Manage Models/);
-  assert.doesNotMatch(html, /Save, enable the desired models/);
+  assert.match(html, /只写一次/);
+  assert.match(html, /重新打开 IDE/);
+  assert.match(html, /无需在 Manage Models 中重新输入/);
+  assert.match(html, /独立 XML/);
+  assert.match(html, /配置写入不等于登录或请求成功/);
+  assert.doesNotMatch(html, /保存并启用模型/);
   assert.doesNotMatch(html, /SENSITIVE|disabled-model|<input/);
   const data = { setup: { manualConfirmed: true, preferences: { connectionId: "c" }, targets: [{ targetId: "jb-idea", state: "notDeployed" }] } };
   const state = setup.derive({ clients: [{ ...target, supportsWrite: true }], connections: [connection] }, data);
@@ -46,7 +50,7 @@ test("app manual confirmation never covers JetBrains, which is optional for core
 });
 test("JetBrains coverage is unavailable rather than fabricated zero or CLI attribution", () => {
   const html = usage.render({ connections: [connection], clients: [target] }, { errors: {} }, true);
-  assert.match(html, /JetBrains usage: not covered/);
-  assert.match(html, /unknown, not zero/);
+  assert.match(html, /JetBrains 用量：未覆盖/);
+  assert.match(html, /未知，不是零/);
   assert.doesNotMatch(html, /data-source-id="jetbrains/);
 });

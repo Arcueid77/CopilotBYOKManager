@@ -39,9 +39,9 @@
     anchor: {
       state: "verified",
       identity: browserIdentity,
-      evidence: "Browser preview: simulated GitHub API identity",
+      evidence: "浏览器试用：模拟 GitHub API 身份",
       detail:
-        "Preview data only. The native app queries an official API through a bounded GitHub CLI process.",
+        "仅为模拟数据；原生应用通过受限的 GitHub CLI 查询官方身份接口。",
       observedAt: new Date().toISOString(),
     },
     surfaces: [
@@ -49,24 +49,24 @@
         surface: "vsCodeCopilot",
         state: "actionRequired",
         identity: null,
-        evidence: "Browser preview: VS Code SecretStorage was not inspected",
-        detail: "Use the official VS Code Accounts interface to select github.com.",
+        evidence: "浏览器试用：未检查 VS Code SecretStorage",
+        detail: "请在 VS Code 官方账号界面中选择 github.com。",
         observedAt: new Date().toISOString(),
       },
       {
         surface: "copilotCli",
         state: "inferred",
         identity: browserIdentity,
-        evidence: "Browser preview: simulated GitHub CLI authentication fallback",
-        detail: "Verify the selected account inside Copilot CLI with /user.",
+        evidence: "浏览器试用：模拟 GitHub CLI 身份推断",
+        detail: "请在 Copilot CLI 内使用 /user 核对所选账号。",
         observedAt: new Date().toISOString(),
       },
       {
         surface: "githubCopilotApp",
         state: "notInstalled",
         identity: null,
-        evidence: "Browser preview: application not installed",
-        detail: "Install the app before starting its official sign-in flow.",
+        evidence: "浏览器试用：模拟未安装状态",
+        detail: "请先安装 App，再完成官方登录。",
         observedAt: new Date().toISOString(),
       },
     ],
@@ -128,24 +128,24 @@
     return `
       <div class="account-panel-header">
         <div>
-          <p class="eyebrow">ACCOUNT ORCHESTRATION</p>
-          <h2>Use official sign-in flows without copying credentials</h2>
-          <p class="account-copy">PilotWeave keeps client authentication stores private. It opens fixed official flows, exposes identity evidence, and never reads VS Code SecretStorage, browser cookies, or client OAuth tokens.</p>
+          <p class="eyebrow">账号核对</p>
+          <h2>通过官方流程登录</h2>
+          <p class="account-copy">仅打开官方登录流程，不读取或复制客户端登录凭据。</p>
         </div>
         <div class="account-panel-actions">
-          <button class="button ghost small" data-account-action="refresh" ${loading ? "disabled" : ""}>${loading ? "Checking…" : "Refresh accounts"}</button>
-          <button class="button primary small" data-account-action="preview" ${loading || selectable.length === 0 || status?.historyRecovery ? "disabled" : ""}>Open official sign-in flows${selectable.length ? ` (${selectable.length})` : ""}</button>
+          <button class="button ghost small" data-account-action="refresh" ${loading ? "disabled" : ""}>${loading ? "检查中…" : "刷新账号"}</button>
+          <button class="button primary small" data-account-action="preview" ${loading || selectable.length === 0 || status?.historyRecovery ? "disabled" : ""}>查看官方登录步骤${selectable.length ? ` (${selectable.length})` : ""}</button>
         </div>
       </div>
       ${status?.historyRecovery ? renderRecovery(status.historyRecovery) : ""}
-      <div class="account-summary" aria-label="Account observation summary">
-        <span><strong>${surfaces.length ? verifiedCount : "—"}</strong> verified</span>
-        <span><strong>${surfaces.length ? actionCount : "—"}</strong> need review</span>
-        <span><strong>${surfaces.length ? surfaces.length : "—"}</strong> surfaces</span>
-        <span class="account-runtime">${isDesktop ? "Native account probes and launchers" : "Browser preview only — no sign-in flow will open"}</span>
+      <div class="account-summary" aria-label="账号观察摘要">
+        <span><strong>${surfaces.length ? verifiedCount : "—"}</strong> 已验证</span>
+        <span><strong>${surfaces.length ? actionCount : "—"}</strong> 待核对</span>
+        <span><strong>${surfaces.length ? surfaces.length : "—"}</strong> 个客户端</span>
+        <span class="account-runtime">${isDesktop ? "本地账号观察与官方登录" : "浏览器试用，不打开真实登录"}</span>
       </div>
-      ${loading && !status ? '<div class="account-loading">Discovering account state…</div>' : ""}
-      ${!loading && !status ? '<div class="account-loading">Account status has not been loaded.</div>' : ""}
+      ${loading && !status ? '<div class="account-loading">读取账号状态中…</div>' : ""}
+      ${!loading && !status ? '<div class="account-loading">尚未读取账号状态，请刷新。</div>' : ""}
       ${status ? renderAnchor(status.anchor) : ""}
       ${surfaces.length ? `<div class="account-grid">${surfaces.map(renderSurface).join("")}</div>` : ""}
       ${status ? renderHistory(status.loginRuns ?? []) : ""}
@@ -155,7 +155,7 @@
   function renderRecovery(reason) {
     return `
       <div class="account-recovery">
-        <strong>Sign-in history is read-only</strong>
+        <strong>登录历史处于只读恢复</strong>
         <span>${escapeHtml(reason)}</span>
       </div>`;
   }
@@ -166,16 +166,16 @@
       <article class="account-anchor">
         <div class="account-anchor-heading">
           <div>
-            <span class="account-kicker">TARGET ACCOUNT ANCHOR</span>
-            <h3>${identity ? `${escapeHtml(identity.login)} · ${escapeHtml(identity.host)}` : "No verified github.com identity"}</h3>
+            <span class="account-kicker">目标账号</span>
+            <h3>${identity ? `${escapeHtml(identity.login)} · ${escapeHtml(identity.host)}` : "尚无已验证的 github.com 账号"}</h3>
           </div>
           <span class="account-status ${stateClass(anchor?.state)}">${escapeHtml(stateLabel(anchor?.state))}</span>
         </div>
-        <p>${escapeHtml(anchor?.detail ?? "No account anchor observation is available.")}</p>
-        <div class="account-evidence"><strong>Evidence</strong><span>${escapeHtml(anchor?.evidence ?? "Unavailable")}</span></div>
+        <p>${escapeHtml(anchor?.detail ?? "目标账号尚不可核验，请检查官方登录。")}</p>
+        <div class="account-evidence"><strong>依据</strong><span>${escapeHtml(anchor?.evidence ?? "不可用")}</span></div>
         <div class="account-meta">
-          <span>${identity?.userId != null ? `GitHub user ID ${escapeHtml(identity.userId)}` : "Stable user ID unavailable"}</span>
-          <span>Observed ${escapeHtml(formatDateTime(anchor?.observedAt))}</span>
+          <span>${identity?.userId != null ? `GitHub 用户 ID ${escapeHtml(identity.userId)}` : "用户 ID 不可用"}</span>
+          <span>观察时间 ${escapeHtml(formatDateTime(anchor?.observedAt))}</span>
         </div>
       </article>`;
   }
@@ -193,10 +193,10 @@
           <span class="account-status ${stateClass(surface.state)}">${escapeHtml(stateLabel(surface.state))}</span>
         </div>
         <h3>${escapeHtml(surfaceName(surface.surface))}</h3>
-        <p class="account-identity">${identity ? `${escapeHtml(identity.login)} · ${escapeHtml(identity.host)}` : "Identity not verified"}</p>
+        <p class="account-identity">${identity ? `${escapeHtml(identity.login)} · ${escapeHtml(identity.host)}` : "身份尚未验证"}</p>
         <p>${escapeHtml(surface.detail)}</p>
-        <div class="account-evidence"><strong>Evidence</strong><span>${escapeHtml(surface.evidence)}</span></div>
-        <div class="account-meta"><span>Observed ${escapeHtml(formatDateTime(surface.observedAt))}</span></div>
+        <div class="account-evidence"><strong>依据</strong><span>${escapeHtml(surface.evidence)}</span></div>
+        <div class="account-meta"><span>观察时间 ${escapeHtml(formatDateTime(surface.observedAt))}</span></div>
       </article>`;
   }
 
@@ -204,28 +204,28 @@
     const recent = runs.slice(0, 5);
     return `
       <div class="account-history-heading">
-        <div><h3>Recent sign-in runs</h3><p>Persisted summaries contain statuses and instructions, never client credentials.</p></div>
+        <div><h3>最近登录记录</h3><p>仅保存状态摘要，不保存登录凭据。</p></div>
       </div>
-      ${recent.length ? `<div class="account-history">${recent.map(renderRun).join("")}</div>` : '<div class="account-history-empty">No sign-in run has been launched yet.</div>'}
+      ${recent.length ? `<div class="account-history">${recent.map(renderRun).join("")}</div>` : '<div class="account-history-empty">尚无登录记录。</div>'}
     `;
   }
 
   function renderRun(run) {
     const target = run.targetIdentity
       ? `${run.targetIdentity.login} · ${run.targetIdentity.host}`
-      : "No verified target identity";
+      : "目标账号尚未验证";
     return `
       <div class="account-run">
         <span class="account-status ${runStatusClass(run.status)}">${escapeHtml(runStatusLabel(run.status))}</span>
         <div>
           <strong>${escapeHtml(target)}</strong>
           <p>${escapeHtml(run.summary)}</p>
-          ${run.observedCliLogin ? `<p>Observed CLI account: ${escapeHtml(run.observedCliLogin)} · github.com</p>` : ""}
+          ${run.observedCliLogin ? `<p>观察到的 CLI 账号： ${escapeHtml(run.observedCliLogin)} · github.com</p>` : ""}
         </div>
         <div class="account-run-meta">
           <span>${escapeHtml(formatDateTime(run.finishedAt ?? run.startedAt))}</span>
-          <span>${escapeHtml(run.requestedSurfaces?.map(surfaceName).join(", ") ?? "No surfaces")}</span>
-          ${isDesktop && ["actionRequired", "partial", "conflict", "interrupted"].includes(run.status) ? `<div class="account-panel-actions"><button class="button ghost small" data-account-action="verify-run" data-run-id="${escapeHtml(run.id)}" ${loading ? "disabled" : ""}>Verify official account</button><button class="button danger small" data-account-action="cancel-run" data-run-id="${escapeHtml(run.id)}">Stop follow-up</button></div>` : ""}
+          <span>${escapeHtml(run.requestedSurfaces?.map(surfaceName).join(", ") ?? "无客户端")}</span>
+          ${isDesktop && ["actionRequired", "partial", "conflict", "interrupted"].includes(run.status) ? `<div class="account-panel-actions"><button class="button ghost small" data-account-action="verify-run" data-run-id="${escapeHtml(run.id)}" ${loading ? "disabled" : ""}>核验官方账号</button><button class="button danger small" data-account-action="cancel-run" data-run-id="${escapeHtml(run.id)}">停止核验</button></div>` : ""}
         </div>
       </div>`;
   }
@@ -255,10 +255,10 @@
           );
           return {
             surface,
-            title: `Open ${surfaceName(surface)} sign-in`,
+            title: `打开 ${surfaceName(surface)} 官方登录`,
             description: supported
-              ? "Browser preview: simulate the fixed official sign-in launcher"
-              : "Install or resolve this surface before starting its sign-in flow",
+              ? "浏览器试用：仅模拟固定的官方登录入口"
+              : "请先安装或修复此客户端，再完成官方登录",
             supported,
           };
         });
@@ -274,7 +274,7 @@
       case "apply_login_plan": {
         const plan = currentPlan;
         if (!plan || plan.id !== args.planId) {
-          throw new Error("Browser preview sign-in plan is missing or consumed");
+          throw new Error("模拟登录计划缺失或已使用，请重新预览");
         }
         const now = new Date().toISOString();
         const steps = plan.operations.map((operation) => ({
@@ -283,7 +283,7 @@
             ? "actionRequired"
             : "skippedNotInstalled",
           detail: operation.supported
-            ? "Browser preview simulated opening the official flow; complete it in the client and refresh"
+            ? "浏览器试用：仅模拟打开入口，不证明真实登录；请在客户端完成后刷新"
             : operation.description,
         }));
         const launched = steps.filter(
@@ -297,8 +297,8 @@
           status: launched ? "actionRequired" : "failed",
           steps,
           summary: launched
-            ? "Official sign-in flows were simulated; refresh after completing them"
-            : "No sign-in flow could be launched",
+            ? "仅模拟登录入口，未启动真实客户端"
+            : "没有可用的登录入口",
           startedAt: now,
           finishedAt: now,
         };
@@ -311,7 +311,7 @@
         };
       }
       default:
-        throw new Error(`Unsupported account preview command: ${command}`);
+        throw new Error(`不支持的账号试用操作：${command}`);
     }
   }
 
@@ -323,7 +323,7 @@
       const value = await invoke("get_account_status");
       validateStatus(value);
       accountStatus = value;
-      if (!quiet) { showToast("Account status refreshed"); document.dispatchEvent(new Event("pilotweave:refresh-setup")); }
+      if (!quiet) { showToast("账号状态已刷新"); document.dispatchEvent(new Event("pilotweave:refresh-setup")); }
     } catch (error) {
       showToast(error?.message ?? String(error), "error");
     } finally {
@@ -334,7 +334,7 @@
 
   function validateStatus(value) {
     if (!value || !value.anchor || !Array.isArray(value.surfaces)) {
-      throw new Error("Account discovery returned an invalid response");
+      throw new Error("账号响应格式不受支持");
     }
     if (!Array.isArray(value.loginRuns)) {
       value.loginRuns = [];
@@ -345,7 +345,7 @@
     if (loading || !accountStatus) return;
     if (accountStatus.historyRecovery) {
       showToast(
-        "Resolve the read-only sign-in history before starting a new run",
+        "请先处理登录历史的只读恢复",
         "error",
       );
       return;
@@ -354,7 +354,7 @@
     const surfaces = Array.isArray(requestedSurfaces) ? requestedSurfaces.filter(s => surfaceOrder.includes(s)) : choices.length ? Array.from(choices).filter((input) => input.checked).map((input) => input.value)
       : (accountStatus.surfaces ?? []).filter((s) => !["notInstalled", "unsupported"].includes(s.state)).map((s) => s.surface);
     if (!surfaces.length) {
-      showToast("Select at least one installed account surface", "error");
+      showToast("请至少选择一个已安装的客户端", "error");
       return;
     }
 
@@ -380,32 +380,32 @@
     const needsManualTargetConfirmation = !target;
     modalRoot.innerHTML = `
       <div class="modal-backdrop account-modal-backdrop" role="presentation">
-        <section class="modal wide account-modal" role="dialog" aria-modal="true" aria-label="Review account sign-in plan">
+        <section class="modal wide account-modal" role="dialog" aria-modal="true" aria-label="核对官方登录计划">
           <header class="modal-header">
-            <div><p class="eyebrow">ONE-SHOT OFFICIAL FLOW</p><h2>Review sign-in plan</h2></div>
-            <button class="icon-button" data-account-modal-close aria-label="Close">×</button>
+            <div><p class="eyebrow">官方登录计划</p><h2>核对登录步骤</h2></div>
+            <button class="icon-button" data-account-modal-close aria-label="关闭">×</button>
           </header>
           <div class="modal-body">
             <div class="account-plan-security">
-              This plan expires at ${escapeHtml(formatDateTime(plan.expiresAt))}, can be consumed once, and contains backend-owned executable paths and fixed arguments. The frontend will submit only its plan ID.
+              计划有效至 ${escapeHtml(formatDateTime(plan.expiresAt))}，仅可使用一次；确认只提交原生计划 ID。
             </div>
             <div class="account-plan-target">
-              <span>Target github.com identity</span>
-              <strong>${target ? `${escapeHtml(target.login)} · ${escapeHtml(target.host)}` : "Not verified"}</strong>
-              <p>${target ? "Use this same identity in every official client flow." : "PilotWeave cannot prove a common target yet. Follow the instructions below and verify the same github.com account in each selected client."}</p>
+              <span>目标 github.com 账号</span>
+              <strong>${target ? `${escapeHtml(target.login)} · ${escapeHtml(target.host)}` : "尚未验证"}</strong>
+              <p>${target ? "请在每个客户端使用此账号。" : "尚未核验统一账号，请按下方步骤逐个确认。"}</p>
             </div>
             ${needsManualTargetConfirmation ? `
               <label class="account-confirmation">
                 <input type="checkbox" data-account-target-confirm />
-                <span>I will select and verify the same github.com account in every selected client.</span>
+                <span>我会在所选客户端逐个确认同一 github.com 账号。</span>
               </label>` : ""}
             <div class="account-plan-list">
               ${plan.operations.map(renderPlanOperation).join("")}
             </div>
           </div>
           <footer class="modal-footer">
-            <button class="button ghost" data-account-modal-close>Cancel</button>
-            <button class="button primary" data-account-confirm ${supportedCount === 0 || needsManualTargetConfirmation ? "disabled" : ""}>Continue with sign-in</button>
+            <button class="button ghost" data-account-modal-close>取消</button>
+            <button class="button primary" data-account-confirm ${supportedCount === 0 || needsManualTargetConfirmation ? "disabled" : ""}>继续官方登录</button>
           </footer>
         </section>
       </div>`;
@@ -430,7 +430,7 @@
   function renderPlanOperation(operation) {
     return `
       <div class="account-plan-operation">
-        <span class="account-status ${operation.supported || operation.surface === "jetBrainsCopilot" ? "action" : "unsupported"}">${operation.surface === "jetBrainsCopilot" ? "Manual instructions" : operation.supported ? operation.surface === "vsCodeCopilot" ? "Instructions" : "Will open" : "Unavailable"}</span>
+        <span class="account-status ${operation.supported || operation.surface === "jetBrainsCopilot" ? "action" : "unsupported"}">${operation.surface === "jetBrainsCopilot" ? "手动步骤" : operation.supported ? operation.surface === "vsCodeCopilot" ? "指令" : "将打开官方流程" : "不可用"}</span>
         <div>
           <strong>${escapeHtml(operation.title)}</strong>
           <p>${escapeHtml(operation.description)}</p>
@@ -445,7 +445,7 @@
     const confirm = modalRoot.querySelector("[data-account-confirm]");
     if (confirm) {
       confirm.disabled = true;
-      confirm.textContent = "Preparing…";
+      confirm.textContent = "准备中…";
     }
     try {
       const result = await invoke("apply_login_plan", { planId: plan.id });
@@ -453,12 +453,12 @@
       accountStatus = result.accountStatus;
       document.dispatchEvent(new Event("pilotweave:refresh-setup"));
       showResultModal(result.run);
-      showToast("Account instructions ready; follow each client's result");
+      showToast("登录步骤已准备，请逐个完成");
       markChanged();
     } catch (error) {
     closeModal();
     showToast(
-      `${error?.message ?? String(error)} Generate a new preview before retrying.`,
+      `${error?.message ?? String(error)} 重试前请重新生成预览。`,
       "error",
     );
   }
@@ -468,10 +468,10 @@
   function showResultModal(run) {
     modalRoot.innerHTML = `
       <div class="modal-backdrop account-modal-backdrop" role="presentation">
-        <section class="modal wide account-modal" role="dialog" aria-modal="true" aria-label="Sign-in launch results">
+        <section class="modal wide account-modal" role="dialog" aria-modal="true" aria-label="登录流程结果">
           <header class="modal-header">
-            <div><p class="eyebrow">OFFICIAL FLOW RESULTS</p><h2>${escapeHtml(runStatusLabel(run.status))}</h2></div>
-            <button class="icon-button" data-account-modal-close aria-label="Close">×</button>
+            <div><p class="eyebrow">官方登录结果</p><h2>${escapeHtml(runStatusLabel(run.status))}</h2></div>
+            <button class="icon-button" data-account-modal-close aria-label="关闭">×</button>
           </header>
           <div class="modal-body">
             <p class="account-result-summary">${escapeHtml(run.summary)}</p>
@@ -480,8 +480,8 @@
             </div>
           </div>
           <footer class="modal-footer">
-            <button class="button ghost" data-account-modal-close>Close</button>
-            <button class="button primary" data-account-result-refresh>Refresh account status</button>
+            <button class="button ghost" data-account-modal-close>关闭</button>
+            <button class="button primary" data-account-result-refresh>刷新账号状态</button>
           </footer>
         </section>
       </div>`;
@@ -536,14 +536,14 @@
 
   function stateLabel(state) {
     return {
-      verified: "Verified",
-      inferred: "Inferred",
-      actionRequired: "Action required",
-      unknown: "Unknown",
-      unsupported: "Unsupported",
-      notInstalled: "Not installed",
-      conflict: "Conflict",
-    }[state] ?? state ?? "Unknown";
+      verified: "已验证",
+      inferred: "推断，待确认",
+      actionRequired: "需要操作",
+      unknown: "未知",
+      unsupported: "不支持",
+      notInstalled: "未安装",
+      conflict: "冲突",
+    }[state] ?? state ?? "未知";
   }
 
   function stateClass(state) {
@@ -560,15 +560,15 @@
 
   function runStatusLabel(status) {
     return {
-      inProgress: "In progress",
-      actionRequired: "Action required",
-      partial: "Partial",
-      failed: "Failed",
-      completed: "Completed",
-      interrupted: "Interrupted",
-      cancelled: "Follow-up cancelled",
-      timedOut: "Verification expired",
-      conflict: "Account conflict",
+      inProgress: "进行中",
+      actionRequired: "需要操作",
+      partial: "部分完成",
+      failed: "失败",
+      completed: "已完成",
+      interrupted: "已中断",
+      cancelled: "已停止后续核验",
+      timedOut: "核验已过期",
+      conflict: "账号冲突",
     }[status] ?? status;
   }
 
@@ -588,16 +588,16 @@
 
   function stepStatusLabel(status) {
     return {
-      pending: "Pending",
-      launched: "Launched",
-      actionRequired: "Action required",
-      skippedNotInstalled: "Not installed",
-      unsupported: "Unsupported",
-      failed: "Failed",
-      verified: "Verified CLI identity",
-      conflict: "Account conflict",
-      cancelled: "Cancelled",
-      timedOut: "Verification expired",
+      pending: "待处理",
+      launched: "已打开",
+      actionRequired: "需要操作",
+      skippedNotInstalled: "未安装",
+      unsupported: "不支持",
+      failed: "失败",
+      verified: "CLI 账号已验证",
+      conflict: "账号冲突",
+      cancelled: "已取消",
+      timedOut: "核验已过期",
     }[status] ?? status;
   }
 
@@ -618,7 +618,7 @@
 
   function formatDateTime(value) {
     const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return "at an unknown time";
+    if (Number.isNaN(date.getTime())) return "时间未知";
     return new Intl.DateTimeFormat(undefined, {
       dateStyle: "medium",
       timeStyle: "short",
@@ -649,7 +649,7 @@
       validateStatus(result.accountStatus);
       accountStatus = result.accountStatus;
       if (!cancel) showResultModal(result.run);
-      showToast(cancel ? "Follow-up stopped; official client windows remain open" : result.run.summary, ["conflict", "failed"].includes(result.run.status) ? "error" : "success");
+      showToast(cancel ? "已停止核验，不关闭客户端窗口" : result.run.summary, ["conflict", "failed"].includes(result.run.status) ? "error" : "success");
       document.dispatchEvent(new Event("pilotweave:refresh-setup"));
     } catch (error) { showToast(error?.message ?? String(error), "error"); }
     finally { loading = false; markChanged(); }

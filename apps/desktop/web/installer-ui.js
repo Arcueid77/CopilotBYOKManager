@@ -28,28 +28,28 @@
       id: "vscode",
       name: "Visual Studio Code",
       status: "ready",
-      detail: "Browser preview: simulated installed component",
+      detail: "浏览器试用：模拟已安装组件",
       version: "preview",
     },
     {
       id: "vscode-copilot-extension",
-      name: "GitHub Copilot extension",
+      name: "GitHub Copilot 扩展",
       status: "ready",
-      detail: "Browser preview: simulated installed extension",
+      detail: "浏览器试用：模拟已安装扩展",
       version: "preview",
     },
     {
       id: "copilot-cli",
       name: "GitHub Copilot CLI",
       status: "missing",
-      detail: "Browser preview: simulated missing component",
+      detail: "浏览器试用：模拟缺失组件",
       version: null,
     },
     {
       id: "github-copilot-app",
       name: "GitHub Copilot app",
       status: "missing",
-      detail: "Browser preview: simulated missing component",
+      detail: "浏览器试用：模拟缺失组件",
       version: null,
     },
   ];
@@ -73,18 +73,23 @@
 
   function statusLabel(status) {
     return {
-      ready: "Ready",
-      missing: "Missing",
-      unsupported: "Unsupported",
-      broken: "Needs repair",
-      unknown: "Detection unavailable",
-      completedAndVerified: "Installed and verified",
-      processSucceededVerificationFailed: "Verification failed",
-      skippedAlreadyReady: "Already ready",
-      skippedDependencyFailed: "Dependency unavailable",
-      failed: "Failed",
-      cancelled: "Cancelled — rediscover",
-      timedOut: "Timed out — rediscover",
+      ready: "已就绪",
+      missing: "缺失",
+      unsupported: "不支持",
+      broken: "需要修复",
+      unknown: "检测不可用",
+      inProgress: "安装中",
+      complete: "已结束，请核对各组件",
+      partial: "部分完成",
+      interrupted: "已中断",
+      elevationDenied: "管理员确认被拒绝",
+      completedAndVerified: "安装后已核验",
+      processSucceededVerificationFailed: "安装后核验失败",
+      skippedAlreadyReady: "已就绪，无需安装",
+      skippedDependencyFailed: "依赖不可用",
+      failed: "失败",
+      cancelled: "已取消，需重新检测",
+      timedOut: "已超时，需重新检测",
     }[status] ?? status;
   }
 
@@ -136,25 +141,25 @@
     return `
       <div class="install-panel-header">
         <div>
-          <p class="eyebrow">WORKSTATION SETUP</p>
-          <h2>Install and verify Copilot surfaces</h2>
-          <p class="install-copy">PilotWeave builds a native, one-shot plan from a fixed allowlist. The frontend never supplies executable paths, package IDs, or shell commands.</p>
+          <p class="eyebrow">环境安装</p>
+          <h2>安装并核验客户端</h2>
+          <p class="install-copy">先核对安装计划，再确认执行；安装来源由本地后端固定。</p>
         </div>
         <div class="install-panel-actions">
-          <button class="button ghost small" data-install-action="refresh" ${loading ? "disabled" : ""}>${loading ? "Checking…" : "Refresh status"}</button>
-          <button class="button primary small" data-install-action="install-all" ${loading || actionable.length === 0 ? "disabled" : ""}>Install all missing${actionable.length ? ` (${actionable.length})` : ""}</button>
+          <button class="button ghost small" data-install-action="refresh" ${loading ? "disabled" : ""}>${loading ? "检查中…" : "刷新状态"}</button>
+          <button class="button primary small" data-install-action="install-all" ${loading || actionable.length === 0 ? "disabled" : ""}>安装缺失组件${actionable.length ? ` (${actionable.length})` : ""}</button>
         </div>
       </div>
-      <div class="install-summary" aria-label="Installation summary">
-        <span><strong>${values.length ? readyCount : "—"}</strong> ready</span>
-        <span><strong>${values.length ? actionable.length : "—"}</strong> actionable</span>
-        <span><strong>${values.length ? unsupportedCount : "—"}</strong> unsupported</span>
-        <span class="install-runtime">${isDesktop ? "Native Windows installation is enabled when supported" : "Browser preview only — no process will run"}</span>
+      <div class="install-summary" aria-label="安装摘要">
+        <span><strong>${values.length ? readyCount : "—"}</strong> 已就绪</span>
+        <span><strong>${values.length ? actionable.length : "—"}</strong> 待处理</span>
+        <span><strong>${values.length ? unsupportedCount : "—"}</strong> 不支持</span>
+        <span class="install-runtime">${isDesktop ? "支持的 Windows 组件可审核安装" : "浏览器试用，不执行安装"}</span>
       </div>
-      ${loading && values.length === 0 ? '<div class="install-loading">Discovering components…</div>' : ""}
-      ${!loading && values.length === 0 ? '<div class="install-loading">Installation status has not been loaded.</div>' : ""}
+      ${loading && values.length === 0 ? '<div class="install-loading">检测组件中…</div>' : ""}
+      ${!loading && values.length === 0 ? '<div class="install-loading">尚未读取组件状态，请刷新。</div>' : ""}
       ${values.length ? `<div class="install-grid">${values.map(renderComponent).join("")}</div>` : ""}
-      ${lastRun ? `<div class="install-result-summary"><div><strong>Installation ${escapeHtml(lastRun.status)}</strong><span>${escapeHtml(lastRun.detail)}</span></div>${lastRun.status === "running" ? `<button class="button danger small" data-install-action="cancel" data-run-id="${escapeHtml(lastRun.id)}">Cancel run</button>` : ""}</div>` : ""}
+      ${lastRun ? `<div class="install-result-summary"><div><strong>安装 ${escapeHtml(statusLabel(lastRun.status))}</strong><span>${escapeHtml(lastRun.detail)}</span></div>${lastRun.status === "running" ? `<button class="button danger small" data-install-action="cancel" data-run-id="${escapeHtml(lastRun.id)}">取消任务</button>` : ""}</div>` : ""}
       ${lastResult ? renderLastResult(lastResult) : ""}
     `;
   }
@@ -170,8 +175,8 @@
         <h3>${escapeHtml(item.name)}</h3>
         <p>${escapeHtml(item.detail)}</p>
         <div class="install-card-footer">
-          <span>${item.version ? `Version ${escapeHtml(item.version)}` : "Version unavailable"}</span>
-          ${canInstall ? `<button class="button ghost small" data-install-action="install-one" data-component-id="${escapeHtml(item.id)}" ${loading ? "disabled" : ""}>${item.status === "broken" ? "Repair" : "Install"}</button>` : ""}
+          <span>${item.version ? `版本 ${escapeHtml(item.version)}` : "版本不可用"}</span>
+          ${canInstall ? `<button class="button ghost small" data-install-action="install-one" data-component-id="${escapeHtml(item.id)}" ${loading ? "disabled" : ""}>${item.status === "broken" ? "修复" : "安装"}</button>` : ""}
         </div>
       </article>
     `;
@@ -194,10 +199,10 @@
     return `
       <div class="install-result-summary">
         <div>
-          <strong>Last installation run</strong>
-          <span>Plan ${escapeHtml(result.planId)}</span>
+          <strong>上次安装</strong>
+          <span>计划 ${escapeHtml(result.planId)}</span>
         </div>
-        <div><strong>${successes}</strong> successful · <strong>${failures}</strong> need attention</div>
+        <div><strong>${successes}</strong> 完成 · <strong>${failures}</strong> 待核对</div>
       </div>
     `;
   }
@@ -231,10 +236,10 @@
             source:
               id === "github-copilot-app"
                 ? "WinGet: GitHub.CopilotApp"
-                : `Preview allowlist: ${id}`,
+                : `模拟白名单：${id}`,
             requiresElevation: false,
             description:
-              "Browser preview simulation; the native backend owns the real command and arguments",
+              "浏览器试用仅模拟；真实安装命令及参数由原生后端生成",
           };
         });
         const now = new Date();
@@ -252,7 +257,7 @@
           const item = browserObservations.find((value) => value.id === id);
           if (item) {
             item.status = "ready";
-            item.detail = "Browser preview: simulated installation completed";
+            item.detail = "浏览器试用：模拟安装完成，未启动安装程序";
             item.version = "preview";
           }
         }
@@ -262,13 +267,13 @@
             componentId: id,
             status: "completedAndVerified",
             detail:
-              "Browser preview simulated a verified result; no process was started",
+              "浏览器试用：仅模拟核验结果，未启动真实进程",
           })),
           observations: structuredClone(browserObservations),
         };
       }
       default:
-        throw new Error(`Unsupported installer preview command: ${command}`);
+        throw new Error(`不支持的安装试用操作：${command}`);
     }
   }
 
@@ -279,9 +284,9 @@
     try {
       observations = await invoke("get_installation_status");
       if (!Array.isArray(observations)) {
-        throw new Error("Installation discovery returned an invalid response");
+        throw new Error("安装检测响应格式不受支持");
       }
-      if (!quiet) { showToast("Installation status refreshed"); document.dispatchEvent(new Event("pilotweave:refresh-setup")); }
+      if (!quiet) { showToast("安装状态已刷新"); document.dispatchEvent(new Event("pilotweave:refresh-setup")); }
     } catch (error) {
       showToast(error?.message ?? String(error), "error");
     } finally {
@@ -320,31 +325,31 @@
                 </div>
                 <div class="install-plan-meta">
                   <span>${escapeHtml(operation.source)}</span>
-                  <span>${escapeHtml(operation.version ?? "Current compatible extension")} · ${escapeHtml(operation.architecture ?? "Windows")}</span>
+                  <span>${escapeHtml(operation.version ?? "当前兼容扩展")} · ${escapeHtml(operation.architecture ?? "Windows")}</span>
                   ${(operation.dependencies ?? []).map(dependency => `<span>${escapeHtml(dependency)}</span>`).join("")}
-                  <span>${operation.requiresElevation ? "Elevation may be required" : "User-level operation"}</span>
+                  <span>${operation.requiresElevation ? "可能需要管理员确认" : "当前用户操作"}</span>
                 </div>
               </div>`,
           )
           .join("")
-      : '<div class="install-plan-empty">Every selected component is already ready. No process will run.</div>';
+      : '<div class="install-plan-empty">所选组件已就绪，不执行安装。</div>';
 
     modalRoot.innerHTML = `
       <div class="modal-backdrop install-modal-backdrop" role="presentation">
-        <section class="modal wide install-modal" role="dialog" aria-modal="true" aria-label="Review installation plan">
+        <section class="modal wide install-modal" role="dialog" aria-modal="true" aria-label="核对安装计划">
           <header class="modal-header">
-            <div><p class="eyebrow">REVIEW CHANGES</p><h2>Review installation plan</h2></div>
-            <button class="icon-button" data-install-modal-close aria-label="Close">×</button>
+            <div><p class="eyebrow">核对变更</p><h2>核对安装计划</h2></div>
+            <button class="icon-button" data-install-modal-close aria-label="关闭">×</button>
           </header>
           <div class="modal-body">
-            <div class="install-plan-security"><details><summary>Review safety details</summary>
-              Package identities and argument vectors are compiled into the Rust backend. This plan expires at ${escapeHtml(formatDateTime(plan.expiresAt))} and can be consumed once.</details>
+            <div class="install-plan-security"><details><summary>安全说明</summary>
+              安装来源由原生后端固定。计划有效至 ${escapeHtml(formatDateTime(plan.expiresAt))}，仅可使用一次。</details>
             </div>
             <div class="install-plan-list">${operationRows}</div>
           </div>
           <footer class="modal-footer">
-            <button class="button ghost" data-install-modal-close>Cancel</button>
-            <button class="button primary" data-install-confirm ${!isDesktop || plan.operations.length === 0 ? "disabled" : ""}>Install and verify</button>
+            <button class="button ghost" data-install-modal-close>取消</button>
+            <button class="button primary" data-install-confirm ${!isDesktop || plan.operations.length === 0 ? "disabled" : ""}>确认安装并核验</button>
           </footer>
         </section>
       </div>`;
@@ -364,7 +369,7 @@
 
   function formatDateTime(value) {
     const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return "an unknown time";
+    if (Number.isNaN(date.getTime())) return "时间未知";
     return new Intl.DateTimeFormat(undefined, {
       dateStyle: "medium",
       timeStyle: "short",
@@ -383,7 +388,7 @@
     const confirm = modalRoot.querySelector("[data-install-confirm]");
     if (confirm) {
       confirm.disabled = true;
-      confirm.textContent = "Installing…";
+      confirm.textContent = "安装中…";
     }
     let runId = null;
     let unlisten = null;
@@ -393,19 +398,19 @@
       if (closed || run?.planId !== plan.id) return;
       runId = run.id; lastRun = run;
       const list = modalRoot.querySelector(".install-plan-list");
-      if (list) list.innerHTML = `<p role="status">${escapeHtml(run.currentComponentId ? `Working on ${componentName(run.currentComponentId)}` : statusLabel(run.status))}</p><p>${escapeHtml(run.detail)}</p>${run.results.map((item) => `<p>${escapeHtml(componentName(item.componentId))}: ${escapeHtml(statusLabel(item.status))}</p>`).join("")}`;
+      if (list) list.innerHTML = `<p role="status">${escapeHtml(run.currentComponentId ? `正在处理 ${componentName(run.currentComponentId)}` : statusLabel(run.status))}</p><p>${escapeHtml(run.detail)}</p>${run.results.map((item) => `<p>${escapeHtml(componentName(item.componentId))}: ${escapeHtml(statusLabel(item.status))}</p>`).join("")}`;
       const cancel = modalRoot.querySelector("[data-install-cancel-run]");
       if (cancel) cancel.disabled = run.status !== "running";
       markChanged();
     };
     const cancel = document.createElement("button");
-    cancel.className = "button danger"; cancel.textContent = "Cancel running installation";
+    cancel.className = "button danger"; cancel.textContent = "取消安装";
     cancel.dataset.installCancelRun = ""; cancel.disabled = true;
     modalRoot.querySelector(".modal-footer")?.append(cancel);
     cancel.addEventListener("click", async () => {
       if (!runId) return;
       cancel.disabled = true;
-      try { await invoke("cancel_install_run", { runId }); cancel.textContent = "Cancellation requested — rediscover when finished"; }
+      try { await invoke("cancel_install_run", { runId }); cancel.textContent = "已请求取消，结束后将重新检测"; }
       catch (error) { showToast(error?.message ?? String(error), "error"); cancel.disabled = false; }
     });
     const observe = async () => {
@@ -424,12 +429,12 @@
       currentModalPlan = null;
       showResultModal(result);
       const attention = result.results.some((item) => !["completedAndVerified", "skippedAlreadyReady"].includes(item.status));
-      showToast(attention ? "Installation finished with items to review" : "Every requested component is verified ready", attention ? "warning" : "success");
+      showToast(attention ? "安装已结束，仍有项目需要核对" : "所选组件已重新检测并确认就绪", attention ? "warning" : "success");
       markChanged();
     } catch (error) {
     closeModal();
     showToast(
-      `${error?.message ?? String(error)} Generate a new preview before retrying.`,
+      `${error?.message ?? String(error)} 重试前请重新生成预览。`,
       "error",
     );
     } finally { closed = true; if (poll) clearInterval(poll); unlisten?.(); }
@@ -439,10 +444,10 @@
   function showResultModal(result) {
     modalRoot.innerHTML = `
       <div class="modal-backdrop install-modal-backdrop" role="presentation">
-        <section class="modal wide install-modal" role="dialog" aria-modal="true" aria-label="Installation results">
+        <section class="modal wide install-modal" role="dialog" aria-modal="true" aria-label="安装结果">
           <header class="modal-header">
-            <div><p class="eyebrow">POST-INSTALL REDISCOVERY</p><h2>Installation results</h2></div>
-            <button class="icon-button" data-install-modal-close aria-label="Close">×</button>
+            <div><p class="eyebrow">安装后重新检测</p><h2>安装结果</h2></div>
+            <button class="icon-button" data-install-modal-close aria-label="关闭">×</button>
           </header>
           <div class="modal-body">
             <div class="install-result-list">
@@ -458,7 +463,7 @@
             </div>
           </div>
           <footer class="modal-footer">
-            <button class="button primary" data-install-modal-close>Done</button>
+            <button class="button primary" data-install-modal-close>完成</button>
           </footer>
         </section>
       </div>`;
@@ -485,7 +490,7 @@
     }
     if (action === "cancel") {
       button.disabled = true;
-      invoke("cancel_install_run", { runId: button.dataset.runId }).then((accepted) => showToast(accepted ? "Cancellation requested; completed installations will remain" : "This run is no longer active", "warning")).catch((error) => showToast(error?.message ?? String(error), "error")).finally(() => { button.disabled = false; });
+      invoke("cancel_install_run", { runId: button.dataset.runId }).then((accepted) => showToast(accepted ? "已请求取消，已完成的安装保留" : "此任务已经结束", "warning")).catch((error) => showToast(error?.message ?? String(error), "error")).finally(() => { button.disabled = false; });
       return;
     }
     if (action === "install-one") {

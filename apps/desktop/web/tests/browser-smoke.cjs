@@ -17,6 +17,28 @@ const server = http.createServer((req, res) => {
   res.setHeader("Content-Type", mime[path.extname(target)] ?? "text/plain");
   res.end(fs.readFileSync(target));
 });
+async function assertReadable(page, selectors) {
+  for (const selector of selectors) {
+    const ratios = await page.locator(selector).evaluateAll((elements) => {
+      const rgba = (color) => {
+        const values = color.match(/[\d.]+/g).map(Number);
+        return [values[0], values[1], values[2], values[3] ?? 1];
+      };
+      const paint = (top, bottom) => top.slice(0, 3).map((channel, i) => channel * top[3] + bottom[i] * (1 - top[3]));
+      const luminance = (rgb) => rgb.map(channel => channel / 255).map(channel => channel <= .04045 ? channel / 12.92 : ((channel + .055) / 1.055) ** 2.4).reduce((sum, channel, i) => sum + channel * [.2126, .7152, .0722][i], 0);
+      return elements.map((element) => {
+        const layers = [];
+        for (let ancestor = element; ancestor; ancestor = ancestor.parentElement) layers.push(rgba(getComputedStyle(ancestor).backgroundColor));
+        const background = layers.reverse().reduce((color, layer) => paint(layer, color), [255, 255, 255]);
+        const foreground = paint(rgba(getComputedStyle(element).color), background);
+        const [low, high] = [luminance(foreground), luminance(background)].sort((a, b) => a - b);
+        return (high + .05) / (low + .05);
+      });
+    });
+    assert.ok(ratios.length, `Missing contrast target: ${selector}`);
+    for (const ratio of ratios) assert.ok(ratio >= 4.5, `Low text contrast for ${selector}: ${ratio.toFixed(2)}`);
+  }
+}
 async function nativeFixture() {
   const now = new Date().toISOString(), day = now.slice(0, 10);
   const connection = { id: "connection", name: "Example provider", baseUrl: "https://example.invalid/v1", providerKind: "openai", protocol: "chat-completions", headers: {}, models: [{ id: "model", modelId: "gpt-5", name: "GPT-5", enabled: true, capabilities: {} }], secretRef: "fixture", hasSecret: true, createdAt: now, updatedAt: now };
@@ -142,7 +164,12 @@ async function nativeFixture() {
     assert.equal(await native.locator('input[name="deployment-target"]:checked').count(), 2);
     await native.locator("#preview-deployment").click(); await native.locator("#apply-deployment").click();
     await native.locator('.manager-client-row[data-client-id="vscode"] .manager-source').waitFor();
-    await native.locator('#primary-nav [data-route="clients"]').click(); await native.locator('[data-action="setup-manual"]').click(); await native.locator("#confirm-manual").click();
+    await native.locator('#primary-nav [data-route="clients"]').click();
+    await native.locator('#account-panel').evaluate(e => { e.parentElement.open = true; });
+    await native.locator('#installation-panel').evaluate(e => { e.parentElement.open = true; });
+    await assertReadable(native, ['.account-summary', '.account-evidence', '.install-summary', '.install-card p']);
+    await native.screenshot({ path: path.join(output, 'clients-light-fixture.png'), fullPage: true });
+    await native.locator('[data-action="setup-manual"]').click(); await native.locator("#confirm-manual").click();
     await native.locator('#primary-nav [data-route="overview"]').click(); await native.locator(".manager-health").waitFor(); await native.screenshot({ path: path.join(output, "home-ready-fixture.png"), fullPage: true });
     await native.locator('#primary-nav [data-route="usage"]').click();
     await native.locator('[data-usage-action="runtime"]').click(); await native.locator('[data-usage-action="billing"]').click();
@@ -160,6 +187,7 @@ async function nativeFixture() {
     await native.evaluate(() => window.__setRecovery());
     await native.locator('#primary-nav [data-route="overview"]').click(); await native.locator('#refresh-button').click();
     await native.locator('[data-action="preview-recovery"]').click();
+    await assertReadable(native, ['.modal', '.modal-header h2', '.modal-body p', '.modal-footer']);
     assert.equal(await native.locator('#apply-recovery').isDisabled(), true);
     await native.locator('#confirm-recovery').check(); await native.locator('#apply-recovery').click();
     await native.locator(".manager-health").waitFor();
@@ -170,7 +198,7 @@ async function nativeFixture() {
       assert.equal(await native.locator('#apply-recovery').isDisabled(), true);
       assert.equal(await native.locator('#confirm-recovery').isDisabled(), true);
       await native.locator('#review-keep-current').click();
-      await native.getByText("Review keeping current files", { exact: true }).waitFor();
+      await native.getByText("核对保留现有文件", { exact: true }).waitFor();
       assert.equal(await native.locator('#apply-recovery').isDisabled(), true);
       assert.equal(await native.locator('#confirm-recovery').isChecked(), false);
       await native.locator('#confirm-recovery').check(); await native.locator('#apply-recovery').click();
@@ -196,7 +224,7 @@ async function nativeFixture() {
     assert.equal(await native.evaluate(() => window.__calls.filter(c => c.cmd === "apply_deployment_plan").length), writesBefore);
     await native.locator('#account-panel').evaluate(e => { e.parentElement.open = true; });
     await native.locator('[data-account-action="preview"]').click();
-    await native.getByText("Manual instructions", { exact: true }).waitFor();
+    await native.getByText("手动步骤", { exact: true }).waitFor();
     assert.equal(await native.locator('[data-account-confirm]').isDisabled(), true);
     await native.locator('.modal-footer [data-account-modal-close]').click();
     await native.locator('#primary-nav [data-route="overview"]').click();
@@ -211,7 +239,8 @@ async function nativeFixture() {
     await native.evaluate(() => window.__enableAutomaticJetBrains()); await native.locator('#refresh-button').click();
     await native.locator('#primary-nav [data-route="clients"]').click();
     await native.locator('[data-action="jetbrains-guide"][data-id="jb-idea"]').click();
-    await native.getByText("Automatic BYOK deployment is available.", { exact: true }).waitFor();
+    await native.getByText("可自动发布 BYOK。", { exact: true }).waitFor();
+    await assertReadable(native, ['.modal', '.modal-header h2', '.modal-body p', '.modal-body summary', '.modal-footer']);
     await native.screenshot({ path: path.join(output, "jetbrains-automatic-fixture.png"), fullPage: true });
     await native.locator('#jetbrains-preview-deployment').click();
     assert.equal(await native.locator('input[name="deployment-target"]:checked').count(), 1);
@@ -225,7 +254,7 @@ async function nativeFixture() {
     await native.waitForFunction((count) => window.__calls.filter(c => c.cmd === "apply_deployment_plan").length === count + 1, automaticWritesBefore);
     const automaticApply = await native.evaluate(() => window.__calls.filter(c => c.cmd === "apply_deployment_plan").at(-1).args);
     assert.deepEqual(automaticApply, { planId: "reviewed-plan", confirmed: true });
-    await native.locator('#primary-nav [data-route="usage"]').click(); await native.getByText(/JetBrains usage: not covered/).waitFor();
+    await native.locator('#primary-nav [data-route="usage"]').click(); await native.getByText(/JetBrains 用量：未覆盖/).waitFor();
     // New manager flows: toggle is local eligibility, source counts remain tied
     // to the last observed publication, and editing never silently publishes.
     await native.locator('#primary-nav [data-route="connections"]').click();
@@ -240,6 +269,7 @@ async function nativeFixture() {
     const probe = await native.evaluate(() => window.__calls.filter(c => c.cmd === 'discover_connection_models').at(-1).args.input);
     assert.equal(probe.apiKey, null); assert.equal(probe.connectionId, 'connection');
     await native.locator('[data-action="edit-connection"][data-id="connection"]').click();
+    await assertReadable(native, ['.form-field label', '#api-key', '#models', '#preferred-model', '.form-field small']);
     assert.equal(await native.locator('#api-key').inputValue(), '');
     assert.equal(await native.locator('#api-key').getAttribute('type'), 'password');
     await native.locator('#api-key').fill('synthetic-editor-key');
@@ -312,6 +342,16 @@ async function nativeFixture() {
       assert.equal(await trial.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `Home overflow at ${width}`);
     }
     await trial.close();
+    await native.locator('.more-nav').evaluate(e => { e.open = true; });
+    await native.locator('#primary-nav [data-route="settings"]').click();
+    await native.locator('.github-auth-permission').waitFor();
+    await assertReadable(native, ['.github-auth-permission', '.github-auth-scopes', '.github-auth-boundary']);
+    await native.locator('[data-github-auth-action="authorize"]').click();
+    await native.locator('#github-auth-token').waitFor();
+    assert.equal(await native.locator('#github-auth-token').inputValue(), '');
+    await assertReadable(native, ['.github-auth-modal-copy', '#github-auth-token', '.modal-header h2', '.modal-footer']);
+    await native.screenshot({ path: path.join(output, 'github-auth-light-fixture.png'), fullPage: true });
+    await native.locator('.modal-footer [data-github-auth-close]').click();
     assert.equal(await native.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
     assert.deepEqual(errors, []); console.log(JSON.stringify({ status: "passed", scenarios: ["preview routes", "account confirmation", "reviewed deployment", "manual provider", "quota and Billing", "models and details", "source consent/import/clear", "price refresh", "filters", "reviewed recovery", "external conflict retention", "missing target retention", "JetBrains per-IDE account confirmation", "JetBrains native guide without writes", "JetBrains manual sign-in", "manual-only apply disabled", "independent app/JetBrains status", "JetBrains coverage unavailable", "automatic JetBrains BYOK native review", "single selected IDE preview before apply", "JetBrains apply submits only reviewed plan ID"], output }));
   } finally { await browser.close(); server.close(); }

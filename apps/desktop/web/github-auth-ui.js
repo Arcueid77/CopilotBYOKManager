@@ -21,8 +21,8 @@
     scopes: [],
     billingCapability: "unknown",
     billingDetail:
-      "Authorize PilotWeave before requesting personal Billing data",
-    detail: "Browser preview has no separate GitHub authorization",
+      "读取个人账单前需要为本软件独立授权",
+    detail: "浏览器试用：没有独立 GitHub 授权",
     validatedAt: null,
     recovery: null,
     cleanupWarning: null,
@@ -70,62 +70,62 @@
     return `
       <div class="github-auth-header">
         <div>
-          <p class="eyebrow">PILOTWEAVE-OWNED AUTHORIZATION</p>
-          <h2>Personal GitHub Billing access</h2>
-          <p>This authorization is separate from VS Code, Copilot CLI, the GitHub Copilot app, and GitHub CLI sign-in. PilotWeave stores only the token in the operating-system credential store and keeps bounded identity/capability metadata in its own file.</p>
+          <p class="eyebrow">本软件独立授权</p>
+          <h2>GitHub 个人账单授权</h2>
+          <p>独立于客户端登录。令牌保存在系统凭据库，界面不回读。</p>
         </div>
         <div class="github-auth-actions">
-          <button class="button ghost small" data-github-auth-action="refresh" ${loading || !canRefresh ? "disabled" : ""}>${loading ? "Checking…" : "Validate again"}</button>
-          <button class="button primary small" data-github-auth-action="authorize" ${loading || readOnly ? "disabled" : ""}>${value?.hasSecret ? "Replace authorization" : "Authorize PilotWeave"}</button>
-          <button class="button danger small" data-github-auth-action="clear" ${loading || !canClear ? "disabled" : ""}>Clear</button>
+          <button class="button ghost small" data-github-auth-action="refresh" ${loading || !canRefresh ? "disabled" : ""}>${loading ? "检查中…" : "重新核验"}</button>
+          <button class="button primary small" data-github-auth-action="authorize" ${loading || readOnly ? "disabled" : ""}>${value?.hasSecret ? "更换授权" : "授权本软件"}</button>
+          <button class="button danger small" data-github-auth-action="clear" ${loading || !canClear ? "disabled" : ""}>清除</button>
         </div>
       </div>
       ${value?.recovery ? renderRecovery(value.recovery) : ""}
       ${value?.cleanupWarning ? renderCleanupWarning(value.cleanupWarning) : ""}
-      ${loading && !value ? '<div class="github-auth-loading">Reading separate authorization state…</div>' : ""}
-      ${!loading && !value ? '<div class="github-auth-loading">Authorization status has not been loaded.</div>' : ""}
+      ${loading && !value ? '<div class="github-auth-loading">读取独立授权中…</div>' : ""}
+      ${!loading && !value ? '<div class="github-auth-loading">尚未读取授权状态，请刷新。</div>' : ""}
       ${value ? `
         <div class="github-auth-grid">
           <article class="github-auth-identity">
             <div class="github-auth-card-heading">
-              <span>Validated identity</span>
+              <span>已核验身份</span>
               <span class="github-auth-state ${stateClass(value.state)}">${escapeHtml(stateLabel(value.state))}</span>
             </div>
-            <strong>${identity ? `${escapeHtml(identity.login)} · ${escapeHtml(identity.host)}` : "Not authorized"}</strong>
+            <strong>${identity ? `${escapeHtml(identity.login)} · ${escapeHtml(identity.host)}` : "未授权"}</strong>
             <p>${escapeHtml(value.detail)}</p>
             <div class="github-auth-meta">
-              <span>${identity?.userId != null ? `GitHub user ID ${escapeHtml(identity.userId)}` : "Stable user ID unavailable"}</span>
-              <span>${value.validatedAt ? `Validated ${escapeHtml(formatDateTime(value.validatedAt))}` : "Never validated"}</span>
+              <span>${identity?.userId != null ? `GitHub 用户 ID ${escapeHtml(identity.userId)}` : "用户 ID 不可用"}</span>
+              <span>${value.validatedAt ? `核验时间 ${escapeHtml(formatDateTime(value.validatedAt))}` : "尚未核验"}</span>
             </div>
           </article>
           <article class="github-auth-billing">
             <div class="github-auth-card-heading">
-              <span>Personal Billing capability</span>
+              <span>个人账单访问能力</span>
               <span class="github-auth-state ${billingClass(value.billingCapability)}">${escapeHtml(billingLabel(value.billingCapability))}</span>
             </div>
             <strong>${billingTitle(value.billingCapability)}</strong>
             <p>${escapeHtml(value.billingDetail)}</p>
-            <div class="github-auth-permission">Required for premium-request reports: fine-grained token with <strong>Plan · read</strong> user permission.</div>
+            <div class="github-auth-permission">高级请求账单需要精细权限令牌，用户权限为 <strong>Plan · read</strong> 。</div>
           </article>
         </div>
         <div class="github-auth-scopes">
-          <div><strong>Reported OAuth scopes</strong><span>Fine-grained tokens may not populate the classic X-OAuth-Scopes header; endpoint probing remains authoritative.</span></div>
-          <div class="github-auth-scope-list">${scopes.length ? scopes.slice(0, 12).map((scope) => `<span>${escapeHtml(scope)}</span>`).join("") : '<span class="muted-scope">Not reported</span>'}</div>
+          <div><strong>返回的 OAuth 权限</strong><span>精细权限令牌可能不返回权限列表，以账单接口核验结果为准。</span></div>
+          <div class="github-auth-scope-list">${scopes.length ? scopes.slice(0, 12).map((scope) => `<span>${escapeHtml(scope)}</span>`).join("") : '<span class="muted-scope">未提供</span>'}</div>
         </div>
       ` : ""}
       <div class="github-auth-boundary">
-        <strong>Security boundary</strong>
-        <span>No client OAuth token, browser cookie, SecretStorage entry, refresh token, password, or passkey is read or copied. Failed replacement attempts leave a previously valid PilotWeave authorization unchanged.</span>
+        <strong>安全边界</strong>
+        <span>不读取客户端凭据。更换授权失败时保留原有效授权。</span>
       </div>
     `;
   }
 
   function renderRecovery(reason) {
-    return `<div class="github-auth-warning danger"><strong>Read-only recovery</strong><span>${escapeHtml(reason)}</span></div>`;
+    return `<div class="github-auth-warning danger"><strong>只读恢复</strong><span>${escapeHtml(reason)}</span></div>`;
   }
 
   function renderCleanupWarning(reason) {
-    return `<div class="github-auth-warning"><strong>Credential cleanup needs attention</strong><span>${escapeHtml(reason)}</span></div>`;
+    return `<div class="github-auth-warning"><strong>凭据清理需要核对</strong><span>${escapeHtml(reason)}</span></div>`;
   }
 
   async function invoke(command, args = {}) {
@@ -137,7 +137,7 @@
       case "authorize_github": {
         const token = String(args.token ?? "");
         if (!token || token.trim() !== token || /[\r\n\0]/.test(token)) {
-          throw new Error("Enter a single-line GitHub token without surrounding whitespace");
+          throw new Error("令牌须为单行，且首尾没有空格");
         }
         Object.assign(browserStatus, {
           state: "verified",
@@ -151,9 +151,9 @@
           scopes: [],
           billingCapability: "available",
           billingDetail:
-            "Browser preview simulated access to personal premium-request Billing",
+            "浏览器试用：仅模拟个人高级请求账单访问",
           detail:
-            "Browser preview simulated a separate authorization; no token was persisted",
+            "浏览器试用：仅模拟独立授权，令牌未保存",
           validatedAt: new Date().toISOString(),
           recovery: null,
           cleanupWarning: null,
@@ -172,15 +172,15 @@
           scopes: [],
           billingCapability: "unknown",
           billingDetail:
-            "Authorize PilotWeave before requesting personal Billing data",
-          detail: "Browser preview has no separate GitHub authorization",
+            "读取个人账单前需要为本软件独立授权",
+          detail: "浏览器试用：没有独立 GitHub 授权",
           validatedAt: null,
           recovery: null,
           cleanupWarning: null,
         });
         return structuredClone(browserStatus);
       default:
-        throw new Error(`Unsupported GitHub authorization preview command: ${command}`);
+        throw new Error(`不支持的 GitHub 授权试用操作：${command}`);
     }
   }
 
@@ -193,7 +193,7 @@
       validateStatus(value);
       status = value;
       document.dispatchEvent(new Event("pilotweave:refresh-setup"));
-      if (!quiet) showToast("GitHub authorization status refreshed");
+      if (!quiet) showToast("GitHub 授权状态已刷新");
     } catch (error) {
       showToast(error?.message ?? String(error), "error");
     } finally {
@@ -204,7 +204,7 @@
 
   function validateStatus(value) {
     if (!value || typeof value.state !== "string") {
-      throw new Error("GitHub authorization returned an invalid response");
+      throw new Error("GitHub 授权响应格式不受支持");
     }
     if (!Array.isArray(value.scopes)) value.scopes = [];
   }
@@ -212,26 +212,26 @@
   function openAuthorizeModal() {
     modalRoot.innerHTML = `
       <div class="modal-backdrop github-auth-modal-backdrop" role="presentation">
-        <section class="modal github-auth-modal" role="dialog" aria-modal="true" aria-label="Authorize PilotWeave with GitHub">
+        <section class="modal github-auth-modal" role="dialog" aria-modal="true" aria-label="独立 GitHub 授权">
           <header class="modal-header">
-            <div><p class="eyebrow">SEPARATE AUTHORIZATION</p><h2>Authorize PilotWeave</h2></div>
-            <button class="icon-button" data-github-auth-close aria-label="Close">×</button>
+            <div><p class="eyebrow">独立授权</p><h2>授权本软件</h2></div>
+            <button class="icon-button" data-github-auth-close aria-label="关闭">×</button>
           </header>
           <div class="modal-body">
             <div class="github-auth-modal-copy">
-              Create a fine-grained personal access token for your own account with <strong>Plan · read</strong> user permission. PilotWeave first validates <code>GET /user</code>, then probes the personal premium-request Billing endpoint. The token is never written to JSON or returned by the backend.
+              使用你自己的精细权限令牌，授予 <strong>Plan · read</strong> 用户权限。先核验身份，再检查个人账单访问；令牌不写入 JSON。
             </div>
             <form id="github-auth-form" class="form-grid">
               <div class="form-field full">
-                <label for="github-auth-token">Fine-grained GitHub token</label>
+                <label for="github-auth-token">GitHub 精细权限令牌</label>
                 <input id="github-auth-token" name="token" type="password" autocomplete="new-password" required maxlength="65536" placeholder="github_pat_…" />
-                <small>A rejected replacement never overwrites an existing valid PilotWeave token.</small>
+                <small>更换失败不会覆盖原有效令牌。</small>
               </div>
             </form>
           </div>
           <footer class="modal-footer">
-            <button class="button ghost" data-github-auth-close>Cancel</button>
-            <button class="button primary" data-github-auth-submit>Validate and store</button>
+            <button class="button ghost" data-github-auth-close>取消</button>
+            <button class="button primary" data-github-auth-submit>核验并保存</button>
           </footer>
         </section>
       </div>`;
@@ -258,7 +258,7 @@
     const submit = modalRoot.querySelector("[data-github-auth-submit]");
     if (submit) {
       submit.disabled = true;
-      submit.textContent = "Validating…";
+      submit.textContent = "核验中…";
     }
     try {
       const value = await invoke("authorize_github", { token });
@@ -269,7 +269,7 @@
       closeModal();
       showToast(
         value.state === "verified"
-          ? "Separate GitHub authorization stored"
+          ? "独立 GitHub 授权已保存"
           : value.detail,
         value.state === "verified" ? "success" : "error",
       );
@@ -279,7 +279,7 @@
       showToast(error?.message ?? String(error), "error");
       if (submit) {
         submit.disabled = false;
-        submit.textContent = "Validate and store";
+        submit.textContent = "核验并保存";
       }
     }
   }
@@ -287,10 +287,10 @@
   function openClearModal() {
     modalRoot.innerHTML = `
       <div class="modal-backdrop github-auth-modal-backdrop" role="presentation">
-        <section class="modal github-auth-modal" role="dialog" aria-modal="true" aria-label="Clear GitHub authorization">
-          <header class="modal-header"><h2>Clear separate GitHub authorization</h2><button class="icon-button" data-github-auth-close aria-label="Close">×</button></header>
-          <div class="modal-body"><p class="github-auth-modal-copy">This removes PilotWeave's bounded authorization metadata and requests deletion of its dedicated operating-system credential entry. It does not sign out VS Code, Copilot CLI, the GitHub Copilot app, or GitHub CLI.</p></div>
-          <footer class="modal-footer"><button class="button ghost" data-github-auth-close>Cancel</button><button class="button danger" data-github-auth-confirm-clear>Clear authorization</button></footer>
+        <section class="modal github-auth-modal" role="dialog" aria-modal="true" aria-label="清除 GitHub 授权">
+          <header class="modal-header"><h2>清除独立 GitHub 授权</h2><button class="icon-button" data-github-auth-close aria-label="关闭">×</button></header>
+          <div class="modal-body"><p class="github-auth-modal-copy">删除本软件的授权记录和专用凭据，不退出任何客户端账号。</p></div>
+          <footer class="modal-footer"><button class="button ghost" data-github-auth-close>取消</button><button class="button danger" data-github-auth-confirm-clear>确认清除授权</button></footer>
         </section>
       </div>`;
     modalRoot
@@ -311,7 +311,7 @@
       document.dispatchEvent(new Event("pilotweave:refresh-setup"));
       closeModal();
       showToast(
-        value.cleanupWarning ?? "Separate GitHub authorization cleared",
+        value.cleanupWarning ?? "独立 GitHub 授权已清除",
         value.cleanupWarning ? "error" : "success",
       );
       markChanged();
@@ -331,7 +331,7 @@
       status = value;
       document.dispatchEvent(new Event("pilotweave:refresh-setup"));
       showToast(
-        value.state === "verified" ? "Authorization validated" : value.detail,
+        value.state === "verified" ? "授权已核验" : value.detail,
         value.state === "verified" ? "success" : "error",
       );
     } catch (error) {
@@ -350,15 +350,15 @@
 
   function stateLabel(value) {
     return {
-      missing: "Missing",
-      verified: "Verified",
-      unauthorized: "Unauthorized",
-      forbidden: "Forbidden",
-      networkError: "Network error",
-      credentialUnavailable: "Credential store unavailable",
-      schemaError: "Schema error",
-      conflict: "Conflict",
-      readOnlyRecovery: "Read-only recovery",
+      missing: "缺失",
+      verified: "已验证",
+      unauthorized: "授权失效",
+      forbidden: "无权限",
+      networkError: "网络错误",
+      credentialUnavailable: "凭据库不可用",
+      schemaError: "格式不受支持",
+      conflict: "冲突",
+      readOnlyRecovery: "只读恢复",
     }[value] ?? value;
   }
 
@@ -377,11 +377,11 @@
 
   function billingLabel(value) {
     return {
-      available: "Available",
-      insufficientPermission: "Permission required",
-      notCovered: "Not covered",
-      unavailable: "Unavailable",
-      unknown: "Unknown",
+      available: "可用",
+      insufficientPermission: "需要授权",
+      notCovered: "未覆盖",
+      unavailable: "不可用",
+      unknown: "未知",
     }[value] ?? value;
   }
 
@@ -397,17 +397,17 @@
 
   function billingTitle(value) {
     return {
-      available: "Premium-request reports can be fetched",
-      insufficientPermission: "Identity is valid; Plan read is missing",
-      notCovered: "Personal Billing is not exposed for this account",
-      unavailable: "The capability probe could not be completed",
-      unknown: "Billing capability has not been probed",
-    }[value] ?? "Billing capability is unknown";
+      available: "可读取高级请求账单",
+      insufficientPermission: "身份有效，但缺少 Plan read 权限",
+      notCovered: "此账号未提供个人账单访问",
+      unavailable: "账单能力核验未完成，请重试",
+      unknown: "尚未核验账单能力",
+    }[value] ?? "账单能力未知";
   }
 
   function formatDateTime(value) {
     const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return "at an unknown time";
+    if (Number.isNaN(date.getTime())) return "时间未知";
     return new Intl.DateTimeFormat(undefined, {
       dateStyle: "medium",
       timeStyle: "short",

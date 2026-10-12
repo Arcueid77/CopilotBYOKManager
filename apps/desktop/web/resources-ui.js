@@ -1,43 +1,43 @@
 ((scope) => {
   "use strict";
   const escape = (value) => String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#039;");
-  const kindLabel = (kind) => ({ mcp: "MCP (HTTPS)", skill: "Skill", instructions: "Instructions" })[kind] ?? "Unsupported";
-  const date = (value) => Number.isNaN(Date.parse(value)) ? "Unknown" : new Date(value).toLocaleString();
+  const kindLabel = (kind) => ({ mcp: "MCP (HTTPS)", skill: "技能", instructions: "指令" })[kind] ?? "不支持";
+  const date = (value) => Number.isNaN(Date.parse(value)) ? "未知" : new Date(value).toLocaleString("zh-CN");
   let context;
 
   function render(overview, error, native, blocked = false) {
     const writable = native && !blocked;
     const records = overview?.resources ?? [];
-    return `<section class="usage-panel"><div class="step-heading"><h2>Shared resources</h2><button class="button primary small" data-resource-action="add" ${!writable ? "disabled" : ""}>Add resource</button></div>
-      <p class="install-copy">Author a resource locally, then review publication to public client paths. Secrets, local MCP commands, arbitrary paths, and client authentication are not imported. GitHub Copilot app, named profiles and custom roots remain manual.</p>
-      ${!native ? '<p class="preview-banner">Unavailable in browser preview — no native catalog or client files are read.</p>' : ""}
+    return `<section class="usage-panel"><div class="step-heading"><h2>共享资源</h2><button class="button primary small" data-resource-action="add" ${!writable ? "disabled" : ""}>添加资源</button></div>
+      <p class="install-copy">资源先保存到本地，再预览发布。App、命名配置与自定义路径保持手动；不导入密钥或客户端认证。</p>
+      ${!native ? '<p class="preview-banner">浏览器试用不可用，不读取本地目录或客户端文件。</p>' : ""}
       ${error ? `<p class="inline-error">${escape(error)}</p>` : ""}
-      ${blocked ? '<p class="inline-error">Managed writes are disabled during recovery. Review recovery before editing or publishing resources.</p>' : ""}
+      ${blocked ? '<p class="inline-error">恢复期间暂停写入，请先核对恢复。</p>' : ""}
       ${overview?.detail ? `<p class="muted">${escape(overview.detail)}</p>` : ""}
-      ${native && !overview ? '<p class="usage-empty">Resource storage is unavailable.</p>' : ""}
-      ${native && overview && records.length === 0 ? '<p class="usage-empty">No authored resources yet. Saving a resource does not publish it.</p>' : ""}
+      ${native && !overview ? '<p class="usage-empty">资源存储不可用，请核对恢复状态。</p>' : ""}
+      ${native && overview && records.length === 0 ? '<p class="usage-empty">尚无资源；保存不会自动发布。</p>' : ""}
       <div class="client-grid">${records.map((record) => {
         const bindings = (overview.bindings ?? []).filter((binding) => binding.resourceId === record.id);
         const unpublished = bindings.some((binding) => Date.parse(binding.deployedAt) < Date.parse(record.updatedAt));
-        return `<article class="client-card resource-card"><h3>${escape(record.name)}</h3><p>${escape(kindLabel(record.kind))} · ${bindings.length ? `${bindings.length} last-published binding(s)` : "Not published"}${unpublished ? " · Local changes need publication" : ""}</p>
-          <p class="muted">${bindings.map((binding) => `${escape(binding.targetId)} · ${escape(date(binding.deployedAt))}`).join("<br>") || "No client configuration has been written."}</p>
-          <div class="install-panel-actions"><button class="button ghost small" data-resource-action="edit" data-resource-id="${escape(record.id)}" ${!writable ? "disabled" : ""}>Edit</button><button class="button small" data-resource-action="publish" data-resource-id="${escape(record.id)}" ${!writable ? "disabled" : ""}>Preview publication</button><button class="button ghost small" data-resource-action="remove" data-resource-id="${escape(record.id)}" ${!writable ? "disabled" : ""}>Revoke and delete…</button></div></article>`;
+        return `<article class="client-card resource-card"><h3>${escape(record.name)}</h3><p>${escape(kindLabel(record.kind))} · ${bindings.length ? `${bindings.length} 个最近发布绑定` : "尚未发布"}${unpublished ? " · 本地修改待发布" : ""}</p>
+          <p class="muted">${bindings.map((binding) => `${escape(binding.targetId)} · ${escape(date(binding.deployedAt))}`).join("<br>") || "尚未写入客户端配置。"}</p>
+          <div class="install-panel-actions"><button class="button ghost small" data-resource-action="edit" data-resource-id="${escape(record.id)}" ${!writable ? "disabled" : ""}>编辑</button><button class="button small" data-resource-action="publish" data-resource-id="${escape(record.id)}" ${!writable ? "disabled" : ""}>预览发布</button><button class="button ghost small" data-resource-action="remove" data-resource-id="${escape(record.id)}" ${!writable ? "disabled" : ""}>撤销并删除…</button></div></article>`;
       }).join("")}</div></section>`;
   }
 
   function renderPlan(plan) {
-    const labels = { create: "Create owned projection", update: "Update owned projection", remove: "Remove owned projection", unchanged: "No change needed", manual: "Manual / unavailable" };
-    return `<ul class="resource-plan-operations">${plan.operations.map((op) => `<li><strong>${escape(op.title)}</strong> · ${escape(labels[op.change] ?? "Unsupported change")}
+    const labels = { create: "新增受管配置", update: "更新受管配置", remove: "移除受管配置", unchanged: "无需修改", manual: "手动处理 / 不可用" };
+    return `<ul class="resource-plan-operations">${plan.operations.map((op) => `<li><strong>${escape(op.title)}</strong> · ${escape(labels[op.change] ?? "不支持的变更")}
       ${op.destination ? `<p class="muted"><code>${escape(op.destination)}</code></p>` : ""}<p>${escape(op.detail)}</p>
-      ${op.contentPreview != null ? `<details><summary>Reviewed owned content</summary><pre class="usage-code">${escape(op.contentPreview)}</pre></details>` : ""}</li>`).join("")}</ul>${plan.operations.length ? "" : "No published bindings exist; only the local catalog entry will be removed."}`;
+      ${op.contentPreview != null ? `<details><summary>受管内容预览</summary><pre class="usage-code">${escape(op.contentPreview)}</pre></details>` : ""}</li>`).join("")}</ul>${plan.operations.length ? "" : "没有发布记录，仅删除本地条目。"}`;
   }
 
   function editor(record) {
     const native = context.native;
     if (!native) return;
-    context.openModal({ title: record ? "Edit authored resource" : "Add authored resource", wide: true,
-      body: `<form id="resource-form"><label class="field-label">Name<input class="text-input" name="name" maxlength="128" required value="${escape(record?.name)}"></label><label class="field-label">Kind<select class="text-input" name="kind" ${record ? "disabled" : ""}>${["instructions", "skill", "mcp"].map((kind) => `<option value="${kind}" ${record?.kind === kind ? "selected" : ""}>${kindLabel(kind)}</option>`).join("")}</select></label><label class="field-label">Content or credential-free HTTPS MCP URL<textarea class="text-input" name="body" rows="12" maxlength="65536" required>${escape(record?.body)}</textarea></label><p class="muted">Instructions apply to all files. Skills get native-generated name/description frontmatter; enter their Markdown body here. Supporting scripts/assets are managed manually. MCP headers, keys, URL credentials and query strings are not supported. Saving does not write client files.</p></form>`,
-      footer: '<button class="button ghost" data-resource-close>Cancel</button><button class="button primary" id="save-resource">Save locally</button>',
+    context.openModal({ title: record ? "编辑资源" : "添加资源", wide: true,
+      body: `<form id="resource-form"><label class="field-label">名称<input class="text-input" name="name" maxlength="128" required value="${escape(record?.name)}"></label><label class="field-label">类型<select class="text-input" name="kind" ${record ? "disabled" : ""}>${["instructions", "skill", "mcp"].map((kind) => `<option value="${kind}" ${record?.kind === kind ? "selected" : ""}>${kindLabel(kind)}</option>`).join("")}</select></label><label class="field-label">内容或不含凭据的 HTTPS MCP 地址<textarea class="text-input" name="body" rows="12" maxlength="65536" required>${escape(record?.body)}</textarea></label><p class="muted">指令面向全部文件；技能填写 Markdown 正文，脚本与资源手动管理。MCP 不接受请求头、密钥或查询参数。保存不会发布。</p></form>`,
+      footer: '<button class="button ghost" data-resource-close>取消</button><button class="button primary" id="save-resource">保存到本地</button>',
       onOpen(root) {
         root.querySelector("[data-resource-close]").addEventListener("click", context.closeModal);
         const save = root.querySelector("#save-resource");
@@ -48,7 +48,7 @@
           try {
             await context.invoke("upsert_resource", { input: { id: record?.id ?? null, name: form.elements.name.value, kind: form.elements.kind.value, body: form.elements.body.value } });
             if (root.isConnected) context.closeModal();
-            context.showToast("Resource saved locally; review publication separately"); await context.refresh();
+            context.showToast("资源已保存，发布需另行预览"); await context.refresh();
           } catch (error) { context.showToast(error?.message ?? String(error), "error"); }
           finally { save.disabled = false; }
         });
@@ -58,9 +58,9 @@
 
   function review(record, revokeAndDelete) {
     if (!context.native) return;
-    context.openModal({ title: revokeAndDelete ? "Review resource revocation" : "Review resource publication", wide: true,
-      body: `<p>${escape(record.name)}. Native ownership and live fingerprints will be rechecked. This preview expires after 15 minutes and is single-use. ${revokeAndDelete ? "Only proven owned configuration is removed; user entries remain." : "Only supported targets are written. Manual and unsupported clients are not counted as synchronized."}</p><div id="resource-plan" role="status">Generate a preview to review every target.</div>`,
-      footer: '<button class="button ghost" data-resource-close>Cancel</button><button class="button primary" id="review-resource">Preview changes</button>',
+    context.openModal({ title: revokeAndDelete ? "核对资源撤销" : "核对资源发布", wide: true,
+      body: `<p>${escape(record.name)}：写前会重检受管证明和目标指纹。预览 15 分钟有效，仅可使用一次。 ${revokeAndDelete ? "仅移除已核验的受管配置，保留用户条目。" : "仅写入支持的目标，手动客户端不计为同步成功。"}</p><div id="resource-plan" role="status">请生成预览，逐个核对目标。</div>`,
+      footer: '<button class="button ghost" data-resource-close>取消</button><button class="button primary" id="review-resource">生成预览</button>',
       onOpen(root) {
         root.querySelector("[data-resource-close]").addEventListener("click", context.closeModal);
         const session = new scope.PilotWeavePlanSession(); const action = root.querySelector("#review-resource");
@@ -72,15 +72,15 @@
               const plan = await context.invoke("preview_resource_sync", { resourceId: record.id, revokeAndDelete });
               if (!root.isConnected || !session.accept(generation, plan)) return;
               root.querySelector("#resource-plan").innerHTML = renderPlan(plan);
-              action.textContent = revokeAndDelete ? "Confirm revoke and delete" : "Confirm publication";
+              action.textContent = revokeAndDelete ? "确认撤销并删除" : "确认发布";
             } else {
               const args = session.consume(true);
               await context.invoke("apply_resource_plan", args);
               if (root.isConnected) context.closeModal();
-              context.showToast(revokeAndDelete ? "Owned resource configuration removed" : "Published to supported targets; manual clients still require setup");
+              context.showToast(revokeAndDelete ? "受管资源配置已移除" : "已发布到支持的目标，其他客户端仍需手动配置");
               await context.refresh();
             }
-          } catch (error) { session.invalidate(); action.textContent = "Preview changes"; if (root.isConnected) root.querySelector("#resource-plan").textContent = error?.message ?? String(error); context.showToast(error?.message ?? String(error), "error"); }
+          } catch (error) { session.invalidate(); action.textContent = "生成预览"; if (root.isConnected) root.querySelector("#resource-plan").textContent = error?.message ?? String(error); context.showToast(error?.message ?? String(error), "error"); }
           finally { action.disabled = false; }
         });
       },

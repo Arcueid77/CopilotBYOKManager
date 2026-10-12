@@ -36,7 +36,8 @@ export async function nativeSuite(options, record) {
       const sources = await d.ipc('get_usage_sources'); assert.ok(sources.every(s => !s.enabled));
       await d.browser.$('#content[data-route="overview"]').waitForExist();
       assert.equal(await d.browser.$('.preview-banner').isExisting(), false);
-      assert.ok((await d.browser.$('.setup-steps').getText()).length > 0);
+      assert.ok((await d.browser.$('.manager-health').getText()).length > 0);
+      assert.ok((await d.browser.$('.manager-pending').getText()).length > 0);
       if (options.evidenceRoot) await d.browser.saveScreenshot(path.join(options.evidenceRoot,'native-home.png'));
       return { capability: 'NativeIsolated', webviewVersion: d.browser.capabilities.browserVersion };
     });
@@ -81,7 +82,7 @@ export async function nativeSuite(options, record) {
     });
     await step('B04 Reviewed deployment UI, foreign data, backups and manual app', async () => {
       await d.click('[data-action="deploy-connection"]'); await d.click('#preview-deployment');
-      const button = await d.browser.$('button=Apply supported changes'); await button.waitForClickable(); await button.click();
+      const button = await d.browser.$('#apply-deployment'); await button.waitForClickable(); await button.click();
       await until(() => fs.readFileSync(settings, 'utf8').includes('pilotWeave'), 'Native deployment did not write');
       await until(async () => { const state = await d.ipc('get_dashboard'); return !state.deploymentRecovery && state.deployments.some(r => r.status === 'applied'); }, 'Deployment audit did not finish');
       assert.match(fs.readFileSync(settings, 'utf8'), /Foreign/);
@@ -147,7 +148,7 @@ export async function nativeSuite(options, record) {
       await d.click('#primary-nav [data-route="usage"]');await d.click('#refresh-button');
       await d.click('[data-usage-tab="sources"]');
       await d.click('[data-usage-action="sync"]');
-      await until(async()=>!(await d.browser.$('[data-usage-action="sync"]').getText()).includes('Importing'),'UI import did not finish');
+      await until(async()=>!(await d.browser.$('[data-usage-action="sync"]').getText()).includes('导入中'),'UI import did not finish');
       await d.browser.$('#usage-filters select[name="sourceId"]').selectByAttribute('value','vscode-otel');
       // Fixed fixture dates must not depend on the moving default 30-day range.
       // Native date controls interpret keyboard input in the OS locale. Set the
@@ -398,44 +399,59 @@ export async function nativeSuite(options, record) {
       await d.ipc('delete_connection',{connectionId:saved.id});
       return {native:'WebView2 -> Tauri IPC -> Rust GET -> local HTTP fixtures',credentials:'synthetic only',requests:server.modelRequests.length};
     });
-    await step('B28 Home add/edit/select/deployment preview stays on Home without automatic deployment', async () => {
+    await step('B28 Home connection cards save locally and preview inline without global selection or automatic publication', async () => {
       await d.click('#primary-nav [data-route="overview"]');
       const before=(await d.ipc('get_dashboard')).deployments.length;
-      await d.click('.setup-connection-card [data-action="add-connection"]');
+      const savedPreferences=()=>{
+        const sqlite=new DatabaseSync(file('config/PilotWeave/usage.sqlite3'),{readOnly:true});
+        try { return sqlite.prepare('SELECT payload FROM setup_preferences WHERE id=1').get()?.payload ?? null; }
+        finally { sqlite.close(); }
+      };
+      // get_setup_status derives a first-enabled fallback when no saved choice
+      // exists. Check persisted preferences, not that compatibility-only DTO.
+      const selectionBefore=savedPreferences();
+      await d.click('#content [data-action="add-connection"]');
       for(const [selector,value] of [['#connection-name','Home connection'],['#base-url','https://models.example.invalid/v1'],['#api-key','fixture-home-key'],['#models','home-model | Home Model']]) await d.browser.$(selector).setValue(value);
       await d.click('#save-connection');
       await until(async()=>(await d.ipc('get_dashboard')).connections.some(c=>c.name==='Home connection'),'Home connection did not save');
       let current=(await d.ipc('get_dashboard')).connections.find(c=>c.name==='Home connection');
-      await until(async()=>(await d.ipc('get_setup_status')).preferences.connectionId===current.id,'Home did not select newly saved connection');
-      await until(async()=>await d.browser.$('#setup-connection').getValue()===current.id,'Home selection was not rendered');
+      assert.equal(savedPreferences(),selectionBefore);
+      const card=`[data-connection-id="${current.id}"]`;
+      await d.browser.$(card).waitForExist();
       assert.equal(await d.browser.$('#content').getAttribute('data-route'),'overview');
-      await d.click('.setup-connection-card [data-action="edit-connection"]');
+      await d.click(`${card} [data-action="edit-connection"]`);
       assert.equal(await d.browser.$('#base-url').getValue(),current.baseUrl);
+      assert.equal(await d.browser.$('#api-key').getValue(),'');
       await d.browser.$('#models').setValue('home-model | Renamed Home Model\nsecond-model | Second Model');
       await d.click('#save-connection');
       await until(async()=>(await d.ipc('get_dashboard')).connections.find(c=>c.id===current.id).models.length===2,'Home edit did not save');
-      await until(async()=>(await d.browser.$('.setup-connection-card').getText()).includes('2 enabled models'),'Home model summary did not refresh');
+      await until(async()=>(await d.browser.$(card).getText()).includes('2 个模型'),'Home model summary did not refresh');
+      assert.equal(savedPreferences(),selectionBefore);
       assert.equal((await d.ipc('get_dashboard')).deployments.length,before);
       if(options.evidenceRoot) await d.browser.saveScreenshot(path.join(options.evidenceRoot,'native-home-connections.png'));
-      await d.click('.setup-connection-card [data-action="setup-deploy"]');
+      await d.click(`${card} [data-action="deploy-connection"]`);
+      assert.equal(await d.browser.$('#modal-root #deployment-preview').isExisting(),false);
+      assert.equal(await d.browser.$('#apply-deployment').isEnabled(),false);
       // B08/B16 deliberately left externally changed, detached CLI state. It
       // must not be adopted by this independent Home UI preview.
       const vsTarget=(await d.ipc('get_dashboard')).clients.find(c=>c.kind==='vs-code-copilot'&&c.detected);
-      await d.click('.modal-body details > summary');
       for(const checkbox of await d.browser.$$('input[name="deployment-target"]')) {
         if(await checkbox.isEnabled() && await checkbox.isSelected() !== ((await checkbox.getValue())===vsTarget.id)) await checkbox.click();
       }
       await d.click('#preview-deployment');
-      await d.browser.$('button=Apply supported changes').waitForExist();
+      await d.browser.$('#apply-deployment').waitForClickable();
       assert.equal((await d.ipc('get_dashboard')).deployments.length,before);
-      await d.click('.modal-header [data-modal-close]');
+      await d.click('[data-deployment-close]');
       await d.ipc('delete_connection',{connectionId:current.id});
     });
     await step('B29 VS Code sign-in never spawns and scopes the reviewed client', async () => {
-      await d.click('#primary-nav [data-route="overview"]');
-      const checks=await d.browser.$('.setup-checks');
-      if(await checks.getAttribute('open')===null) await d.click('.setup-checks > summary');
-      await d.click('[data-action="setup-signin"][data-surface="vsCodeCopilot"]');
+      await d.click('#primary-nav [data-route="clients"]');
+      const accountDetails=await d.browser.$('#account-panel').parentElement();
+      if(await accountDetails.getAttribute('open')===null) await accountDetails.$('summary').click();
+      for(const checkbox of await d.browser.$$('input[name="account-surface"]')) {
+        if(await checkbox.isEnabled() && await checkbox.isSelected() !== ((await checkbox.getValue())==='vsCodeCopilot')) await checkbox.click();
+      }
+      await d.click('[data-account-action="preview"]');
       await d.browser.$('.account-plan-operation').waitForExist();
       assert.equal((await d.browser.$$('.account-plan-operation')).length,1);
       await d.click('.account-modal .modal-header [data-account-modal-close]');
@@ -477,8 +493,10 @@ export async function nativeSuite(options, record) {
       }
       const preserved=JSON.parse(fs.readFileSync(mcp,'utf8'));
       assert.equal(preserved.userSetting,true);assert.equal(preserved.mcpServers.foreign.url,'https://user.example.invalid/mcp');
+      const more=await d.browser.$('.more-nav');
+      if(await more.getAttribute('open')===null) await d.click('.more-nav > summary');
       await d.click('#primary-nav [data-route="resources"]');
-      assert.match(await d.browser.$('#content').getText(),/Resources|authored resources/);
+      assert.match(await d.browser.$('#content').getText(),/共享资源/);
       await d.click('[data-resource-action="add"]');
       await d.browser.$('#resource-form input[name="name"]').setValue('UI resource fixture');
       await d.browser.$('#resource-form textarea[name="body"]').setValue('Use clear names. This is authored test content, not an imported conversation.');
@@ -488,16 +506,19 @@ export async function nativeSuite(options, record) {
       assert.equal((await d.ipc('get_resources')).bindings.some(b=>b.resourceId===authored.id),false);
       await d.click(`[data-resource-action="publish"][data-resource-id="${authored.id}"]`);
       await d.click('#review-resource');
-      await until(async()=>(await d.browser.$('#resource-plan').getText()).includes('Create owned projection'),'Resource review did not show semantic changes');
+      await until(async()=>(await d.browser.$('#resource-plan').getText()).includes('新增受管配置'),'Resource review did not show semantic changes');
       await d.click('#resource-plan details > summary');
       assert.match(await d.browser.$('#resource-plan pre').getText(),/Use clear names/);
       if(options.evidenceRoot) await d.browser.saveScreenshot(path.join(options.evidenceRoot,'native-resource-review.png'));
-      await d.click('button=Confirm publication');
+      assert.equal(await d.browser.$('#review-resource').getText(),'确认发布');
+      await d.click('#review-resource');
       await until(async()=>(await d.ipc('get_resources')).bindings.some(b=>b.resourceId===authored.id),'Resource UI did not publish the reviewed plan');
-      await until(async()=>(await d.browser.$('#content').getText()).includes('last-published binding'),'Published binding was not rendered');
+      await until(async()=>(await d.browser.$('#content').getText()).includes('个最近发布绑定'),'Published binding was not rendered');
       if(options.evidenceRoot) await d.browser.saveScreenshot(path.join(options.evidenceRoot,'native-resources.png'));
       await d.click(`[data-resource-action="remove"][data-resource-id="${authored.id}"]`);
-      await d.click('#review-resource');await d.click('button=Confirm revoke and delete');
+      await d.click('#review-resource');
+      await until(async()=>await d.browser.$('#review-resource').getText()==='确认撤销并删除','Resource revoke preview did not finish');
+      await d.click('#review-resource');
       await until(async()=>!(await d.ipc('get_resources')).resources.some(r=>r.id===authored.id),'Resource UI did not revoke the owned publication');
     });
     await step('B31 Installation history and current CLI account follow-up persist without credential copying', async () => {

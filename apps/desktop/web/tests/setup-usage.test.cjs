@@ -22,8 +22,8 @@ test("missing apps, inferred accounts, stale deployment and manual setup choose 
 });
 test("money rendering preserves decimal precision and unknown is distinct from exact zero", () => {
   assert.equal(usage.money("0.0000000000000000000000001234"), "$0.0000000000000000000000001234");
-  assert.equal(usage.money("0"), "$0"); assert.match(usage.money(null), /Unavailable/);
-  assert.equal(usage.value(0), "0"); assert.match(usage.value(null), /Unknown/);
+  assert.equal(usage.money("0"), "$0"); assert.match(usage.money(null), /不可用/);
+  assert.equal(usage.value(0), "0"); assert.match(usage.value(null), /未知/);
 });
 
 test("legacy setup renderer keeps editable controls and scoped sign-in for compatibility", () => {
@@ -72,5 +72,5 @@ test("remote strings and source setup paths are escaped and cannot inject markup
   assert.equal(setup.escape('<img src=x onerror="alert(1)">'), "&lt;img src=x onerror=&quot;alert(1)&quot;&gt;");
   assert.doesNotMatch(usage.setupInstructions({ id: "vscode-otel", pathHint: "<script>attack()</script>", setupPath: 'C:\\<img onerror="bad">' }), /<script>|<img/);
   const markup = usage.render(snapshot, { errors: { localUsage: "<script>bad</script>" }, billing: { families: [] } }, false);
-  assert.match(markup, /Browser preview/); assert.doesNotMatch(markup, /<script>/); assert.match(markup, /disabled/);
+  assert.match(markup, /浏览器试用/); assert.doesNotMatch(markup, /<script>/); assert.match(markup, /disabled/);
 });

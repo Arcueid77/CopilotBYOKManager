@@ -8,7 +8,7 @@
   --border-soft: #eceef1;
   --text: #1f2430;
   --muted: #667085;
-  --subtle: #7b8494;
+  --subtle: #667085;
   --accent: #4f46e5;
   --accent-strong: #4f46e5;
   --accent-soft: #f0efff;
@@ -102,8 +102,18 @@ h1 { font-size: 23px; font-weight: 650; margin-bottom: 7px; letter-spacing: 0; }
 .install-panel, .account-panel, .github-auth-panel, .card, .client-card, .security-note, .setting-row, .usage-panel { background: var(--panel); border-color: var(--border); box-shadow: none; border-radius: 10px; }
 .status-pill.available, .status-pill.applied, .badge.secure { color: var(--muted); border-color: var(--border); background: var(--panel-2); }
 .modal-backdrop { background: #21293d40; z-index: 30; }
-.modal { border-radius: 12px; box-shadow: var(--shadow); max-height: calc(100vh - 48px); }
+.modal { color: var(--text); background: var(--panel); border-color: var(--border); border-radius: 12px; box-shadow: var(--shadow); max-height: calc(100vh - 48px); }
+.modal-header, .modal-footer { background: var(--panel); }
 .modal-body p, .modal-body small { line-height: 1.7; }
+input, select, textarea { color: var(--text); background: var(--panel); }
+input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
+.form-field label, .field-label { color: var(--muted); }
+.install-card { background: var(--panel); }
+.install-summary, .account-summary, .account-evidence, .account-run,
+.account-plan-security, .account-plan-target, .account-confirmation, .account-result-summary,
+.github-auth-permission, .github-auth-scopes, .github-auth-modal-copy { background: var(--panel-2); }
+.path-line { color: var(--muted); background: var(--panel-2); }
+.modal-body a { color: var(--accent); }
 .toast { background: var(--panel); box-shadow: var(--shadow); }
 code, .path-line, .usage-code { font-family: "Cascadia Code", "Consolas", monospace; overflow-wrap: anywhere; }
 .security-note { margin-bottom: 18px; font-size: 12px; }

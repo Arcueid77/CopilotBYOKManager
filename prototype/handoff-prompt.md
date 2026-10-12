@@ -15,7 +15,7 @@
 
 - 这些客户端可同时配置多个供应商，用户**在客户端内的模型选择器**里选用模型。
 - 因此「发布」= 在客户端**新增/更新一个供应商组**，保留其他来源；**发布 ≠ 被选中**。
-- 证据：VS Code Language Models 编辑器按供应商分组（code.visualstudio.com/docs/agent-customization/language-models）；JetBrains 2025-12 起 BYOK 支持多自定义供应商（blog.jetbrains.com/ai/2025/12/bring-your-own-key-byok-is-now-live-in-jetbrains-ides）。
+- 证据：VS Code Language Models 编辑器按供应商分组（code.visualstudio.com/docs/agent-customization/language-models）；GitHub Copilot JetBrains 自定义端点公告（github.blog/changelog/2026-07-14-github-copilot-for-jetbrains-expands-byok-capabilities）。原引用的 JetBrains BYOK 文章介绍 AI Assistant，不是 GitHub Copilot 插件。
 - 检查现有 planner/adapter 文案与逻辑，把"切换/替换"语义改为"新增/更新供应商组（保留其他来源）"。发布结果的引导语必须包含："请到客户端的模型选择器中选用刚发布的模型"。
 
 ### 1.2 Copilot CLI 是单活排他
@@ -25,11 +25,12 @@
 - 排他：自定义供应商生效期间 GitHub 官方模型路由不可用；**重启终端会话后生效**。预览中必须用醒目文案说明这两点。
 - `~/.copilot/providers.json`：官方配置目录参考里提到（providers/models 键、优先于环境变量），但**无公开字段级 schema**，本版不使用，列为后续调研项。
 
-### 1.3 JetBrains 每个 IDE 配置路径独立（纠正"共享文件"假设）
+### 1.3 JetBrains 是两层存储（2026-10-12 发布包复核修正）
 
-- 每个 IDE 自己的 options 目录：`%APPDATA%\JetBrains\<Product><Version>\options\github-copilot.xml`（本机实证：IntelliJ、PyCharmCE2023.3、PyCharmCE2024.1、Rider2026.1 各自独立 options 目录）。
-- 跨 IDE 共享的只有 agent/认证层（`%LOCALAPPDATA%\github-copilot\`）。
-- **检查并移除实现中"多个 JetBrains IDE 共享配置、写一次多处生效"的假设**；改为每个 IDE 独立写入、各自提示重启。
+- **供应商配置层共享**：已审核的 GitHub Copilot 1.19 语言服务器以 `byok` 命名空间保存供应商密钥、端点、协议及模型配置。Windows 默认目标为 `%USERPROFILE%\AppData\Local\github-copilot\byok.json`；绝对 `XDG_CONFIG_HOME` 可改变根路径。同一用户、同一配置根路径的 IDE 共用该文件，继续去重写入，不能改成逐 IDE 重复保存密钥。
+- **IDE 偏好层独立**：各 IDE 的 `options/github-copilot.xml` 保存 `CopilotBYOKGroupNames`、`CopilotBYOKProviderLabels`、`CopilotModelEnabledState`、`CopilotContextWindows` 和 `CopilotReasoningEfforts` 等偏好。它不是完整供应商配置文件，也不证明每个 IDE 的 BYOK 端点互相隔离。
+- 插件通过语言服务器的 `listCustomProviderConfigs` 获取供应商组名，并协调 IDE 本地分组。保留各 IDE 的官方登录、重启、模型可见性和请求验收，不把写入共享文件当作全部 IDE 已选用模型。
+- 本轮**不读写真实 IDE XML、认证材料或对话**，不重置用户的启用/显示偏好。未知版本保持不支持。静态证据见 `docs/jetbrains-support.md`；隔离真机验收见 `docs/local-validation-plan.md` 的“JetBrains 隔离真机验收”章节。
 
 ### 1.4 Copilot App 保持手动边界（已调研定案）
 

@@ -95,11 +95,11 @@
     const createdAt = nowIso();
     return {
       version: 1,
-      statePath: "Browser preview — no filesystem access",
+      statePath: "浏览器试用 — no filesystem access",
       stateRecovery: null,
       usageDb: {
         state: "unavailable",
-        detail: "Browser preview has no native usage database",
+        detail: "浏览器试用 has no native usage database",
         path: null,
         schemaVersion: null,
       },
@@ -127,7 +127,7 @@
           id: "vscode:stable:default",
           kind: "vs-code-copilot",
           name: "Visual Studio Code · Default",
-          detail: "Default profile language-model catalog",
+          detail: "默认配置的模型目录（模拟）",
           path: "~/Library/Application Support/Code/User/chatLanguageModels.json",
           detected: true,
           supportsWrite: true,
@@ -149,13 +149,13 @@
           id: "github-copilot-app:local",
           kind: "github-copilot-app",
           name: "GitHub Copilot app",
-          detail: "Installation detected; provider management is manual in this MVP",
+          detail: "模拟检测结果；App 供应商需手动配置",
           path: "/Applications/GitHub Copilot.app",
           detected: true,
           supportsWrite: false,
           status: "read-only",
           diagnostic:
-            "PilotWeave will not write private app state or credential storage without a stable external interface",
+            "没有已审核的外部接口，不改写 App 私有状态或凭据存储",
         },
       ],
       deployments: [],
@@ -193,7 +193,7 @@
       case "get_install_runs":
         return [];
       case "get_resources":
-        return { resources: [], bindings: [], detail: "Browser preview has no native resource catalog" };
+        return { resources: [], bindings: [], detail: "浏览器试用 has no native resource catalog" };
       case "upsert_connection": {
         const input = args.input;
         const existing = input.id
@@ -249,16 +249,16 @@
         const connection = demoState.connections.find(
           (item) => item.id === args.connectionId,
         );
-        if (!connection) throw new Error("Unknown connection");
+        if (!connection) throw new Error("连接不存在");
         if (connection.enabled === false) throw new Error("请先启用连接再发布");
         const targets = args.targetIds.map((id) =>
           demoState.clients.find((item) => item.id === id),
         );
-        if (!targets.length || targets.some((target) => !target)) throw new Error("Unknown deployment target");
+        if (!targets.length || targets.some((target) => !target)) throw new Error("发布目标不存在");
         for (const [id, stored] of demoPlans) {
           if (Date.now() >= stored.expiresAt) demoPlans.delete(id);
         }
-        if (demoPlans.size >= 32) throw new Error("Too many pending previews");
+        if (demoPlans.size >= 32) throw new Error("待处理预览过多，请关闭旧预览");
         const plan = createMockPlan(connection, targets);
         demoPlans.set(plan.id, {
           plan: structuredClone(plan),
@@ -272,18 +272,18 @@
         const stored = demoPlans.get(args.planId);
         demoPlans.delete(args.planId);
         if (!stored || Date.now() >= stored.expiresAt || args.confirmed !== true) {
-          throw new Error("Preview expired or was consumed; preview again");
+          throw new Error("预览已过期或已使用，请重新预览");
         }
         const { plan } = stored;
         const connection = demoState.connections.find(
           (item) => item.id === plan.connectionId,
         );
-        if (!connection) throw new Error("Unknown connection");
+        if (!connection) throw new Error("连接不存在");
         const targets = plan.targetIds
           .map((id) => demoState.clients.find((item) => item.id === id))
           .filter(Boolean);
         if (stored.connectionRevision !== JSON.stringify(connection) || stored.targetRevision !== JSON.stringify(targets)) {
-          throw new Error("PlanChanged: preview again");
+          throw new Error("模拟计划已变化，请重新预览");
         }
         const records = plan.operations.map((operation) => ({
           id: crypto.randomUUID(),
@@ -293,7 +293,7 @@
           targetKind: operation.targetKind,
           status: operation.supported ? "applied" : "skipped",
           detail: operation.supported
-            ? "Browser preview simulated this deployment; no client configuration was written"
+            ? "浏览器试用仅模拟此次发布，未写入客户端配置"
             : operation.description,
           createdAt: nowIso(),
         }));
@@ -324,16 +324,16 @@
         id: crypto.randomUUID(),
         targetId: target.id,
         targetKind: target.kind,
-        title: `Deploy ${connection.name} to ${target.name}`,
+        title: `发布 ${connection.name} 到 ${target.name}`,
         description: target.supportsWrite
-          ? `Update ${target.path ?? target.name}`
-          : "Manual action required in the client's provider settings",
+          ? `模拟更新 ${target.path ?? target.name}`
+          : "请在客户端供应商设置中手动配置",
         changes: [
-          `Publish ${connection.models.filter((item) => item.enabled).length} enabled model(s)`,
-          "Preserve non-PilotWeave configuration",
+          `发布 ${connection.models.filter((item) => item.enabled).length} 个启用模型`,
+          "保留其他来源的配置",
           target.supportsWrite
-            ? "Create a rollback-safe managed projection"
-            : "Do not mutate unsupported private client state",
+            ? "模拟创建支持回滚的受管配置"
+            : "不改写未支持的客户端私有状态",
         ],
         supported: target.detected && target.supportsWrite,
         requiresRestart: target.kind === "copilot-cli",
@@ -427,9 +427,9 @@
       content.innerHTML = `
         <div class="empty-state">
           <div class="empty-icon">!</div>
-          <h2>Could not load PilotWeave</h2>
+          <h2>无法读取本地状态</h2>
           <p>${escapeHtml(error?.message ?? error)}</p>
-          <button class="button" data-action="refresh">Try again</button>
+          <button class="button" data-action="refresh">重试</button>
         </div>`;
       showToast(error?.message ?? String(error), "error");
     } finally {
@@ -464,7 +464,7 @@
       clients: renderClients,
       usage: () => window.PilotWeaveUsage.render(snapshot, data, isDesktop),
       resources: () => window.PilotWeaveResources.render(data.resources, data.errors.resources, isDesktop, Boolean(snapshot.stateRecovery || snapshot.deploymentRecovery)),
-      about: () => '<section class="setting-row"><div><h2>PilotWeave</h2><p>An independent Copilot setup tool. Pre-release; not affiliated with GitHub.</p><p>Configuration is local. Client authentication stays in each official client.</p></div></section>',
+      about: () => '<section class="setting-row"><div><h2>CopilotBYOKManager</h2><p>独立的 Copilot 配置管理工具，处于预发布阶段，与 GitHub 无隶属关系。</p><p>配置保存在本地，登录凭据留在各官方客户端。</p></div></section>',
       activity: renderActivity,
       settings: renderSettings,
     };
@@ -496,34 +496,34 @@
 
   function renderActivity() {
     const entries = [
-      ...snapshot.deployments.map((r) => ({ time: r.createdAt, kind: "Deployment / rollback", source: r.targetId, status: r.status, detail: r.detail, route: "connections" })),
-      ...(data.installRuns ?? []).map((r) => ({ time: r.finishedAt ?? r.startedAt, kind: "Installation", source: r.componentIds.join(", "), status: r.status, detail: r.detail, route: "clients" })),
-      ...(data.setup?.accounts?.loginRuns ?? []).map((r) => ({ time: r.finishedAt ?? r.startedAt, kind: "Official sign-in", source: r.requestedSurfaces.join(", "), status: r.status, detail: r.summary, route: "clients" })),
-      ...(data.runs ?? []).map((r) => ({ time: r.finishedAt ?? r.startedAt, kind: "Import / refresh", source: r.sourceId, status: r.status, detail: r.detail, route: "usage" })),
+      ...snapshot.deployments.map((r) => ({ time: r.createdAt, kind: "发布 / 回滚", source: r.targetId, status: r.status, detail: r.detail, route: "connections" })),
+      ...(data.installRuns ?? []).map((r) => ({ time: r.finishedAt ?? r.startedAt, kind: "安装", source: r.componentIds.join(", "), status: r.status, detail: r.detail, route: "clients" })),
+      ...(data.setup?.accounts?.loginRuns ?? []).map((r) => ({ time: r.finishedAt ?? r.startedAt, kind: "官方登录", source: r.requestedSurfaces.join(", "), status: r.status, detail: r.summary, route: "clients" })),
+      ...(data.runs ?? []).map((r) => ({ time: r.finishedAt ?? r.startedAt, kind: "导入 / 刷新", source: r.sourceId, status: r.status, detail: r.detail, route: "usage" })),
     ].sort((a, b) => Date.parse(b.time) - Date.parse(a.time));
-    return `<section class="usage-panel"><div class="step-heading"><h2>Recent activity</h2><span>Local, redacted history</span></div>${[data.errors.runs, data.errors.installRuns].filter(Boolean).map((error) => `<p class="inline-error">${escapeHtml(error)}</p>`).join("")}
-      ${entries.length ? `<div class="usage-table-wrap"><table class="usage-table"><thead><tr><th>Time</th><th>Operation</th><th>Target / source</th><th>Status</th><th>Detail</th><th>Next step</th></tr></thead><tbody>${entries.slice(0, 200).map((r) => `<tr><td>${escapeHtml(formatDate(r.time))}</td><td>${escapeHtml(r.kind)}</td><td>${escapeHtml(r.source)}</td><td>${escapeHtml(window.PilotWeaveUsage.label(r.status))}</td><td>${escapeHtml(r.detail)}</td><td><button class="button ghost small" data-action="route" data-route="${r.route}">Review</button></td></tr>`).join("")}</tbody></table></div>` : '<p class="usage-empty">No recorded activity yet.</p>'}</section>`;
+    return `<section class="usage-panel"><div class="step-heading"><h2>最近活动</h2><span>本地脱敏记录</span></div>${[data.errors.runs, data.errors.installRuns].filter(Boolean).map((error) => `<p class="inline-error">${escapeHtml(error)}</p>`).join("")}
+      ${entries.length ? `<div class="usage-table-wrap"><table class="usage-table"><thead><tr><th>时间</th><th>操作</th><th>目标 / 来源</th><th>状态</th><th>详情</th><th>下一步</th></tr></thead><tbody>${entries.slice(0, 200).map((r) => `<tr><td>${escapeHtml(formatDate(r.time))}</td><td>${escapeHtml(r.kind)}</td><td>${escapeHtml(r.source)}</td><td>${escapeHtml(window.PilotWeaveUsage.label(r.status))}</td><td>${escapeHtml(r.detail)}</td><td><button class="button ghost small" data-action="route" data-route="${r.route}">核对</button></td></tr>`).join("")}</tbody></table></div>` : '<p class="usage-empty">尚无活动记录。</p>'}</section>`;
   }
 
   function renderSettings() {
     return `<section id="github-authorization-panel"></section>
       <div class="settings-list">
-        ${settingRow("Runtime", isDesktop ? "Tauri native backend" : "Browser preview", isDesktop ? "Client configuration writes can be applied after preview." : "All deployment applies are simulated and remain inside this tab.")}
-        ${settingRow("State file", snapshot.statePath, "Non-secret connections, deployments, and schema version.")}
-        ${settingRow("State schema", `v${snapshot.version}`, "Migrations are rejected when state is newer than the running build.")}
-        ${settingRow("State recovery", snapshot.stateRecovery ? "Read-only recovery" : "Healthy", snapshot.stateRecovery ?? "The primary state file loaded successfully; writes are enabled.")}
-        ${settingRow("Usage database", usageDbLabel(), snapshot.usageDb?.detail ?? "Usage storage status was not reported.")}
-        ${settingRow("Credential storage", isDesktop ? "Operating-system credential store" : "Simulated has-secret flag", "Secrets are never returned by get_dashboard.")}
-        ${settingRow("GitHub Copilot app", "Read-only provider adapter", "Detection is implemented; private provider-store mutation is intentionally disabled.")}
+        ${settingRow("运行时", isDesktop ? "本地原生后端" : "浏览器试用", isDesktop ? "配置写入须先预览并确认。" : "发布仅模拟，数据保留在当前标签页。")}
+        ${settingRow("状态文件", snapshot.statePath, "只保存非敏感连接、发布记录和版本。")}
+        ${settingRow("状态版本", `v${snapshot.version}`, "状态版本高于当前程序时拒绝迁移。")}
+        ${settingRow("状态恢复", snapshot.stateRecovery ? "只读恢复" : "正常", snapshot.stateRecovery ?? "状态文件已正常读取，可修改。")}
+        ${settingRow("用量数据库", usageDbLabel(), snapshot.usageDb?.detail ?? "未提供用量存储状态。")}
+        ${settingRow("凭据存储", isDesktop ? "系统凭据库" : "模拟密钥保存标记", "状态查询不会返回密钥。")}
+        ${settingRow("GitHub Copilot app", "供应商仅手动配置", "可检测客户端，不读写私有供应商存储。")}
       </div>`;
   }
 
   function usageDbLabel() {
     const db = snapshot.usageDb;
-    if (!db) return "Unknown";
+    if (!db) return "未知";
     return db.state === "available"
-      ? `Ready (schema v${db.schemaVersion})`
-      : "Unavailable";
+      ? `可用（格式 v${db.schemaVersion}）`
+      : "不可用";
   }
 
   function storageWarningBanner() {
@@ -531,19 +531,19 @@
     if (snapshot.deploymentRecovery) warnings.push(snapshot.deploymentRecovery);
     if (snapshot.stateRecovery) {
       warnings.push(
-        `Connection storage is in read-only recovery: ${snapshot.stateRecovery}`,
+        `连接存储处于只读恢复： ${snapshot.stateRecovery}`,
       );
     }
     if (snapshot.usageDb && snapshot.usageDb.state !== "available") {
-      warnings.push(`Usage database is unavailable: ${snapshot.usageDb.detail}`);
+      warnings.push(`用量数据库不可用： ${snapshot.usageDb.detail}`);
     }
     if (!warnings.length) return "";
     return `<div class="security-note">
       <div class="note-icon">⚠</div>
       <div>
-        <strong>Storage needs attention</strong>
+        <strong>存储需要核对</strong>
         ${warnings.map((warning) => `<p>${escapeHtml(warning)}</p>`).join("")}
-        ${snapshot.deploymentRecovery ? '<button class="button" data-action="preview-recovery">Review safe recovery</button>' : ""}
+        ${snapshot.deploymentRecovery ? '<button class="button" data-action="preview-recovery">核对安全恢复</button>' : ""}
       </div>
     </div>`;
   }
@@ -565,7 +565,7 @@
         </div>
         <h3>${escapeHtml(client.name)}</h3>
         <p>${escapeHtml(client.detail)}</p>
-        <div class="path-line" title="${escapeHtml(client.path ?? client.diagnostic ?? "")}">${escapeHtml(client.path ?? client.diagnostic ?? "No local path")}</div>
+        <div class="path-line" title="${escapeHtml(client.path ?? client.diagnostic ?? "")}">${escapeHtml(client.path ?? client.diagnostic ?? "未提供本地路径")}</div>
         ${client.kind === "jetbrains-copilot" ? `<button class="button ghost small" data-action="jetbrains-guide" data-id="${escapeHtml(client.id)}">${client.supportsWrite ? "自动发布 BYOK" : "配置指引"}</button>` : ""}
       </article>`;
   }
@@ -592,7 +592,7 @@
     modalRoot.innerHTML = `
       <div class="modal-backdrop" role="presentation">
         <section class="modal ${wide ? "wide" : ""}" role="dialog" aria-modal="true" aria-label="${escapeHtml(title)}">
-          <header class="modal-header"><h2>${escapeHtml(title)}</h2><button class="icon-button" data-modal-close aria-label="Close">×</button></header>
+          <header class="modal-header"><h2>${escapeHtml(title)}</h2><button class="icon-button" data-modal-close aria-label="关闭">×</button></header>
           <div class="modal-body">${body}</div>
           ${footer ? `<footer class="modal-footer">${footer}</footer>` : ""}
         </section>
@@ -613,7 +613,7 @@
 
   function openConnectionForm(connection = null) {
     if (snapshot.stateRecovery || snapshot.deploymentRecovery) {
-      showToast("Connection changes are disabled during read-only recovery", "error");
+      showToast("只读恢复期间不能修改连接", "error");
       return;
     }
     const modelsText = connection?.models
@@ -736,14 +736,14 @@
       .split(/\r?\n/)
       .map((line) => line.trim())
       .filter(Boolean);
-    if (!modelLines.length) throw new Error("Add at least one model");
+    if (!modelLines.length) throw new Error("请至少添加一个模型");
     const existingByModelId = Object.fromEntries(
       (existing?.models ?? []).map((item) => [item.modelId, item]),
     );
     let models = modelLines.map((line) => {
       const [rawId, ...nameParts] = line.split("|");
       const modelId = rawId.trim();
-      if (!modelId) throw new Error(`Invalid model line: ${line}`);
+      if (!modelId) throw new Error("模型行须包含模型 ID");
       const name = nameParts.join("|").trim() || modelId;
       return {
         id: existingByModelId[modelId]?.id ?? crypto.randomUUID(),
@@ -777,13 +777,13 @@
 
   function openDeleteConfirmation(connection) {
     if (snapshot.stateRecovery || snapshot.deploymentRecovery) {
-      showToast("Connection changes are disabled during read-only recovery", "error");
+      showToast("只读恢复期间不能修改连接", "error");
       return;
     }
     openModal({
-      title: "Remove connection",
-      body: `<p class="muted" style="line-height:1.7">Remove <strong style="color:var(--text)">${escapeHtml(connection.name)}</strong>? Revoke and delete reviews removal of configuration proven to belong to this installation. Detach only leaves all client configuration, including materialized credentials, untouched.</p><div id="delete-preview" role="status"></div>`,
-      footer: `<button class="button ghost" data-modal-close>Cancel</button><button class="button ghost" id="confirm-delete">Detach only…</button><button class="button danger" id="revoke-delete">Preview revoke and delete</button>`,
+      title: "移除连接",
+      body: `<p class="muted" style="line-height:1.7">移除 <strong style="color:var(--text)">${escapeHtml(connection.name)}</strong>？撤销并删除仅移除有本软件受管证明的配置；仅停止管理会保留客户端配置及其中的密钥。</p><div id="delete-preview" role="status"></div>`,
+      footer: `<button class="button ghost" data-modal-close>取消</button><button class="button ghost" id="confirm-delete">仅停止管理…</button><button class="button danger" id="revoke-delete">预览撤销并删除</button>`,
       onOpen(root) {
         root.querySelectorAll("[data-modal-close]").forEach((button) =>
           button.addEventListener("click", closeModal),
@@ -795,18 +795,18 @@
         const preview = root.querySelector("#delete-preview");
         detach.addEventListener("click", async () => {
           if (busy) return;
-          if (detach.textContent !== "Confirm detach only") {
+          if (detach.textContent !== "确认停止管理") {
             plan = null;
-            preview.textContent = "Client configuration and any keys already written there will remain. PilotWeave will discard ownership, local deployment history and its stored credential. Confirm only if you intend to manage that configuration manually.";
-            detach.textContent = "Confirm detach only";
-            revoke.textContent = "Preview revoke and delete";
+            preview.textContent = "客户端配置及其中已写入的密钥将保留。本软件删除受管证明、发布记录和专用凭据；确认后需自行管理。";
+            detach.textContent = "确认停止管理";
+            revoke.textContent = "预览撤销并删除";
             return;
           }
           busy = true; detach.disabled = true; revoke.disabled = true;
           try {
             const result = await invoke("delete_connection", { connectionId: connection.id });
             closeModal();
-            showToast(result?.credentialCleanupWarning ?? "Connection detached; client configuration remains", result?.credentialCleanupWarning ? "warning" : "success");
+            showToast(result?.credentialCleanupWarning ?? "已停止管理，客户端配置保留", result?.credentialCleanupWarning ? "warning" : "success");
             await refresh();
           } catch (error) {
             showToast(error?.message ?? String(error), "error");
@@ -815,24 +815,24 @@
         revoke.addEventListener("click", async () => {
           if (busy) return;
           busy = true; detach.disabled = true; revoke.disabled = true;
-          detach.textContent = "Detach only…";
+          detach.textContent = "仅停止管理…";
           try {
             if (!plan) {
               plan = await invoke("preview_revoke_and_delete", { connectionId: connection.id });
-              preview.innerHTML = `<p>${plan.operations.length ? "Reviewed owned targets:" : "No owned targets are recorded; no client files will be removed."}</p><ul>${plan.operations.map((op) => `<li>${escapeHtml(op.title)} · ${escapeHtml(op.targetId)}</li>`).join("")}</ul><p>Client removal, ownership and connection deletion commit together. External changes invalidate this one-shot preview. Credential-store cleanup failures are reported separately.</p>`;
-              revoke.textContent = "Confirm revoke and delete";
+              preview.innerHTML = `<p>${plan.operations.length ? "已核验的受管目标：" : "没有受管目标记录，不删除客户端文件。"}</p><ul>${plan.operations.map((op) => `<li>${escapeHtml(op.title)} · ${escapeHtml(op.targetId)}</li>`).join("")}</ul><p>受管配置与连接一并删除。外部修改会使预览失效；凭据清理失败单独报告。</p>`;
+              revoke.textContent = "确认撤销并删除";
             } else {
               const planId = plan.id;
               plan = null; // An uncertain or failed apply must never be replayed.
               const result = await invoke("apply_deployment_plan", { planId, confirmed: true });
-              if (!result.connectionDeleted) throw new Error("Revocation did not complete; the connection was preserved. Review Activity or recovery.");
+              if (!result.connectionDeleted) throw new Error("撤销未完成，连接已保留。请查看活动记录或恢复状态。");
               closeModal();
-              showToast(result.credentialCleanupWarning ?? "Owned configuration revoked and connection deleted", result.credentialCleanupWarning ? "warning" : "success");
+              showToast(result.credentialCleanupWarning ?? "受管配置已撤销，连接已删除", result.credentialCleanupWarning ? "warning" : "success");
               await refresh();
             }
           } catch (error) {
             plan = null;
-            revoke.textContent = "Preview revoke and delete";
+            revoke.textContent = "预览撤销并删除";
             preview.textContent = error?.message ?? String(error);
             showToast(error?.message ?? String(error), "error");
           } finally { busy = false; detach.disabled = false; revoke.disabled = false; }
@@ -912,7 +912,7 @@
     }
     openModal({ title: `JetBrains BYOK · ${target.name}`, wide: true,
       body: window.PilotWeaveJetBrains.guide(connection, target, operation),
-      footer: `<button class="button ghost" data-modal-close>Close</button>${operation?.supported ? '<button class="button primary" id="jetbrains-preview-deployment">Preview automatic BYOK</button>' : ""}`,
+      footer: `<button class="button ghost" data-modal-close>关闭</button>${operation?.supported ? '<button class="button primary" id="jetbrains-preview-deployment">预览自动 BYOK</button>' : ""}`,
       onOpen(root) { root.querySelector("#jetbrains-preview-deployment")?.addEventListener("click", () => openDeployment(connection, [target.id])); }
     });
   }
@@ -923,11 +923,11 @@
       const keepCurrent = plan.action === "keepCurrent";
       const blocked = !keepCurrent && !plan.view.committed && (plan.view.conflictCount > 0 || plan.view.unknownResourceCount > 0 || plan.view.unreadableResourceCount > 0);
       openModal({
-        title: keepCurrent ? "Review keeping current files" : "Review interrupted deployment recovery",
+        title: keepCurrent ? "核对保留现有文件" : "核对中断后的恢复",
         body: keepCurrent
-          ? `<p>Keep all ${plan.view.resourceCount} recorded resources exactly as they are. This removes the pending rollback journal and ends the deployment write block.</p><p><strong>The pending changes cannot be rolled back by PilotWeave after this operation.</strong> This does not verify client configuration or mark the deployment successful. Review the current client setup before deploying again.</p><label><input id="confirm-recovery" type="checkbox" style="width:auto" />I reviewed this choice and accept keeping the current files and discarding pending rollback data.</label>`
-          : `<p>${plan.view.resourceCount} physical resources were recorded; ${plan.view.conflictCount} have external changes, ${plan.view.unknownResourceCount ?? 0} are no longer detected or cannot be located, and ${plan.view.unreadableResourceCount ?? 0} cannot be read safely.</p><p>${plan.view.committed ? "The audit was committed. This only removes the completed journal." : blocked ? "Automatic restoration is blocked. Resolve the affected targets and preview again, or separately review keeping all current files to end recovery." : "Unchanged PilotWeave writes will be restored. A new external edit will stop safe restoration and retain the journal for another review."}</p><label><input id="confirm-recovery" type="checkbox" style="width:auto" ${blocked ? "disabled" : ""} />I reviewed and approve this recovery operation.</label>`,
-        footer: `<button class="button ghost" data-modal-close>Cancel</button>${!keepCurrent && !plan.view.committed ? '<button class="button ghost" id="review-keep-current">Review keeping current files…</button>' : ""}<button class="button primary" id="apply-recovery" disabled>${keepCurrent ? "Keep files and end recovery" : "Recover"}</button>`,
+          ? `<p>保留全部 ${plan.view.resourceCount} 个记录中的资源，移除待恢复日志并解除发布写入阻塞。</p><p><strong>此操作后，本软件将无法回滚尚未完成的变更。</strong> 这不代表配置正确或发布成功。再次发布前请核对客户端。</p><label><input id="confirm-recovery" type="checkbox" style="width:auto" />我确认保留现有文件，并丢弃待恢复的回滚数据。</label>`
+          : `<p>记录了 ${plan.view.resourceCount} 个物理资源：${plan.view.conflictCount} 个被外部修改，${plan.view.unknownResourceCount ?? 0} 个无法定位，${plan.view.unreadableResourceCount ?? 0} 个无法安全读取。</p><p>${plan.view.committed ? "审计已提交，仅清理完成的日志。" : blocked ? "自动恢复已阻塞。处理受影响目标后重新预览，或另行核对保留现有文件。" : "仅恢复没有外部改动的受管写入；再次发生外部改动时保留日志并停止恢复。"}</p><label><input id="confirm-recovery" type="checkbox" style="width:auto" ${blocked ? "disabled" : ""} />我已核对并同意执行此恢复操作。</label>`,
+        footer: `<button class="button ghost" data-modal-close>取消</button>${!keepCurrent && !plan.view.committed ? '<button class="button ghost" id="review-keep-current">核对保留现有文件…</button>' : ""}<button class="button primary" id="apply-recovery" disabled>${keepCurrent ? "保留文件并结束恢复" : "恢复"}</button>`,
         onOpen(root) {
           const button = root.querySelector("#apply-recovery");
           root.querySelector("#confirm-recovery").addEventListener("change", (event) => { button.disabled = blocked || !event.target.checked; });
@@ -940,11 +940,11 @@
             try {
               await invoke("apply_deployment_recovery", { planId: plan.id, confirmed: true });
               closeModal();
-              showToast(keepCurrent ? "Current files retained; review client setup before deploying again" : "Recovery completed; original audit may require review");
+              showToast(keepCurrent ? "现有文件已保留，再次发布前请核对客户端" : "恢复已完成，请核对原审计记录");
               await refresh();
             } catch (error) {
               closeModal();
-              showToast(`${error?.message ?? error} Preview again before retrying.`, "error");
+              showToast(`${error?.message ?? error} 重试前请重新预览。`, "error");
               await refresh();
             }
           });
