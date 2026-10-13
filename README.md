@@ -1,5 +1,7 @@
 # CopilotBYOKManager
 
+**简体中文** | [English](README.en.md)
+
 **Provider 一次配置，多端 Copilot 复用。**
 
 在一个地方保存 AI 供应商的接口地址、API 密钥和模型，再将同一份配置应用到 **VS Code、Copilot CLI 和受支持的 JetBrains IDE**。Copilot App 提供手动配置引导。

@@ -1,6 +1,6 @@
 # CopilotBYOKManager documentation
 
-Start with the [project README](../README.md) for setup and everyday use, then the [current implementation status](implementation-status.md) for coverage, validation evidence and remaining acceptance work.
+Start with the user manual in [English](../README.en.md) or [简体中文](../README.md) for setup and everyday use, then the [current implementation status](implementation-status.md) for coverage, validation evidence and remaining acceptance work.
 
 ## Current contracts and implementation
 
