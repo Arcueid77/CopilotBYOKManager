@@ -71,14 +71,27 @@
   function lastResult(snapshot, native) {
     const records = snapshot.deployments.slice().sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
     if (!records.length) return '<p class="manager-meta">尚无发布记录</p>';
-    const last = records[0], batch = records.filter(record => record.planId === last.planId);
+    const last = records[0], batch = last.planId ? records.filter(record => record.planId === last.planId) : [last];
     const applied = batch.filter(record => record.status === "applied").length;
     const failed = batch.filter(record => record.status === "failed").length;
     const manual = batch.filter(record => record.status === "skipped").length;
-    const picked = batch.filter(record => record.status === "applied" && snapshot.connections.some(connection => connection.id === record.connectionId && connection.models.some(model => model.enabled)));
-    const picker = picked.some(record => ["vs-code-copilot", "vscode-copilot", "jetbrains-copilot"].includes(record.targetKind));
-    const cli = picked.some(record => record.targetKind === "copilot-cli");
-    return `<div class="manager-result"><span>${native ? "" : "模拟 · "}${date(last.createdAt)} · ${applied} 个目标已完成${manual ? ` · ${manual} 个需手动处理` : ""}${failed ? ` · ${failed} 个失败` : ""}</span><button class="button ghost small" data-action="route" data-route="activity">查看记录</button></div>${picker ? '<p class="manager-meta">请到客户端的模型选择器中选用刚发布的模型；JetBrains 请先重启相关 IDE。</p>' : ""}${cli ? '<p class="manager-meta">CLI 首选模型已写入环境路由，请新开终端和 CLI 会话。</p>' : ""}`;
+    const statuses = { applied: "配置变更已应用", skipped: "未自动处理", failed: "失败，请核对", rolledBack: "已回滚", "rolled-back": "已回滚", interrupted: "已中断，待恢复", partial: "部分完成", prepared: "已准备", applying: "处理中" };
+    return `<div class="manager-result"><span>${native ? "" : "模拟 · "}${date(last.createdAt)} · ${applied} 个目标配置已处理${manual ? ` · ${manual} 个未自动处理` : ""}${failed ? ` · ${failed} 个失败` : ""}</span><button class="button ghost small" data-action="route" data-route="activity">查看记录</button></div>
+      <ul class="manager-result-targets">${batch.map(record => {
+        const client = snapshot.clients.find(client => client.id === record.targetId);
+        const connection = snapshot.connections.find(connection => connection.id === record.connectionId);
+        const steps = publicationSteps(record, connection);
+        return `<li><strong>${escape(client?.name ?? record.targetId ?? record.targetKind ?? "目标未知")}</strong><span>${escape(statuses[record.status] ?? "状态需核对")}</span>${steps.map(text => `<p>${escape(text)}</p>`).join("")}${record.status !== "applied" && record.detail ? `<details><summary>操作明细</summary><p>${escape(record.detail)}</p></details>` : ""}</li>`;
+      }).join("")}</ul><p class="manager-boundary">以上为配置处理结果，不证明已登录、已选用模型或真实请求成功。</p>`;
+  }
+
+  function publicationSteps(record, connection) {
+    if (record.status !== "applied") return record.status === "skipped" && record.targetKind === "github-copilot-app" ? ["此客户端保持手动配置，请到客户端页查看步骤。"] : [];
+    if (!connection?.models.some(model => model.enabled)) return [];
+    if (record.targetKind === "copilot-cli") return ["请新开终端和 CLI 会话，并核对实际选用的首选模型。"];
+    if (record.targetKind === "jetbrains-copilot") return ["请先重启此 IDE，再到客户端的模型选择器中选用刚发布的模型。"];
+    if (["vs-code-copilot", "vscode-copilot"].includes(record.targetKind)) return ["请到客户端的模型选择器中选用刚发布的模型。"];
+    return [];
   }
 
   function renderHome(snapshot, data, native) {
@@ -92,5 +105,5 @@
       <section class="manager-section"><h2>最近一次发布</h2>${lastResult(snapshot, native)}</section>`;
   }
 
-  return { escape, policy, connectionCard, sourceRows, pending, lastResult, renderHome };
+  return { escape, policy, connectionCard, sourceRows, pending, lastResult, publicationSteps, renderHome };
 });

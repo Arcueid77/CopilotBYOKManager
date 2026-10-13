@@ -81,7 +81,11 @@ export async function nativeSuite(options, record) {
       fs.writeFileSync(settings, original);
     });
     await step('B04 Reviewed deployment UI, foreign data, backups and manual app', async () => {
-      await d.click('[data-action="deploy-connection"]'); await d.click('#preview-deployment');
+      await d.click('[data-action="deploy-connection"]');
+      for (const checkbox of await d.browser.$$('input[name="deployment-target"]')) {
+        if (await checkbox.isEnabled() && !(await checkbox.isSelected())) await checkbox.click();
+      }
+      await d.click('#preview-deployment');
       const button = await d.browser.$('#apply-deployment'); await button.waitForClickable(); await button.click();
       await until(() => fs.readFileSync(settings, 'utf8').includes('pilotWeave'), 'Native deployment did not write');
       await until(async () => { const state = await d.ipc('get_dashboard'); return !state.deploymentRecovery && state.deployments.some(r => r.status === 'applied'); }, 'Deployment audit did not finish');
@@ -149,6 +153,8 @@ export async function nativeSuite(options, record) {
       await d.click('[data-usage-tab="sources"]');
       await d.click('[data-usage-action="sync"]');
       await until(async()=>!(await d.browser.$('[data-usage-action="sync"]').getText()).includes('导入中'),'UI import did not finish');
+      await d.click('[data-usage-tab="models"]');
+      await d.click('#usage-advanced-filters > summary');
       await d.browser.$('#usage-filters select[name="sourceId"]').selectByAttribute('value','vscode-otel');
       // Fixed fixture dates must not depend on the moving default 30-day range.
       // Native date controls interpret keyboard input in the OS locale. Set the

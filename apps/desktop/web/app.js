@@ -412,6 +412,7 @@
     closeDeployment();
     if (loading) { refreshQueued = true; return; }
     loading = true;
+    const focus = window.PilotWeaveUI.capture(content);
     refreshButton.disabled = true;
     content.innerHTML = '<div class="loading"><div><div class="spinner"></div>读取本地状态…</div></div>';
     try {
@@ -423,6 +424,7 @@
       window.PilotWeaveGithubAuth.hydrate(data.authorization);
       setRuntimeState();
       render();
+      window.PilotWeaveUI.restore(content, focus);
     } catch (error) {
       content.innerHTML = `
         <div class="empty-state">
@@ -441,18 +443,23 @@
 
   function setRoute(nextRoute) {
     if (!routes[nextRoute]) return;
+    const fromMore = document.querySelector(".more-nav").contains(document.activeElement);
     route = nextRoute;
     document.querySelectorAll(".nav-item").forEach((button) => {
       button.classList.toggle("active", button.dataset.route === route);
+      if (button.dataset.route === route) button.setAttribute("aria-current", "page");
+      else button.removeAttribute("aria-current");
     });
     document.querySelector(".more-nav").open = false;
     document.querySelector(".more-nav > summary").classList.toggle("active", ["resources", "activity", "settings", "about"].includes(route));
     render();
+    if (fromMore) { pageTitle.tabIndex = -1; pageTitle.focus({ preventScroll: true }); }
   }
 
   function render() {
     if (!snapshot) return;
     closeDeployment();
+    const focus = window.PilotWeaveUI.capture(content);
     const meta = routes[route];
     pageTitle.textContent = meta.title;
     pageSubtitle.textContent = meta.subtitle;
@@ -473,6 +480,7 @@
     window.PilotWeaveInstaller.mount();
     window.PilotWeaveAccount.mount();
     window.PilotWeaveGithubAuth.mount();
+    window.PilotWeaveUI.restore(content, focus);
   }
 
   function renderOverview() {
@@ -483,6 +491,7 @@
     return `
       <p class="manager-boundary" style="margin-bottom:18px">密钥保存在系统凭据库，不回读到界面。测试连接仅查询模型目录，不验证推理能力。</p>
       ${snapshot.connections.length ? `<div class="card-grid">${snapshot.connections.map(connectionCard).join("")}</div>` : emptyConnections()}
+      <section class="manager-section manager-publication"><h2>最近配置操作</h2>${window.PilotWeaveManager.lastResult(snapshot, isDesktop)}</section>
     `;
   }
 
@@ -585,7 +594,11 @@
   }
 
   let modalCleanup = null;
+  const dialogs = window.PilotWeaveUI.modal({ root: modalRoot, background: document.querySelector(".app-shell"), cleanup() {
+    modalCleanup?.(); modalCleanup = null; modalRoot.replaceChildren();
+  } });
   function openModal({ title, body, footer = "", wide = false, onOpen }) {
+    if (!dialogs.prepare()) return;
     closeDeployment();
     modalCleanup?.();
     modalCleanup = null;
@@ -597,18 +610,12 @@
           ${footer ? `<footer class="modal-footer">${footer}</footer>` : ""}
         </section>
       </div>`;
-    const backdrop = modalRoot.querySelector(".modal-backdrop");
-    backdrop.addEventListener("click", (event) => {
-      if (event.target === backdrop) closeModal();
-    });
-    modalRoot.querySelectorAll("[data-modal-close]").forEach((button) => button.addEventListener("click", closeModal));
+    dialogs.mount();
     onOpen?.(modalRoot);
   }
 
-  function closeModal() {
-    modalCleanup?.();
-    modalCleanup = null;
-    modalRoot.innerHTML = "";
+  function closeModal(event) {
+    return event?.type ? dialogs.requestClose() : dialogs.close();
   }
 
   function openConnectionForm(connection = null) {
@@ -624,36 +631,26 @@
           .map(([name, value]) => `${name}: ${value}`)
           .join("\n")
       : "";
+    const advanced = connection && (connection.providerKind !== "openai" || connection.protocol !== "chat-completions" || headersText);
     openModal({
       title: connection ? `编辑 ${connection.name}` : "添加连接",
       wide: true,
       body: `
-        <form id="connection-form" class="form-grid">
+        <form id="connection-form" class="form-grid" novalidate>
           <input type="hidden" name="id" value="${escapeHtml(connection?.id ?? "")}" />
-          <div class="form-field">
+          <p id="connection-error" class="inline-error full" role="alert" tabindex="-1" hidden></p>
+          <div class="form-field full">
             <label for="connection-name">名称</label>
-            <input id="connection-name" name="name" required value="${escapeHtml(connection?.name ?? "")}" placeholder="OpenRouter" />
-          </div>
-          <div class="form-field">
-            <label for="provider-kind">供应商类型</label>
-            <select id="provider-kind" name="providerKind">
-              ${selectOptions(["openai", "azure", "anthropic", "local", "custom"], connection?.providerKind ?? "openai")}
-            </select>
+            <input id="connection-name" name="name" required maxlength="160" value="${escapeHtml(connection?.name ?? "")}" placeholder="例如：我的供应商" />
           </div>
           <div class="form-field full">
             <label for="base-url">端点地址</label>
             <input id="base-url" name="baseUrl" type="url" required value="${escapeHtml(connection?.baseUrl ?? "")}" placeholder="https://api.example.com/v1" />
-            <small>填写供应商基址或客户端所需的推理端点。</small>
+            <small>填写供应商提供的接口基址，例如 https://api.example.com/v1。不同供应商的协议可在高级选项中核对。</small>
           </div>
-          <div class="form-field">
-            <label for="protocol">接口协议</label>
-            <select id="protocol" name="protocol">
-              ${selectOptions(["chat-completions", "responses", "messages"], connection?.protocol ?? "chat-completions")}
-            </select>
-          </div>
-          <div class="form-field">
+          <div class="form-field full">
             <label for="api-key">API 密钥</label>
-            <input id="api-key" name="apiKey" type="password" autocomplete="new-password" placeholder="${connection?.hasSecret ? "留空保留已存密钥，不回读原值" : "本地端点可留空"}" />
+            <input id="api-key" name="apiKey" type="password" autocomplete="new-password" placeholder="${connection?.hasSecret ? "留空保留已存密钥，不回读原值" : "允许匿名的端点可留空"}" />
             <small>保存在系统凭据库，不写入连接配置文件。</small>
           </div>
           ${connection ? `<div class="form-field full"><label><input name="clearSecret" type="checkbox" style="width:auto;height:auto;margin-right:7px" />移除已保存的密钥</label></div>` : ""}
@@ -673,13 +670,13 @@
             <small>每行一个模型：<code>上游模型 ID | 显示名称</code>，名称可省略。</small>
           </div>
           <div class="form-field full"><label for="preferred-model">首选模型</label><select id="preferred-model" name="preferredModel"></select><small>CLI 写入 COPILOT_MODEL；其他客户端仅作本软件推荐，仍需在客户端选择。</small></div>
-          <div class="form-field full">
-            <label for="headers">请求头</label>
-            <textarea id="headers" name="headers" placeholder="X-Custom-Header: value&#10;Authorization: Bearer \${apiKey}">${escapeHtml(headersText)}</textarea>
-            <small>每行一个请求头；用 <code>\${apiKey}</code> 作为发布时的密钥占位符。</small>
-          </div>
+          <details class="connection-advanced full" ${advanced ? "open" : ""}><summary>高级选项：供应商类型、接口协议与请求头</summary><div class="form-grid">
+            <div class="form-field"><label for="provider-kind">供应商类型</label><select id="provider-kind" name="providerKind">${selectOptions(["openai", "azure", "anthropic", "local", "custom"], connection?.providerKind ?? "openai", { openai: "OpenAI 兼容", azure: "Azure OpenAI", anthropic: "Anthropic", local: "本地端点", custom: "自定义" })}</select></div>
+            <div class="form-field"><label for="protocol">接口协议</label><select id="protocol" name="protocol">${selectOptions(["chat-completions", "responses", "messages"], connection?.protocol ?? "chat-completions", { "chat-completions": "Chat Completions", responses: "Responses", messages: "Messages" })}</select><small>按供应商文档选择；更改类型不会自动改写协议或端点。</small></div>
+            <div class="form-field full"><label for="headers">请求头（可选）</label><textarea id="headers" name="headers" placeholder="X-Custom-Header: value&#10;Authorization: Bearer \${apiKey}">${escapeHtml(headersText)}</textarea><small>每行一个请求头；用 <code>\${apiKey}</code> 引用密钥，不填写真实密钥值。</small></div>
+          </div></details>
         </form>`,
-      footer: `<button class="button ghost" data-modal-close>取消</button><button class="button primary" id="save-connection">保存连接</button>`,
+      footer: `<button class="button ghost" data-modal-close>取消</button><button class="button primary" id="save-connection" type="submit" form="connection-form">保存连接</button>`,
       onOpen(root) {
         const preferred = root.querySelector("#preferred-model");
         const modelsField = root.querySelector("#models");
@@ -694,18 +691,33 @@
         modelsField.addEventListener("input", syncPreferred); syncPreferred();
         const discovery = window.ModelDiscovery.mount(root.querySelector("#connection-form"), { invoke, native: Boolean(window.__TAURI__?.core?.invoke), connection });
         modalCleanup = () => discovery.dispose();
-        root.querySelectorAll("[data-modal-close]").forEach((button) =>
-          button.addEventListener("click", closeModal),
-        );
+        const form = root.querySelector("#connection-form"), errorPanel = root.querySelector("#connection-error");
+        for (const field of form.querySelectorAll("input, select, textarea")) {
+          const hint = field.parentElement.querySelector(":scope > small");
+          if (hint && field.id) { hint.id = `${field.id}-hint`; field.setAttribute("aria-describedby", hint.id); }
+        }
+        function formError(message, field) {
+          errorPanel.textContent = `连接未保存。${message}`; errorPanel.hidden = false;
+          if (field) {
+            field.setAttribute("aria-invalid", "true");
+            field.setAttribute("aria-describedby", `${field.getAttribute("aria-describedby") ?? ""} connection-error`.trim());
+            const details = field.closest("details"); if (details) details.open = true;
+            field.focus();
+          } else errorPanel.focus();
+        }
+        form.addEventListener("input", event => { event.target.removeAttribute("aria-invalid"); });
         let saving = false;
-        root.querySelector("#save-connection").addEventListener("click", async (event) => {
+        const saveButton = root.querySelector("#save-connection");
+        form.addEventListener("submit", async (event) => {
+          event.preventDefault();
           if (saving) return;
-          const form = root.querySelector("#connection-form");
-          if (!form.reportValidity()) return;
+          if (!form.checkValidity()) { formError("请填写必填项，并检查端点地址格式。", form.querySelector(":invalid")); return; }
           const data = new FormData(form);
-          const saveButton = event.currentTarget;
           saving = true;
           saveButton.disabled = true;
+          saveButton.textContent = "保存中…";
+          dialogs.setBusy(true);
+          errorPanel.hidden = true;
           try {
             const input = parseConnectionForm(data, connection, discovery.discoveredIds);
             await invoke("upsert_connection", { input });
@@ -713,37 +725,42 @@
             showToast("连接已保存，尚未发布到客户端。");
             await refresh();
           } catch (error) {
-            showToast(error?.message ?? String(error), "error");
+            if (form.isConnected) dialogs.setBusy(false);
+            const field = ["name", "baseUrl", "models", "headers", "preferredModel"].includes(error?.field) ? form.elements.namedItem(error.field) : null;
+            if (form.isConnected) formError(error?.message ?? String(error), field);
           } finally {
             saving = false;
-            if (saveButton.isConnected) saveButton.disabled = false;
+            if (saveButton.isConnected) { dialogs.setBusy(false); saveButton.disabled = false; saveButton.textContent = "保存连接"; }
           }
         });
       },
     });
   }
 
-  function selectOptions(values, selected) {
+  function selectOptions(values, selected, labels = {}) {
     return values
       .map(
-        (value) => `<option value="${escapeHtml(value)}" ${value === selected ? "selected" : ""}>${escapeHtml(value)}</option>`,
+        (value) => `<option value="${escapeHtml(value)}" ${value === selected ? "selected" : ""}>${escapeHtml(labels[value] ?? value)}</option>`,
       )
       .join("");
   }
 
   function parseConnectionForm(data, existing, discoveredIds = new Set()) {
+    function invalid(message, field) { const error = new Error(message); error.field = field; throw error; }
+    if (!String(data.get("name") ?? "").trim()) invalid("请填写连接名称。", "name");
+    if (new TextEncoder().encode(String(data.get("name") ?? "")).length > 160) invalid("名称过长，请缩短后重试。", "name");
     const modelLines = String(data.get("models") ?? "")
       .split(/\r?\n/)
       .map((line) => line.trim())
       .filter(Boolean);
-    if (!modelLines.length) throw new Error("请至少添加一个模型");
+    if (!modelLines.length) invalid("请至少添加一个模型。", "models");
     const existingByModelId = Object.fromEntries(
       (existing?.models ?? []).map((item) => [item.modelId, item]),
     );
     let models = modelLines.map((line) => {
       const [rawId, ...nameParts] = line.split("|");
       const modelId = rawId.trim();
-      if (!modelId) throw new Error("模型行须包含模型 ID");
+      if (!modelId) invalid("模型行须包含模型 ID。", "models");
       const name = nameParts.join("|").trim() || modelId;
       return {
         id: existingByModelId[modelId]?.id ?? crypto.randomUUID(),
@@ -759,8 +776,11 @@
         },
       };
     });
-    models = window.ModelDiscovery.preferModels(models, String(data.get("preferredModel") ?? ""));
-    const headers = window.ModelDiscovery.parseHeaders(String(data.get("headers") ?? ""));
+    try { models = window.ModelDiscovery.preferModels(models, String(data.get("preferredModel") ?? "")); }
+    catch (error) { invalid(error.message, "preferredModel"); }
+    let headers;
+    try { headers = window.ModelDiscovery.parseHeaders(String(data.get("headers") ?? "")); }
+    catch (error) { invalid(error.message, "headers"); }
     const id = String(data.get("id") ?? "").trim();
     return {
       id: id || null,
@@ -855,8 +875,7 @@
         const applied = result.records.filter(item => item.status === "applied");
         const skipped = result.records.filter(item => item.status === "skipped").length;
         const failed = result.records.filter(item => item.status === "failed").length;
-        const picker = applied.some(item => ["vs-code-copilot", "vscode-copilot", "jetbrains-copilot"].includes(item.targetKind));
-        showToast(`${isDesktop ? "" : "模拟 · "}${applied.length} 个目标已完成${skipped ? `，${skipped} 个需手动处理` : ""}${failed ? `，${failed} 个失败` : ""}${picker && connection.models.some(model => model.enabled) ? "。请到客户端的模型选择器中选用刚发布的模型；JetBrains 请先重启 IDE。" : ""}`, failed ? "error" : "success");
+        showToast(`${isDesktop ? "" : "模拟 · "}${applied.length} 个目标配置已写入${skipped ? `，${skipped} 个未自动处理` : ""}${failed ? `，${failed} 个失败` : ""}。请核对下方结果与下一步。`, failed ? "error" : "success");
         await refresh();
       },
     });
@@ -1036,6 +1055,6 @@
   });
   document.addEventListener("pilotweave:refresh-setup", () => refresh());
   window.PilotWeaveUsage.configure({ invoke, refresh: refreshUsage, render, showToast, openModal, closeModal, getData: () => data, native: isDesktop });
-  window.PilotWeaveResources.configure({ invoke, refresh, showToast, openModal, closeModal, getData: () => data, native: isDesktop });
+  window.PilotWeaveResources.configure({ invoke, refresh, showToast, openModal, closeModal, setBusy: value => dialogs.setBusy(value), getData: () => data, native: isDesktop });
   refresh();
 })();

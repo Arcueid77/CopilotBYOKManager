@@ -210,6 +210,7 @@
   }
 
   function openAuthorizeModal() {
+    if (!dialog().prepare()) return;
     modalRoot.innerHTML = `
       <div class="modal-backdrop github-auth-modal-backdrop" role="presentation">
         <section class="modal github-auth-modal" role="dialog" aria-modal="true" aria-label="独立 GitHub 授权">
@@ -236,6 +237,7 @@
         </section>
       </div>`;
 
+    dialog().mount();
     modalRoot
       .querySelectorAll("[data-github-auth-close]")
       .forEach((button) => button.addEventListener("click", closeModal));
@@ -285,6 +287,7 @@
   }
 
   function openClearModal() {
+    if (!dialog().prepare()) return;
     modalRoot.innerHTML = `
       <div class="modal-backdrop github-auth-modal-backdrop" role="presentation">
         <section class="modal github-auth-modal" role="dialog" aria-modal="true" aria-label="清除 GitHub 授权">
@@ -293,6 +296,7 @@
           <footer class="modal-footer"><button class="button ghost" data-github-auth-close>取消</button><button class="button danger" data-github-auth-confirm-clear>确认清除授权</button></footer>
         </section>
       </div>`;
+    dialog().mount();
     modalRoot
       .querySelectorAll("[data-github-auth-close]")
       .forEach((button) => button.addEventListener("click", closeModal));
@@ -342,10 +346,10 @@
     }
   }
 
-  function closeModal() {
-    const token = modalRoot.querySelector("#github-auth-token");
-    if (token) token.value = "";
-    modalRoot.innerHTML = "";
+  let modalLifecycle;
+  function dialog() { return modalLifecycle ??= window.PilotWeaveUI.modal({ root: modalRoot, background: document.querySelector(".app-shell"), cleanup() { modalRoot.replaceChildren(); } }); }
+  function closeModal(event) {
+    return event?.type ? dialog().requestClose() : dialog().close();
   }
 
   function stateLabel(value) {

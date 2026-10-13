@@ -5,14 +5,14 @@ const { parseHeaders, mergeModels, session } = require('../model-discovery.js');
 test('selection preserves manual text and names, deduplicates ignoring case, and enforces the connection limit', () => {
   const original = 'manual | My name\nfixture/chat | Custom name';
   assert.equal(mergeModels(original, [{modelId:'Fixture/Chat',name:'Catalog name'},{modelId:'new-model',name:'New'}]), original+'\nnew-model | New');
-  assert.throws(() => mergeModels('manual', Array.from({length:128}, (_,i)=>({modelId:`m${i}`,name:`M${i}`}))), /at most 128/);
-  for (const modelId of ['x\ny','x|y','']) assert.throws(()=>mergeModels('',[{modelId,name:'x'}]),/invalid/);
+  assert.throws(() => mergeModels('manual', Array.from({length:128}, (_,i)=>({modelId:`m${i}`,name:`M${i}`}))), /最多 128/);
+  for (const modelId of ['x\ny','x|y','']) assert.throws(()=>mergeModels('',[{modelId,name:'x'}]),/格式不受支持/);
   assert.equal(mergeModels('manual\n', []), 'manual\n');
 });
 
 test('headers do not echo credentials in parse errors or mutate object prototypes', () => {
   assert.throws(()=>parseHeaders('PRIVATE_KEY'),error=>!error.message.includes('PRIVATE_KEY'));
-  assert.throws(()=>parseHeaders('X-Test: a\nx-test: b'), /Duplicate/);
+  assert.throws(()=>parseHeaders('X-Test: a\nx-test: b'), /不能重复/);
   const value = parseHeaders('__proto__: safe\nAuthorization: Bearer ${apiKey}');
   assert.equal(Object.getPrototypeOf(value),null); assert.equal(value.Authorization,'Bearer ${apiKey}');
 });

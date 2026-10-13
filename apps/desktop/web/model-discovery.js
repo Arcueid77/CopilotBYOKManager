@@ -11,9 +11,9 @@
     const seen = new Set();
     for (const line of text.split(/\r?\n/).map(s => s.trim()).filter(Boolean)) {
       const colon = line.indexOf(":");
-      if (colon <= 0) throw new Error("Each request header needs a name and colon.");
+      if (colon <= 0) throw new Error("请求头须采用“名称: 值”格式，请检查每一行。");
       const name = line.slice(0, colon).trim();
-      if (seen.has(name.toLowerCase())) throw new Error("Duplicate request header names are not allowed.");
+      if (seen.has(name.toLowerCase())) throw new Error("请求头名称不能重复（不区分大小写），请合并重复项。");
       seen.add(name.toLowerCase());
       headers[name] = line.slice(colon + 1).trim();
     }
@@ -31,10 +31,10 @@
       const id = model.modelId;
       const name = model.name;
       if (typeof id !== "string" || typeof name !== "string" || !id.trim() || /[\s|]/.test(id) || /[\r\n|]/.test(name)) {
-        throw new Error("The catalog contains an invalid model entry.");
+        throw new Error("目录包含格式不受支持的模型，请手动填写模型 ID。");
       }
       if (ids.has(id.toLowerCase())) continue;
-      if (ids.size >= LIMIT) throw new Error(`A connection can contain at most ${LIMIT} models. Select fewer models.`);
+      if (ids.size >= LIMIT) throw new Error(`每个连接最多 ${LIMIT} 个模型，请减少勾选数量。`);
       ids.add(id.toLowerCase());
       added.push(`${id} | ${name}`);
     }

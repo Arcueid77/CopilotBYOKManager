@@ -657,7 +657,7 @@ h3 {
 table {
   width: 100%;
   border-collapse: collapse;
-  background: rgba(16, 19, 27, 0.78);
+  background: var(--panel);
 }
 
 th,

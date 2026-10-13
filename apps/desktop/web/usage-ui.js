@@ -32,9 +32,13 @@
   const success = (v) => ["available", "successfulEmpty"].includes(v);
   const badge = (s) => `<span class="setup-badge ${success(s) ? "good" : ""}">${e(label(s))}</span>`;
   const today = () => new Date().toISOString().slice(0, 10);
-  const start = new Date(); start.setUTCDate(start.getUTCDate() - 29);
-  const filters = { start: start.toISOString().slice(0, 10), end: today(), surface: null, route: null, connectionId: null, model: null, confidence: null, sourceId: null, sourceStatus: null, page: 0, pageSize: 50 };
-  let tab = "official", billingMonth = today().slice(0, 7), modelPage = 0, priceSearch = "";
+  function defaultFilters() {
+    const start = new Date(); start.setUTCDate(start.getUTCDate() - 29);
+    return { start: start.toISOString().slice(0, 10), end: today(), surface: null, route: null, connectionId: null, model: null, confidence: null, sourceId: null, sourceStatus: null, page: 0, pageSize: 50 };
+  }
+  const filters = defaultFilters();
+  let tab = "official", billingMonth = today().slice(0, 7), modelPage = 0, priceSearch = "", advancedOpen = false;
+  function resetFilters() { Object.assign(filters, defaultFilters()); modelPage = 0; advancedOpen = false; }
   let context = null;
   const busy = new Set();
   const progress = new Map();
@@ -83,27 +87,30 @@
     return `<div class="usage-metrics">${cards.map(([name, v]) => `<div><span>${name}</span><strong>${v}</strong></div>`).join("")}</div>`;
   }
   function filterForm(snapshot, data) {
+    const suggestions = [...new Set(modelUnion(snapshot, data).flatMap(model => [model.rawModel, model.canonicalModel]).filter(Boolean))].slice(0, 256);
+    const advancedCount = ["connectionId", "model", "confidence", "sourceId", "sourceStatus"].filter(key => filters[key]).length;
     return `<form id="usage-filters" class="usage-filters"><label>起始日期（UTC）<input name="start" type="date" value="${e(filters.start)}" required /></label><label>结束日期（UTC）<input name="end" type="date" value="${e(filters.end)}" required max="${today()}" /></label>
       <label>客户端<select name="surface">${options([["vs-code-copilot", "VS Code Copilot"], ["shared-copilot-runtime", "CLI / App 共享运行时"]], filters.surface)}</select></label>
       <label>路由<select name="route">${options([["officialGithub", "GitHub 官方"], ["byok", "BYOK"], ["unknown", "未知"]], filters.route)}</select></label>
+      <details id="usage-advanced-filters" class="usage-filter-advanced" ${advancedOpen ? "open" : ""}><summary>高级筛选${advancedCount ? ` · 已启用 ${advancedCount} 项` : ""}</summary><div class="usage-filters">
       <label>连接<select name="connectionId">${options(snapshot.connections.map((c) => [c.id, c.name]), filters.connectionId)}</select></label>
-      <label>模型<input name="model" maxlength="160" value="${e(filters.model ?? "")}" placeholder="精确原始或规范模型 ID" /></label>
+      <label>模型<input name="model" list="usage-model-suggestions" maxlength="160" value="${e(filters.model ?? "")}" placeholder="选择或输入精确模型 ID" /></label><datalist id="usage-model-suggestions">${suggestions.map(id => `<option value="${e(id)}"></option>`).join("")}</datalist>
       <label>归因置信度<select name="confidence">${options([["explicit", "来源明确报告"], ["exactConnectionIdentity", "精确连接标识"], ["unknown", "未知"]], filters.confidence)}</select></label>
       <label>来源<select name="sourceId">${options((data.sources ?? []).map((s) => [s.id, s.name]), filters.sourceId)}</select></label>
       <label>来源最近状态<select name="sourceStatus">${options(["available", "partial", "successfulEmpty", "disabled", "missing", "schemaError", "canceled", "interrupted"].map((s) => [s, label(s)]), filters.sourceStatus)}</select></label>
-      <button class="button primary small" type="submit">应用筛选</button></form>`;
+      </div></details><div class="usage-filter-actions"><button id="apply-usage-filters" class="button primary small" type="submit">应用筛选</button><button class="button ghost small" type="button" data-usage-action="reset-filters">重置筛选</button></div></form>`;
   }
   function overview(snapshot, data) {
     const local = data.localUsage;
     return `<section class="usage-panel"><div class="step-heading"><h2>本地 Token 观察</h2>${badge(local?.status ?? "unavailable")}</div>${sectionError(data, "localUsage")}
-      ${metrics(local?.totals)}<p>${e(coverage(local?.totals))}</p><details><summary>覆盖范围与计算</summary>
+      <p>${e(coverage(local?.totals))}。筛选仅影响本地观察，不改变官方额度或账单。</p>${filterForm(snapshot, data)}${metrics(local?.totals)}<details><summary>覆盖范围与计算</summary>
       <p>${e(local?.detail ?? "启用支持的来源并导入元数据后查看用量。")}</p>
       <p>缓存命中率 = 已知记录的缓存读取 Token 总和 ÷ 归一化输入总和。 ${value(local?.totals?.cacheCoveredRecords)} 条记录有覆盖；缺失值保持未知。</p>
       <p>已计价请求： ${value(local?.totals?.pricedRequests)} · 未计价请求： ${value(local?.totals?.unpricedRequests)} · 已计价 Token： ${value(local?.totals?.pricedTokens)} · 未计价 Token： ${value(local?.totals?.unpricedTokens)}</p>
       <p>观察范围： ${e(time(local?.coverageStart))} – ${e(time(local?.coverageEnd))}. 最近导入： ${e(time(local?.lastImported))}.</p>
       <p>估算仅按公开 API 文本 Token 价格换算，与 GitHub 账单分开；不按当前配置猜测历史路由。</p>
       <p>绑定价格快照： ${(local?.totals?.priceSnapshots ?? []).map((s) => `<code>${e(s)}</code>`).join(" ") || "无"}</p></details>
-      ${filterForm(snapshot, data)}</section>`;
+      </section>`;
   }
   function official(data, native) {
     const runtime = data.quota?.latest, previous = data.quota?.lastSuccessful;
@@ -130,7 +137,7 @@
     const union = modelUnion(snapshot, data).filter((r) => (!filters.route || filters.route === r.route) && (!filters.model || r.rawModel === filters.model || r.canonicalModel === filters.model));
     const pageCount = Math.max(1, Math.ceil(union.length / 40)); modelPage = Math.min(modelPage, pageCount - 1);
     return `<section class="usage-panel"><div class="step-heading"><h2>全部来源中的模型</h2><span>${union.length} 个模型 / 路由条目</span></div><p>本地用量遵循上方筛选。配置、运行时及所选账单月份的模型仍可显示；目录中的模型不证明请求路由。</p>
-      <div class="usage-table-wrap"><table class="usage-table model-table"><thead><tr><th>原始 / 规范模型</th><th>路由 / 归因置信度</th><th>客户端 / 来源</th><th>记录 / 请求</th><th>报告输入 / 归一化输入</th><th>未缓存输入</th><th>缓存读取 / 写入</th><th>输出</th><th>缓存命中</th><th>API 等价估算</th><th>官方账单</th><th>覆盖范围 / 质量</th></tr></thead><tbody>${union.slice(modelPage * 40, modelPage * 40 + 40).map((m) => {
+      <p class="usage-model-scroll-note">可左右滚动查看完整指标，模型列固定；聚焦表格后也可用左右方向键。</p><div class="usage-table-wrap" role="region" aria-label="模型统计表，可左右滚动" tabindex="0"><table class="usage-table model-table"><thead><tr><th>原始 / 规范模型</th><th>路由 / 归因置信度</th><th>客户端 / 来源</th><th>记录 / 请求</th><th>报告输入 / 归一化输入</th><th>未缓存输入</th><th>缓存读取 / 写入</th><th>输出</th><th>缓存命中</th><th>API 等价估算</th><th>官方账单</th><th>覆盖范围 / 质量</th></tr></thead><tbody>${union.slice(modelPage * 40, modelPage * 40 + 40).map((m) => {
         const t = m.totals;
         return `<tr><td><strong>${e(m.rawModel)}</strong><small>${e(m.canonicalModel ?? "规范 ID 未确定")}</small></td><td>${e(label(m.route))}<small>${e(label(m.confidence))}</small></td><td>${m.surfaces.map((s) => e(label(s))).join(", ") || "未观察到"}<small>${m.origins.map(e).join(" · ")}</small></td><td>${value(t?.records)} / ${value(t?.requests)}</td><td>${value(t?.inputReported)} / ${value(t?.normalizedInput)}</td><td>${value(t?.freshInput)}</td><td>${value(t?.cacheRead)} / ${value(t?.cacheWrite)}</td><td>${value(t?.output)}</td><td>${e(percent(t?.cacheHitRate))}</td><td>${money(t?.estimateUsd)}</td><td>${m.official.map((i) => `${value(i.quantity)} ${e(i.unit)} · ${money(i.netAmountUsd)}${i.stale ? "（旧快照）" : ""}`).join("<br>") || "不可用"}</td><td><details><summary>${e(coverage(t))}</summary><p>${m.quality.map(e).join("<br>") || "暂无本地质量观察"}</p><p>${m.availability.map(e).join(" · ")}</p></details></td></tr>`;
       }).join("")}</tbody></table></div>${!union.length ? empty("无匹配模型。请添加连接、刷新运行时或导入来源。") : ""}
@@ -162,13 +169,14 @@
     return `<section class="usage-panel"><div class="step-heading"><h2>价格目录与历史估算</h2>${button("prices", busy.has("prices") ? "刷新中…" : "刷新官方 OpenRouter 目录", !native || busy.has("prices"))}${button("cancel", "取消进行中的任务", !native || !busy.has("prices"))}</div>
       ${sectionError(data, "catalog")}<p>${e(view?.latest?.detail ?? "刷新价格目录，将兼容的观察记录绑定到不可变价格快照。")}</p>${view?.stale ? badge("stale") : ""}
       ${catalog ? `<p>${e(catalog.detail)}</p><p>核对时间：${e(time(view?.checkedAt))} · 快照创建：${e(time(catalog.fetchedAt))} · 解析器 v${catalog.parserVersion} · <a href="https://openrouter.ai/api/v1/models" target="_blank" rel="noreferrer">官方来源</a></p><details><summary>快照标识</summary><code>${e(catalog.id)}</code><p>来源版本： ${e(catalog.sourceVersion)}</p><p>历史估算保留原快照。Token 缺失或价格档位不明时不估算；零价格不等于价格缺失。</p></details>
-      <form id="price-filter" class="inline-actions"><label>查找价格<input name="priceSearch" value="${e(priceSearch)}" maxlength="160" placeholder="模型 ID" /></label><button class="button ghost small">查找</button></form>
+      <form id="price-filter" class="inline-actions"><label>查找价格<input name="priceSearch" value="${e(priceSearch)}" maxlength="160" placeholder="模型 ID" /></label><button id="apply-price-filter" class="button ghost small">查找</button></form>
       <p>显示 ${Math.min(rows.length, 80)} / ${rows.length} 个匹配模型；单位为 USD / 百万文本 Token。</p><div class="usage-table-wrap"><table class="usage-table"><thead><tr><th>规范模型</th><th>输入门槛</th><th>输入</th><th>缓存读取</th><th>缓存写入 / 1 h</th><th>输出</th></tr></thead><tbody>${rows.slice(0, 80).flatMap((m) => m.supported ? m.tiers.map((t) => `<tr><td>${e(m.model)}</td><td>≥ ${t.minInput}</td><td>${money(t.input)}</td><td>${money(t.cacheRead)}</td><td>${money(t.cacheWrite)} / ${money(t.cacheWrite1h)}</td><td>${money(t.output)}</td></tr>`) : [`<tr><td>${e(m.model)}</td><td colspan="5">价格格式不受支持，不生成估算</td></tr>`]).join("")}</tbody></table></div>` : empty("尚无价格快照；取得兼容价格和完整 Token 数据后才能估算。")}</section>`;
   }
   function render(snapshot, data, native) {
-    return `${!native ? '<div class="preview-banner">浏览器试用 · 不读取真实用量、额度或账单</div>' : ""}${overview(snapshot, data)}
+    return `${!native ? '<div class="preview-banner">浏览器试用 · 不读取真实用量、额度或账单</div>' : ""}
       ${(snapshot.clients ?? []).some(c => c.kind === "jetbrains-copilot" && c.path) ? '<p class="security-note" role="status">JetBrains 用量：未覆盖。尚未验证其 OTel 导入格式，不读取 IDE 日志，也不将 CLI 记录猜测为 JetBrains 用量。缺失数据保持未知，不是零。</p>' : ""}
       <nav class="usage-tabs" aria-label="用量视图">${[["official", "官方订阅 / 用量"], ["models", "模型统计"], ["sessions", "会话 / 详情"], ["sources", "数据来源 / 价格"]].map(([id, name]) => `<button class="${tab === id ? "active" : ""}" data-usage-tab="${id}" aria-current="${tab === id ? "page" : "false"}">${name}</button>`).join("")}</nav>
+      ${["models", "sessions"].includes(tab) ? overview(snapshot, data) : ""}
       ${{ official: () => official(data, native), models: () => models(snapshot, data), sessions: () => sessions(data), sources: () => sources(data, native) }[tab]()}`;
   }
   function setupInstructions(source) {
@@ -195,7 +203,8 @@
   async function action(buttonElement) {
     const name = buttonElement.dataset.usageAction, sourceId = buttonElement.dataset.sourceId;
     const data = context.getData(), source = data.sources?.find((s) => s.id === sourceId);
-    if (name === "record") {
+    if (name === "reset-filters") { resetFilters(); await context.refresh(); }
+    else if (name === "record") {
       const record = data.localUsage?.records.find((r) => r.id === buttonElement.dataset.recordId);
       if (record) context.openModal({ title: "已导入元数据", wide: true, body: `<p>只显示允许保存的元数据，标识已哈希；不保留原日志行或对话。</p><pre class="usage-code">${e(JSON.stringify(record, null, 2))}</pre>`, footer: '<button class="button ghost" data-modal-close>关闭</button>' });
     } else if (name === "source-info" && source) {
@@ -219,10 +228,11 @@
     context = api;
     document.addEventListener("click", (event) => {
       const tabButton = event.target.closest("[data-usage-tab]");
-      if (tabButton) { tab = tabButton.dataset.usageTab; context.render(); }
+      if (tabButton && ["official", "models", "sessions", "sources"].includes(tabButton.dataset.usageTab)) { tab = tabButton.dataset.usageTab; context.render(); }
       const target = event.target.closest("[data-usage-action]");
       if (target && !target.disabled) action(target).catch((err) => context.showToast(err?.message ?? String(err), "error"));
     });
+    document.addEventListener("toggle", event => { if (event.target.id === "usage-advanced-filters") advancedOpen = event.target.open; }, true);
     document.addEventListener("submit", async (event) => {
       if (event.target.id === "usage-filters") {
         event.preventDefault(); const form = new FormData(event.target);
@@ -253,5 +263,5 @@
     if (command === "get_github_authorization_status") return globalThis.PilotWeaveGithubAuth.previewStatus();
     throw new Error("此操作需要桌面软件");
   }
-  return { configure, render, query: () => ({ ...filters }), billingQuery, preview, modelUnion, money, value, percent, setupInstructions, label, metrics, coverage };
+  return { configure, render, query: () => ({ ...filters }), billingQuery, preview, modelUnion, money, value, percent, setupInstructions, label, metrics, coverage, filterForm, resetFilters };
 });

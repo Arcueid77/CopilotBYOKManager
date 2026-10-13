@@ -101,10 +101,6 @@
 
     let panel = content.querySelector("#account-panel");
     if (!panel) return;
-    const installationPanel = content.querySelector("#installation-panel");
-    if (installationPanel && panel.previousElementSibling !== installationPanel) {
-      installationPanel.after(panel);
-    }
     if (panel.dataset.renderVersion === String(renderVersion)) return;
     panel.dataset.renderVersion = String(renderVersion);
     panel.innerHTML = renderPanel();
@@ -373,6 +369,8 @@
   }
 
   function openPlanModal(plan) {
+    if (!dialog().prepare()) return;
+    currentPlan = plan;
     const target = plan.targetIdentity;
     const supportedCount = plan.operations.filter(
       (operation) => operation.supported,
@@ -410,6 +408,7 @@
         </section>
       </div>`;
 
+    dialog().mount();
     modalRoot
       .querySelectorAll("[data-account-modal-close]")
       .forEach((button) => button.addEventListener("click", closeModal));
@@ -466,6 +465,7 @@
   }
 
   function showResultModal(run) {
+    if (!dialog().prepare()) return;
     modalRoot.innerHTML = `
       <div class="modal-backdrop account-modal-backdrop" role="presentation">
         <section class="modal wide account-modal" role="dialog" aria-modal="true" aria-label="登录流程结果">
@@ -485,6 +485,7 @@
           </footer>
         </section>
       </div>`;
+    dialog().mount();
     modalRoot
       .querySelectorAll("[data-account-modal-close]")
       .forEach((button) => button.addEventListener("click", closeModal));
@@ -504,9 +505,10 @@
       </div>`;
   }
 
-  function closeModal() {
-    modalRoot.innerHTML = "";
-    currentPlan = null;
+  let modalLifecycle;
+  function dialog() { return modalLifecycle ??= window.PilotWeaveUI.modal({ root: modalRoot, background: document.querySelector(".app-shell"), cleanup() { modalRoot.replaceChildren(); currentPlan = null; } }); }
+  function closeModal(event) {
+    return event?.type ? dialog().requestClose() : dialog().close();
   }
 
   function orderedSurfaces(values) {

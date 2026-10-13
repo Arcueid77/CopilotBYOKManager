@@ -296,6 +296,8 @@
   }
 
   let currentModalPlan = null;
+  let modalLifecycle;
+  function dialog() { return modalLifecycle ??= window.PilotWeaveUI.modal({ root: modalRoot, background: document.querySelector(".app-shell"), cleanup() { modalRoot.replaceChildren(); currentModalPlan = null; } }); }
 
   async function previewInstall(componentIds) {
     if (loading || componentIds.length === 0) return;
@@ -314,6 +316,8 @@
   }
 
   function openPlanModal(plan) {
+    if (!dialog().prepare()) return;
+    currentModalPlan = plan;
     const operationRows = plan.operations.length
       ? plan.operations
           .map(
@@ -354,6 +358,7 @@
         </section>
       </div>`;
 
+    dialog().mount();
     modalRoot
       .querySelectorAll("[data-install-modal-close]")
       .forEach((button) => button.addEventListener("click", closeModal));
@@ -376,9 +381,8 @@
     }).format(date);
   }
 
-  function closeModal() {
-    modalRoot.innerHTML = "";
-    currentModalPlan = null;
+  function closeModal(event) {
+    return event?.type ? dialog().requestClose() : dialog().close();
   }
 
   async function applyPlan(plan) {
@@ -442,6 +446,7 @@
   }
 
   function showResultModal(result) {
+    if (!dialog().prepare()) return;
     modalRoot.innerHTML = `
       <div class="modal-backdrop install-modal-backdrop" role="presentation">
         <section class="modal wide install-modal" role="dialog" aria-modal="true" aria-label="安装结果">
@@ -467,6 +472,7 @@
           </footer>
         </section>
       </div>`;
+    dialog().mount();
     modalRoot
       .querySelectorAll("[data-install-modal-close]")
       .forEach((button) => button.addEventListener("click", closeModal));

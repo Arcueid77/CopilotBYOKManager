@@ -36,21 +36,25 @@
     const native = context.native;
     if (!native) return;
     context.openModal({ title: record ? "编辑资源" : "添加资源", wide: true,
-      body: `<form id="resource-form"><label class="field-label">名称<input class="text-input" name="name" maxlength="128" required value="${escape(record?.name)}"></label><label class="field-label">类型<select class="text-input" name="kind" ${record ? "disabled" : ""}>${["instructions", "skill", "mcp"].map((kind) => `<option value="${kind}" ${record?.kind === kind ? "selected" : ""}>${kindLabel(kind)}</option>`).join("")}</select></label><label class="field-label">内容或不含凭据的 HTTPS MCP 地址<textarea class="text-input" name="body" rows="12" maxlength="65536" required>${escape(record?.body)}</textarea></label><p class="muted">指令面向全部文件；技能填写 Markdown 正文，脚本与资源手动管理。MCP 不接受请求头、密钥或查询参数。保存不会发布。</p></form>`,
-      footer: '<button class="button ghost" data-resource-close>取消</button><button class="button primary" id="save-resource">保存到本地</button>',
+      body: `<form id="resource-form" novalidate><p id="resource-error" class="inline-error" role="alert" tabindex="-1" hidden></p><label class="field-label">名称<input class="text-input" name="name" maxlength="128" required value="${escape(record?.name)}"></label><label class="field-label">类型<select class="text-input" name="kind" ${record ? "disabled" : ""}>${["instructions", "skill", "mcp"].map((kind) => `<option value="${kind}" ${record?.kind === kind ? "selected" : ""}>${kindLabel(kind)}</option>`).join("")}</select></label><label class="field-label">内容或不含凭据的 HTTPS MCP 地址<textarea class="text-input" name="body" rows="12" maxlength="65536" required>${escape(record?.body)}</textarea></label><p class="muted">指令面向全部文件；技能填写 Markdown 正文，脚本与资源手动管理。MCP 不接受请求头、密钥或查询参数。保存不会发布。</p></form>`,
+      footer: '<button class="button ghost" data-resource-close>取消</button><button class="button primary" id="save-resource" type="submit" form="resource-form">保存到本地</button>',
       onOpen(root) {
         root.querySelector("[data-resource-close]").addEventListener("click", context.closeModal);
         const save = root.querySelector("#save-resource");
-        save.addEventListener("click", async () => {
+        const form = root.querySelector("#resource-form"), errorPanel = root.querySelector("#resource-error");
+        const report = message => { errorPanel.hidden = false; errorPanel.textContent = `资源未保存。${message}`; errorPanel.focus(); };
+        form.addEventListener("submit", async event => {
+          event.preventDefault();
           if (save.disabled) return;
-          const form = root.querySelector("#resource-form"); if (!form.reportValidity()) return;
+          if (!form.checkValidity()) { report("请填写名称和内容。输入已保留，可修改后重试。"); return; }
           save.disabled = true;
+          errorPanel.hidden = true; context.setBusy?.(true);
           try {
             await context.invoke("upsert_resource", { input: { id: record?.id ?? null, name: form.elements.name.value, kind: form.elements.kind.value, body: form.elements.body.value } });
             if (root.isConnected) context.closeModal();
             context.showToast("资源已保存，发布需另行预览"); await context.refresh();
-          } catch (error) { context.showToast(error?.message ?? String(error), "error"); }
-          finally { save.disabled = false; }
+          } catch (error) { if (form.isConnected) { context.setBusy?.(false); report(error?.message ?? String(error)); } }
+          finally { if (save.isConnected) { context.setBusy?.(false); save.disabled = false; } }
         });
       },
     });
