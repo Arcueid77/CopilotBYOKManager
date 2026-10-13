@@ -1,8 +1,12 @@
 # CopilotBYOKManager
 
-**Bring your own models to GitHub Copilot.**
+**Configure your AI provider once. Use it across Copilot clients.**
 
-A local desktop manager for provider connections, model catalogs, reviewed configuration deployment, client account checks, and usage visibility. Built with Tauri, Rust, and a lightweight web interface.
+Save your provider's endpoint, API key, and model catalog in one place, then publish the same configuration to GitHub Copilot in **VS Code, Copilot CLI, and supported JetBrains IDEs**. **Copilot app** is covered through guided provider setup.
+
+When your endpoint or model list changes, update the saved connection, select the clients that should receive it, and preview and confirm the changes. CopilotBYOKManager handles each supported client's configuration format and keeps the publication results together.
+
+Client setup, account checks, and usage views support this configure-once workflow. The desktop app is built with Tauri, Rust, and a lightweight web interface.
 
 [Documentation](docs/README.md) · [Current implementation and validation](docs/implementation-status.md) · [Security policy](SECURITY.md)
 
@@ -13,6 +17,8 @@ CopilotBYOKManager was formerly named PilotWeave. The repository and public docu
 This is an independent community project, not affiliated with, sponsored by, or endorsed by GitHub or JetBrains. GitHub, GitHub Copilot, and JetBrains product names belong to their respective owners.
 
 ## Supported clients
+
+One saved provider connection can be published to multiple client targets. Each client's publication method and follow-up steps are listed below:
 
 | Client | BYOK publication | After publication |
 | --- | --- | --- |
@@ -25,7 +31,8 @@ JetBrains profiles are optional and are not required for the original three-surf
 
 ## What you can do
 
-- **Manage connections and models:** save provider endpoints, protocols, header templates and model catalogs; fetch a read-only model list, explicitly add checked models, choose a preferred model, and enable or disable a connection.
+- **Configure a provider once:** keep its endpoint, key, protocol, header templates and model catalog in one reusable connection. Fetch models, add the ones you want, and choose a preferred model.
+- **Apply it across Copilot clients:** select VS Code profiles, Copilot CLI, and reviewed JetBrains targets from the same connection; preview and confirm publication to the selected clients. Update the connection centrally and republish when needed. Copilot app uses guided manual setup.
 - **Keep provider keys local:** keys use the operating-system credential store and are never read back into the form. Saved header templates reference the key at deployment time.
 - **Preview and publish:** native-held, expiring, one-shot plans enforce live fingerprints, ownership, prepare-all writes, private journals and conditional rollback. Detaching a connection and revoking its owned configuration are separate operations.
 - **Set up clients and accounts:** inspect components, review pinned Windows installation plans, use official client sign-in actions, and distinguish verified identity from manual confirmation or unavailable evidence. VS Code sign-in focuses an existing editor window; if none exists, it gives manual instructions.
@@ -39,8 +46,8 @@ The [implementation status](docs/implementation-status.md) lists current coverag
 The main navigation is **总览 / 连接 / 客户端 / 用量 / 更多**. Resources, Activity, Settings, and About are under More.
 
 1. **Overview:** see pending actions, each client's owned published sources, enabled connections, and the latest publication result.
-2. **Connections:** add an endpoint, key and models. Provider type, protocol and headers are under Advanced options. Saving is local; the connection test checks catalog access, not inference.
-3. **Publish to clients:** select targets, review the inline preview, then confirm. Changing the connection, targets, route or loaded state invalidates the review. Select the CLI target explicitly when its exclusive route is wanted.
+2. **Configure once:** add the provider's endpoint, key and models as a connection. Provider type, protocol and headers are under Advanced options. This saved connection is reusable across client targets. Saving is local; the connection test checks catalog access, not inference.
+3. **Apply across clients:** choose where the saved connection should be published, review the inline preview, then confirm. Changing the connection, targets, route or loaded state invalidates the review. Select the CLI target explicitly when its exclusive route is wanted.
 4. **Follow the result:** per-target next steps remain visible after the notification disappears. VS Code and JetBrains need client-side model selection; CLI needs a new terminal/session; the app stays manual.
 5. **Clients:** inspect configuration and component state, installation plans, and official sign-in/account checks.
 6. **Usage:** choose Official subscription/usage, Model statistics, Sessions/details, or Data sources/pricing. Local filters stay in model/session views; less common fields expand under Advanced filters. Model suggestions and Reset filters are available without changing the selected Billing month.
