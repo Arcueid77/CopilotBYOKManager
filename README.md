@@ -1,158 +1,127 @@
-# PilotWeave
+# CopilotBYOKManager
 
-**Set up GitHub Copilot on this computer.**
+**Bring your own models to GitHub Copilot.**
 
-Manage provider connections, publish reviewed model catalogs, confirm client accounts, and inspect usage with explicit source coverage. The desktop UI display name is **CopilotBYOKManager**; repository, state and credential namespaces remain PilotWeave for compatibility.
+A local desktop manager for provider connections, model catalogs, reviewed configuration deployment, client account checks, and usage visibility. Built with Tauri, Rust, and a lightweight web interface.
 
-> Configure once. Preview every change. Apply across supported Copilot surfaces.
+[Documentation](docs/README.md) · [Current implementation and validation](docs/implementation-status.md) · [Security policy](SECURITY.md)
 
-> [!IMPORTANT]
-> PilotWeave is an independent, community-built project. It is not affiliated with, sponsored by, or endorsed by GitHub. GitHub and GitHub Copilot are trademarks of GitHub, Inc. The PilotWeave name, woven-connection icon, and interface are original project assets and do not reproduce GitHub, Octocat, or GitHub Copilot logos.
+> **Pre-release:** native functionality and isolated regression coverage are implemented. Clean Windows installation, real-account access, and actual client requests still require acceptance testing. Publishing configuration does not prove that a client selected or successfully used a model.
 
-## Current implementation
+CopilotBYOKManager was formerly named PilotWeave. The repository and public documentation now use the new name; existing storage, credential references, build identifiers, and executable names retain their compatibility identifiers. See [Naming and compatibility](#naming-and-compatibility).
 
-PilotWeave is still pre-release, but the repository now contains working vertical slices rather than only a static prototype:
+This is an independent community project, not affiliated with, sponsored by, or endorsed by GitHub or JetBrains. GitHub, GitHub Copilot, and JetBrains product names belong to their respective owners.
 
-- Connection and model-catalog CRUD with bounded native validation for URLs, headers, model limits, identifiers, serialized size, and persisted collection invariants.
-- Provider API keys stored through the operating-system credential store rather than `state.json`; authentication headers use a deployment-time secret placeholder instead of persisted literal credentials.
-- Explicit read-only recovery when `state.json`, login history, GitHub authorization metadata, or `usage.sqlite3` cannot be loaded safely.
-- Discovery of Visual Studio Code Stable/Insiders profiles, GitHub Copilot CLI, and the GitHub Copilot app.
-- Native-held, expiring, one-shot deployment plans with live target fingerprints, write-ahead journal state, bounded snapshots, stale-preview rejection, rollback checks, and centralized frontend error redaction.
-- VS Code `chatLanguageModels.json` projection that preserves non-PilotWeave groups and creates an original rollback backup.
-- Copilot CLI provider activation through user environment variables on Windows and managed shell environment files on macOS/Linux.
-- GitHub Copilot app detection with an explicit read-only/manual provider-configuration boundary.
-- Reviewed Windows installation plans for allowlisted WinGet packages and the exact GitHub Copilot VS Code extension, followed by real component rediscovery rather than optimistic success.
-- Official client sign-in orchestration for VS Code Copilot, Copilot CLI, and the GitHub Copilot app. Plans contain backend-owned executable paths and fixed arguments; persisted run summaries never contain client credentials.
-- Account observations that keep Verified, Inferred, Action required, Unknown, Unsupported, Not installed, and Conflict distinct. Where a client has no stable token-free identity interface, PilotWeave shows the limitation instead of manufacturing verification.
-- A separate PilotWeave-owned GitHub authorization stored under its own operating-system credential reference. The backend validates the authenticated `github.com` identity and probes personal premium-request Billing capability without extracting or reusing any client token.
-- A migration-safe `usage.sqlite3` foundation covering sources, cursors, raw normalized usage records, quota/Billing snapshots, model aliases, immutable price snapshots, and estimate fields.
-- Exact decimal serialization and checked arithmetic for monetary data; binary floating-point JSON values are rejected from the money domain.
-- Native Settings and Clients panels for installation, account orchestration, sign-in history, separate GitHub authorization, storage recovery, and browser-preview limitations.
-- A browser fallback for reviewing the interface without native writes or real authentication.
-- Durable installation-owner proofs, explicit reviewed revoke-and-delete, and a separate detach-only action that does not remove deployed credentials.
-- Native MCP, Skills, and Instructions authoring/publication on supported public paths, with one-shot reviews, ownership checks, journals, and rollback.
-- Private persisted installation runs with per-component outcomes, progress, scoped cancellation, and explicit interrupted recovery.
-- Official read-only CLI account follow-up with matching/conflicting/expired outcomes; other clients retain their manual account boundary.
-- Optional JetBrains Copilot integration: standard IDE/version observations and automatic BYOK deployment for reviewed 1.19 distributions. Preview/apply publishes endpoint, protocol, enabled models, limits/capabilities, headers and the Connection's own key into the dedicated shared runtime namespace; unmanaged providers survive and writes are deduplicated. Ownership, stale checks, journals and rollback apply. GitHub sign-in remains an official per-IDE flow, never credential copying; resource/usage gaps stay explicit. See [JetBrains support and provenance](docs/jetbrains-support.md).
+## Supported clients
 
-The approved lightweight Home layout shows pending actions, per-client owned model sources, enabled Connection cards and the last publication result. Navigation is 总览 / 连接 / 客户端 / 用量 / 更多 (Resources, Activity and Settings). Connections have a persisted enable switch, a read-only catalog-access test, checked model addition and a preferred-model selector. Disabling hides the card and blocks new publication; it never silently revokes configuration. Preview expands inline and confirmation is separate; edits, target changes, refresh and navigation invalidate the review, including late responses.
+| Client | BYOK publication | After publication |
+| --- | --- | --- |
+| VS Code Stable / Insiders and detected profiles | Automatically adds or updates the owned supplier group in `chatLanguageModels.json`; preserves other suppliers | Select the model in the client's model picker |
+| GitHub Copilot CLI | Automatically projects one owned legacy user-environment route and `COPILOT_MODEL`; the CLI target is unchecked by default | Open a new terminal and CLI session; this route is exclusive |
+| JetBrains GitHub Copilot | Automatically writes the shared `github-copilot/byok.json` namespace for [reviewed 1.19 plugin distributions](docs/jetbrains-support.md); deduplicates shared writes | Restart the relevant IDE, complete its official sign-in, then select and test the model |
+| GitHub Copilot app | Detection and manual provider setup; no reviewed automatic provider-write interface | Follow the in-app instructions and verify the model manually |
 
-VS Code and reviewed JetBrains publication adds/updates only that Connection's supplier group; other suppliers survive. Publishing is not selecting: choose the new model in the client's model picker (restart relevant JetBrains IDEs first). Source chips use verified deployed counts, not the edited catalog or private current-model state. App provider setup remains manual. The CLI adapter uses a single legacy environment route and `COPILOT_MODEL`, requires a new terminal/session, never writes `providers.json`, and refuses a provider registry that shadows the environment. Current [GitHub BYOK instructions](https://docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/use-byok-models) describe broader CLI model coexistence; this legacy adapter limitation is not a claim about every current CLI interface. Resources are locally authored configuration, not imported conversation content; a last-published binding is not proof that every client consumes it.
+JetBrains profiles are optional and are not required for the original three-surface setup. Unknown plugin versions stay unsupported until reviewed. The CLI limitation describes this adapter's environment projection, not every interface offered by the current CLI. It does not write `providers.json` and refuses a registry that shadows the environment.
 
-Usage has native commands and a SQLite v2 migration for:
+## What you can do
 
-- Read-only Copilot SDK protocol 3 quota/model observations; no session or prompt RPCs.
-- Monthly personal GitHub Billing snapshots, stable account identity, independent endpoint families, retry-after and same-month stale fallback.
-- Opt-in CLI/shared-runtime session imports and VS Code OTel chat-span imports, with fixed source roots, bounded incremental cursors, cancellation and physical-source deduplication.
-- Reported/normalized input, output, fresh input, cache read/write, weighted cache hit, request counts, model/route/client/provider/day breakdowns and record details.
-- Immutable official OpenRouter text-price catalogs, exact aliases, tier-aware decimal API-equivalent comparisons and explicit incomplete coverage.
-- Filters, source setup/disable/clear controls, runtime/Billing/catalog refreshes, immutable snapshot provenance and local job history.
+- **Manage connections and models:** save provider endpoints, protocols, header templates and model catalogs; fetch a read-only model list, explicitly add checked models, choose a preferred model, and enable or disable a connection.
+- **Keep provider keys local:** keys use the operating-system credential store and are never read back into the form. Saved header templates reference the key at deployment time.
+- **Preview and publish:** native-held, expiring, one-shot plans enforce live fingerprints, ownership, prepare-all writes, private journals and conditional rollback. Detaching a connection and revoking its owned configuration are separate operations.
+- **Set up clients and accounts:** inspect components, review pinned Windows installation plans, use official client sign-in actions, and distinguish verified identity from manual confirmation or unavailable evidence. VS Code sign-in focuses an existing editor window; if none exists, it gives manual instructions.
+- **Inspect usage:** keep official runtime quota, personal GitHub Billing, local token observations, and API-equivalent estimates separate. Opt-in CLI/shared-runtime and VS Code OTel imports persist metadata only. Prices and monetary calculations use exact decimals.
+- **Manage shared resources:** author and publish MCP, Markdown-only Skills, and Instructions through reviewed public paths with ownership and rollback. Unsupported profiles, paths and secret-bearing resources remain manual.
 
-See [adapter provenance and supported schemas](docs/usage-sources.md) and the [P0/P1 handoff](docs/p0-p1-handoff.md). These changes do not establish clean-machine or real-account release acceptance.
+The [implementation status](docs/implementation-status.md) lists current coverage and remaining acceptance work. Adapter versions and source limitations are recorded in [usage sources](docs/usage-sources.md), [model discovery](docs/provider-model-discovery.md), and [JetBrains support](docs/jetbrains-support.md).
 
-## Required MVP
+## Interface and workflow
 
-The complete behavior and acceptance criteria are defined in [the MVP implementation specification](docs/mvp-implementation-spec.md). Remaining required work includes:
+The main navigation is **总览 / 连接 / 客户端 / 用量 / 更多**. Resources, Activity, Settings, and About are under More.
 
-- Complete clean Windows 11 x64 installation verification, including every applicable package/product/publisher requirement and partial/cancellation behavior.
-- Validate CLI protocol-3 account follow-up on real supported clients; VS Code and the app still require their own account checks without reading credentials.
-- Validate runtime quota and personal Billing with actual supported client/account combinations during P2.
-- Expand usage coverage only when upstream exposes the missing semantics: current CLI shutdown metrics do not establish fresh-vs-total input, VS Code may omit cache-write tokens, and no separate supported Copilot app usage source is established. Current data remains Unknown/Partial/Unsupported where appropriate.
-- Validate public-path Resources on actual supported client versions. Secret-bearing/local-command MCP, named profiles, custom roots, and Copilot app resources remain explicitly manual.
-- Complete the clean-machine acceptance run. Automated ownership/revocation, interruption, and resource regressions are implemented, but do not establish real-machine release acceptance.
+1. **Overview:** see pending actions, each client's owned published sources, enabled connections, and the latest publication result.
+2. **Connections:** add an endpoint, key and models. Provider type, protocol and headers are under Advanced options. Saving is local; the connection test checks catalog access, not inference.
+3. **Publish to clients:** select targets, review the inline preview, then confirm. Changing the connection, targets, route or loaded state invalidates the review. Select the CLI target explicitly when its exclusive route is wanted.
+4. **Follow the result:** per-target next steps remain visible after the notification disappears. VS Code and JetBrains need client-side model selection; CLI needs a new terminal/session; the app stays manual.
+5. **Clients:** inspect configuration and component state, installation plans, and official sign-in/account checks.
+6. **Usage:** choose Official subscription/usage, Model statistics, Sessions/details, or Data sources/pricing. Local filters stay in model/session views; less common fields expand under Advanced filters. Model suggestions and Reset filters are available without changing the selected Billing month.
 
-See [the current hardening handoff](docs/hardening-handoff.md) for verified behavior, upstream provenance, and precise remaining acceptance boundaries.
+Dialogs support keyboard focus containment, Escape, and focus restoration. Connection/resource editors confirm before discarding unsaved edits, retain input after save errors, and show persistent error messages. Passwords are never serialized into a draft. Tables use readable light surfaces and a fixed model column for horizontal comparisons.
 
-The primary clean-machine acceptance environment is Windows 11 x64. Existing macOS and Linux discovery/deployment behavior must not regress, but full one-click installation on those platforms is outside the required scope.
+## Run from source
 
-Read [AGENTS.md](AGENTS.md) before implementation. The active development branch is `main` while the project is pre-release.
-
-## Explicit non-goals
-
-The required milestone does not include organization or enterprise Billing administration, BYOK-provider invoice APIs, cloud usage synchronization, multi-user allocation, overage purchasing/settings changes, full macOS/Linux one-click installation, automatic upload of local logs, or parsing private Copilot application stores to manufacture authentication or usage support.
-
-## Run
-
-Prerequisites:
-
-- Node.js 22+
-- Rust 1.88+
-- Platform requirements for Tauri 2
+Prerequisites: Node.js 22+, Rust 1.88+, and the platform build requirements for Tauri 2. Windows development also needs the MSVC toolchain and WebView2.
 
 ```bash
-npm install
+git clone https://github.com/AvaloNero/CopilotBYOKManager.git
+cd CopilotBYOKManager
+npm ci
 npm run dev
 ```
 
-For a frontend-only review, open `apps/desktop/web/index.html` directly. Browser fallback data is disposable and must never be presented as native state.
+The active development branch is `main`.
 
-## Tests
+For a frontend-only review, open `apps/desktop/web/index.html` directly. Browser mode uses disposable simulated data and does not perform native writes or real authentication. `prototype/copilot-byok-manager.html` is the approved interactive design reference, not the current native application.
 
-`npm run check` runs the local gate: web syntax checks, `cargo fmt --check`, `cargo test --workspace`, and `cargo clippy -- -D warnings`. CI runs the same checks on Ubuntu, Windows, and macOS for every push to `main` and every pull request; the Windows job also builds the native Tauri application.
+Build the desktop executable without an installer:
 
-Current regression coverage includes:
-
-- **Deployment lifecycle** — one-shot/expiring plans, stale targets, journals, rollback refusal after external changes, and recovery-safe state handling.
-- **VS Code Copilot** — enabled models are projected into a temporary `chatLanguageModels.json`; switching models replaces only the PilotWeave-owned group, foreign groups survive, and the original backup remains distinct from per-deployment snapshots.
-- **Copilot CLI** — `COPILOT_PROVIDER_*` projection is verified per provider kind and protocol; changing the preferred model rewrites every model variable, and a failing store write restores the previous fake snapshot.
-- **GitHub Copilot app** — deployment remains intentionally read-only; tests pin the manual-configuration boundary and runbook preview.
-- **JetBrains Copilot** — reviewed BYOK namespace projection is transactional; shared IDE writes are deduplicated, unmanaged providers/precise values survive, and stale/unproven/unsafe state refuses writes or rollback. IDE restart/model selection and real provider use remain separate acceptance checks.
-- **Installation and sign-in** — backend-owned component/surface allowlists, one-shot plans, bounded native-process output, interrupted login-run recovery, and UTF-8-safe redacted diagnostics.
-- **Separate GitHub authorization** — fake credential-store tests prove token/metadata separation, corrupt metadata recovery, rollback of a previous secret after metadata-write failure, bounded token/scope validation, and clear behavior.
-- **Usage persistence and money** — v1-to-v2 migrations, foreign keys, append/truncate/rotate/reopen behavior, incomplete final lines, atomic batches, cancel/recovery, stable cumulative IDs, privacy sentinels, exact counters across IPC, cache arithmetic, context tiers, aliases, and immutable historical prices.
-- **Setup and UI** — manual vs verified identity, expiry/evidence invalidation, drift, optional usage readiness, escaped remote strings, exact decimal display, and model-list union.
-
-An optional isolated browser check is available as `node apps/desktop/web/tests/browser-smoke.cjs` with Playwright installed (or `PILOTWEAVE_PLAYWRIGHT` set to its module path). `PILOTWEAVE_BROWSER` can select a browser executable. It uses a fresh headless profile and in-memory native fixtures; screenshots go to a temporary directory. In addition to account/usage/recovery coverage, it exercises enablement with retained source chips, masked saved keys, checked model addition, preferred order, read-only probes, inline ID-only apply, target/refresh/navigation/late-response invalidation, two-supplier coexistence with one CLI route, and responsive layout. It does not exercise a real native account, client or installer. `node prototype/smoke-test.cjs` checks the standalone design reference without a hardcoded checkout path.
-
-Tests use temporary directories, fake stores/runners, and sanitized data. They never modify real VS Code profiles, registry keys, environment variables, shell files, client sessions, or GitHub credentials.
-
-## Architecture
-
-```text
-Connection + model catalog
-        │
-        ├── VS Code Copilot adapter
-        ├── Copilot CLI adapter
-        └── GitHub Copilot app adapter
-                │
-                └── native plan / preview / journal / rollback / result
-
-Account and usage control loops
-        ├── environment discovery / reviewed installation
-        ├── official client sign-in orchestration / qualified identity evidence
-        ├── separate PilotWeave GitHub authorization
-        └── runtime quota + personal Billing + local usage + pricing
-                         │
-                         └── usage.sqlite3 (raw observations before derived views)
+```bash
+npm run build -- --no-bundle
 ```
 
-The source of truth is client-neutral. Client-specific paths, configuration fields, login evidence, and usage parsers belong to adapters rather than being copied into independent provider catalogs. Client login credentials and PilotWeave's own GitHub authorization are separate trust domains.
+Windows packaging and layered acceptance procedures are described in [local validation](docs/local-validation-plan.md). A successful build is not clean-machine installation acceptance.
 
-See [architecture](docs/architecture.md), [adversarial review](docs/adversarial-review.md), and [security policy](SECURITY.md).
+## Development and checks
 
-## Safety model
+Read [AGENTS.md](AGENTS.md), the [MVP contract](docs/mvp-implementation-spec.md), and the [architecture](docs/architecture.md) before implementation.
 
-- Frontend payloads are untrusted and may never contain executable installer commands, authoritative prices, route attribution, or a completed status.
-- Provider secrets and PilotWeave's GitHub API authorization use separate operating-system credential-store references and are never returned to the frontend.
-- Client sign-in uses fixed official browser/device/application flows; PilotWeave does not copy client authentication material.
-- Authentication helper processes run with known sensitive GitHub/Copilot/provider environment variables removed, bounded output, fixed arguments, and timeouts where output is captured.
-- Missing, unavailable, inferred, partial, stale, conflict, and numeric zero are distinct states.
-- Raw prompts, responses, source code, tool payloads, environment dumps, cookies, and authentication headers are not retained by usage collection.
-- GitHub authoritative monetary values and API-equivalent estimates remain separate metrics and use exact decimal representations.
-- GitHub Copilot app provider mutation remains disabled until a stable, supportable interface is available.
+```bash
+npm run check:web
+cargo fmt --all -- --check
+cargo test --workspace
+cargo clippy --workspace --all-targets -- -D warnings
+git diff --check
+```
+
+`npm run check` runs the web and Rust gates; run the whitespace check separately. CI runs the required checks on Ubuntu, Windows, and macOS, and builds the native app on Windows.
+
+The optional browser regression is `node apps/desktop/web/tests/browser-smoke.cjs`. Set `PILOTWEAVE_PLAYWRIGHT` to an installed Playwright module path if needed; `PILOTWEAVE_BROWSER` can select the browser executable. It uses a fresh headless profile, in-memory native fixtures, and temporary screenshots. Coverage includes modal keyboard/draft/error handling, account-panel placement, usage navigation/filtering, publication guidance, CLI opt-in, and 1180 × 760 / 960 × 640 layouts.
+
+Automated tests use temporary directories, fake credentials/processes, sanitized schemas, and local HTTP servers. Real clients, accounts, installers and provider requests belong to separately authorized acceptance runs. See [recorded validation and its limits](docs/implementation-status.md#validation-evidence).
+
+## Safety and limits
+
+- Never copy client OAuth tokens, browser cookies, VS Code SecretStorage, JetBrains Password Safe, or private Copilot app databases.
+- Local usage stores only allowlisted metadata, not prompts, responses, source code, tool content or raw logs.
+- Unknown, unavailable, partial, stale, manual, verified and zero remain distinct.
+- Official GitHub monetary amounts and API-equivalent estimates remain separate; missing counters or prices reduce coverage.
+- Installation uses backend-owned reviewed plans and post-install rediscovery. The direct Copilot app asset-download fallback is not implemented.
+- Organization/enterprise Billing, provider invoice APIs, cloud usage sync, overage settings, and full macOS/Linux one-click installation are outside the required milestone.
+
+The [security policy](SECURITY.md) explains sensitive-data handling and private reporting. The [MVP specification](docs/mvp-implementation-spec.md) remains the acceptance contract.
+
+## Naming and compatibility
+
+The public repository is [AvaloNero/CopilotBYOKManager](https://github.com/AvaloNero/CopilotBYOKManager). Existing clones can update their remote:
+
+```bash
+git remote set-url origin https://github.com/AvaloNero/CopilotBYOKManager.git
+```
+
+This rename does not migrate user data. The `PilotWeave` configuration directory, credential services and ownership markers, `dev.pilotweave.desktop` identifier, `pilotweave` package/binary names, `PILOTWEAVE_*` environment options, and existing validation paths remain compatible. Native package/window labels may still show PilotWeave in this build. Do not rename these persisted identifiers or folders manually.
 
 ## Repository layout
 
 ```text
-apps/desktop/src-tauri/          Native Tauri backend and client adapters
-apps/desktop/web/                Desktop frontend
-AGENTS.md                        Coding-agent implementation entry point
-docs/mvp-implementation-spec.md Normative MVP contract
-docs/architecture.md             Current and required architecture
-docs/adversarial-review.md       Threat and failure analysis
-SECURITY.md                      Disclosure and sensitive-data policy
+apps/desktop/src-tauri/     Native backend, adapters, persistence and tests
+apps/desktop/web/           Desktop frontend and browser regressions
+docs/                      Documentation index, implementation status and contracts
+prototype/                 Reviewed interactive design reference and handoff
+scripts/                   Local validation and packaging tools
+tests/                     Cross-cutting web and native-isolated suites
+AGENTS.md                  Coding-agent entry point
+SECURITY.md                Disclosure and sensitive-data policy
 ```
 
 ## License
 
-MIT
+[MIT](LICENSE)

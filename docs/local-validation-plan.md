@@ -1,8 +1,18 @@
-# PilotWeave 本机自动验证
+# CopilotBYOKManager 本机自动验证
 
 本机入口已实现。A 是代码/浏览器回归，B 是隔离的真实 Windows WebView/IPC 集成测试，C1 使用现有环境观察真实能力，C2 为专用空白用户保留可接续验收入口。维护者本轮选择现有环境，未创建用户或 VM，未执行 C2 安装验收。各次实际结果以仓库外的报告为准；本文不把未执行的项目算作通过。
 
+当前状态更新于 2026-10-13，见 [实现与验收状态](implementation-status.md)。下文注明日期的 HostObserve、NativeIsolated 与 Rider 记录属于各自源码和环境，不能自动沿用到新提交。仓库和公开名称已改为 CopilotBYOKManager；`PilotWeave-validation`、内部构建/存储标识和脚本参数保留兼容。
+
 完成这些验证不等于完整 MVP 达标；仍按 [实现规范 §21](mvp-implementation-spec.md#21-final-acceptance) 判定。Resources 的受支持公共路径发布与撤销已纳入 B；真实客户端消费、手动边界和干净机器验收仍须单独核对，见 [加固交接](hardening-handoff.md)。
+
+## 2026-10-13 UX 回归状态
+
+应用改动已提交为 `3791283`：Web 检查 46 项通过（桌面 42 + 既有计划测试 4），默认 Rust 267 项通过（库测试 261 + 集成 6），fmt、严格 Clippy 和差异检查通过。隔离浏览器使用全模拟数据，验证了弹窗焦点/Tab/Escape、未保存修改与替换保护、保存中禁重复操作、失败保留输入、账号面板位置、筛选/重置焦点、CLI 显式选择及持续的客户端专属发布指引；1180 × 760 和 960 × 640 两种尺寸已检查。最后的“更多”菜单跳转焦点也已复核。
+
+B04 的部署目标改为显式勾选，B09 先进入模型统计并展开高级筛选，避免新布局使旧测试访问错误入口。**本次只检查原生测试脚本语法，未重跑 B00–B32**；2026-10-12 的 33 项通过记录不能当作新 UX 的原生通过证据。隔离浏览器也不等于 Tauri IPC 或真实 IDE 验收。
+
+Rider 已按维护者要求暂缓。没有新增真实供应商请求、模型选择器或多 IDE 共享通过结果；C2 干净 Windows 验收同样待完成。
 
 ## 运行入口
 
@@ -30,7 +40,7 @@ A 的既有浏览器套件使用现有 Playwright。自动查找 Codex 的捆绑
 | C1 / HostObserve | 默认 EXE、真实组件/账号观察、公开价格、官方只读 quota/models、独立授权状态、重启 | 仅证明报告中观察到的真实能力，不证明安装或日志导入 |
 | C2 / DedicatedUser | 专用空白用户预检、默认包安装、先单组件后剩余组件、官方登录入口、人工步骤接续、独立 Billing、用户启用的新日志导入与重启 | 代码入口已具备；本轮未执行，干净 Windows 验收仍待完成 |
 
-B 使用 WebdriverIO 直接连接 Microsoft Edge WebDriver，启动 PilotWeave 的 WebView2，未启用内嵌 WebDriver 插件，也不要求安装 tauri-driver。驱动与 WebView2 版本必须匹配，失败记录 BLOCKED_DRIVER，不降级成 mock。[Microsoft 官方 WebView2 WebDriver 说明](https://learn.microsoft.com/en-us/microsoft-edge/webview2/how-to/webdriver)
+B 使用 WebdriverIO 直接连接 Microsoft Edge WebDriver，启动 CopilotBYOKManager 的 WebView2，未启用内嵌 WebDriver 插件，也不要求安装 tauri-driver。驱动与 WebView2 版本必须匹配，失败记录 BLOCKED_DRIVER，不降级成 mock。[Microsoft 官方 WebView2 WebDriver 说明](https://learn.microsoft.com/en-us/microsoft-edge/webview2/how-to/webdriver)
 
 本机驱动启动时会把附着的 WebView 导航到 `about:blank`。驱动封装记录初始 URL，再导航到应用编译的 `http://tauri.localhost` 资源协议，等待真实导航栏和 IPC；页面、handler、数据库均来自 EXE。此证据说明“经 WebDriver 启动和加载应用”，不替代独立的安装后双击/开始菜单启动验收。
 
@@ -68,7 +78,7 @@ B 覆盖表（具体通过情况见每次报告）：
 
 ## C1：现有环境
 
-本轮按维护者选择执行 HostObserve。它会读组件存在性和官方身份观察，刷新公开价格及 Copilot 只读 RPC；PilotWeave 自身会写状态/缓存，不能称为零磁盘写入。报告分别记录检查结论和实际能力状态；版本未暴露时仍是 null，不能推断版本。
+本轮按维护者选择执行 HostObserve。它会读组件存在性和官方身份观察，刷新公开价格及 Copilot 只读 RPC；CopilotBYOKManager 自身会写状态/缓存，不能称为零磁盘写入。报告分别记录检查结论和实际能力状态；版本未暴露时仍是 null，不能推断版本。
 
 此模式不安装组件、不启动登录、不写客户端配置、不启用日志源、不读历史会话内容、不借用客户端 token。会比对 Connection、部署历史和源 opt-in 前后状态。个人 Billing 的独立授权缺失时记录 BLOCKED，不制造零用量，也不自动跳到其他凭据。
 
@@ -89,7 +99,7 @@ pwsh -NoProfile -File .\scripts\verify-local.ps1 -Mode PrepareLive -LiveTarget D
 pwsh -NoProfile -File .\scripts\verify-local.ps1 -Mode LiveAcceptance -LiveTarget DedicatedUser -RunId <ID> -Resume
 ```
 
-首次预检拒绝已有 Copilot、VS Code 或 PilotWeave 用户数据；通过后只建立绑定当前 SID 与 Run ID 的标记。它不会通过卸载/删配置来制造空白用户。每个需人工动作会写 `live-manifest.json` 的 `pendingAction` 和审核范围。完成该动作后用对应的 `-CompletedAction` 接续；仅 `-Resume` 或等待不会批准操作。范围改变使原批准失效。
+首次预检拒绝已有 Copilot、VS Code 或 CopilotBYOKManager 用户数据；通过后只建立绑定当前 SID 与 Run ID 的标记。它不会通过卸载/删配置来制造空白用户。每个需人工动作会写 `live-manifest.json` 的 `pendingAction` 和审核范围。完成该动作后用对应的 `-CompletedAction` 接续；仅 `-Resume` 或等待不会批准操作。范围改变使原批准失效。
 
 SID 获取或格式校验失败会记录 BLOCKED，且不会登记用户或启动安装。登记标记保留在该专用用户下：同一 Run ID 可继续，其他用户或 Run ID 会得到 BLOCKED 及接续提示。请用原 Run ID 在原用户下 `-Resume`；一轮新的干净环境验收使用另一个空白用户。不要删除标记把已有客户端数据的用户重新当成空白环境；标记损坏或不可访问同样阻塞并保留现场。
 
@@ -129,7 +139,7 @@ ProviderSetup 会检查真实部署状态及 Copilot app 的手动确认；它�
 
 同日代码与界面收尾回归：`npm run check:web` 41 项通过，默认 Rust 267 项通过，fmt 与严格 Clippy 通过，验证工具 12 项通过；隔离浏览器覆盖浅色弹窗/输入框/账号授权面板的文字对比度（至少 4.5:1）、中文状态、未知与零值、安全确认及旧布局兼容。NativeIsolated 的 `ui-closeout-20261012-935e61a9-r3` 中 B00–B32 全部通过，进程与端口清理及源码稳定性通过；报告保留在仓库外。前两次失败报告同样保留，分别记录旧测试误把临时推导选择当成已保存偏好、以及未展开新“更多”导航；没有通过删断言来处理失败。
 
-这些结果只证明代码及隔离原生集成，不证明 Rider 的模型可见性或真实供应商请求。本次真实请求仍为 BLOCKED，尚未写入获批供应商密钥；最新阻塞为 Windows 防火墙网络权限提示与管理许可证窗口。代理不得代操作系统安全权限或用户认证，必须等用户亲自处理权限、许可选择及官方登录后继续。
+这些 2026-10-12 结果只证明当时源码的代码及隔离原生集成，不证明 Rider 的模型可见性或真实供应商请求。当时真实请求为 BLOCKED，尚未写入获批供应商密钥；观察到 Windows 防火墙网络权限提示与管理许可证窗口。随后维护者明确要求暂不处理 Rider，当前记录为 deferred，不能自行恢复 IDE 操作或把准备完成改记为请求通过。恢复时先核对隔离环境和许可/登录状态，再按已授权范围接续；不操作系统安全权限或读取客户端认证材料来绕过阻塞。
 
 ## 报告与清理
 

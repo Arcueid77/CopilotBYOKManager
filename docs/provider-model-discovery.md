@@ -1,6 +1,8 @@
-# Connection model discovery
+# CopilotBYOKManager connection model discovery
 
-The connection editor can query a provider's model catalog before saving a connection. After entering a URL and API key, leave the edited field to start a debounced query. **Fetch models** supports explicit queries and retries, including public/local catalogs without a key. Filter the returned list, select models and use **Add selected**, then save the connection. Existing manual entries and custom names are preserved; selection never saves or deploys by itself. A connection remains limited to 128 models.
+The connection editor can query a provider's model catalog before saving a connection. After entering a URL and API key, leave the edited field to start a debounced query. **获取模型** supports explicit queries and retries, including public/local catalogs without a key. Filter the returned list, select models and use **添加已选**, then save the connection. Existing manual entries and custom names are preserved; selection never saves or deploys by itself. A connection remains limited to 128 models.
+
+The 2026-10-13 form keeps name, endpoint, key and models visible; provider type, wire protocol and header templates are in Advanced options. Existing nondefault settings expand that section. Changing a provider label does not automatically change the protocol or URL. Validation/save errors remain in the form, retain input, and focus the relevant field or error summary. Closing a dirty editor requires a discard decision; keys are not persisted as drafts. See [current UI and evidence](implementation-status.md).
 
 ## Supported sources, verified 2026-09-11
 

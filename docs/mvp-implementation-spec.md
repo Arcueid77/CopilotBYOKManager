@@ -1,18 +1,18 @@
-# PilotWeave required MVP implementation specification
+# CopilotBYOKManager required MVP implementation specification
 
 ## 1. Status and interpretation
 
-This document is the normative implementation contract for PilotWeave's required pre-release milestone. Everything described as **must**, **required**, or **shall** is required scope. This document intentionally contains no post-MVP roadmap.
+This document is the normative implementation contract for CopilotBYOKManager's required pre-release milestone. Everything described as **must**, **required**, or **shall** is required scope. This document intentionally contains no post-MVP roadmap.
 
 Where an upstream GitHub, VS Code, package-manager, model-price, or client-log interface changes, the implementation must prefer a safe explicit Unsupported/SchemaError state over undocumented credential extraction, brittle private-state mutation, fabricated data, or silent fallback.
 
-The checked-in code is an initial Connection/deployment prototype. It does not yet satisfy this complete specification.
+The checked-in code contains connected native deployment/recovery, installation, account, Resources and Usage slices. The [implementation status](implementation-status.md) records their actual coverage and dated validation. The complete milestone is still unaccepted: clean-machine and real-client checks remain open, and unsupported upstream capabilities remain explicit. The public project name is CopilotBYOKManager; legacy PilotWeave storage and credential/build identifiers remain unchanged for compatibility.
 
 ## 2. Product goal
 
 A user on a clean Windows 11 x64 machine must be able to:
 
-1. open PilotWeave and see which Copilot surfaces and required components are installed;
+1. open CopilotBYOKManager and see which Copilot surfaces and required components are installed;
 2. install one selected missing component or all missing components from a reviewed native plan;
 3. use official sign-in flows to make the three Copilot surfaces use the same GitHub account, or clearly resolve/accept unsupported and conflicting states;
 4. configure a Connection/model catalog once and deploy supported configuration to the relevant clients;
@@ -215,7 +215,7 @@ A marker string alone does not prove ownership. Foreign-owner, unmanaged, legacy
 Expose two explicit operations:
 
 - **Revoke from supported targets and delete**: reviewed transactional revocation followed by state/secret cleanup.
-- **Stop managing/detach only**: removes PilotWeave state without claiming to clean existing client configuration.
+- **Stop managing/detach only**: removes CopilotBYOKManager state without claiming to clean existing client configuration.
 
 Secret-cleanup warnings must not make a completed state deletion look wholly unsuccessful. Orphan-secret cleanup must not expose secret values.
 
@@ -248,7 +248,7 @@ Each observation includes:
 - verification evidence and timestamp;
 - safe diagnostic reason.
 
-PATH presence alone is not sufficient for identity. Where practical, resolve a regular executable, invoke a bounded version command with timeout, and validate output/product identity without inheriting PilotWeave secrets.
+PATH presence alone is not sufficient for identity. Where practical, resolve a regular executable, invoke a bounded version command with timeout, and validate output/product identity without inheriting CopilotBYOKManager secrets.
 
 ### 7.2 Refresh behavior
 
@@ -406,7 +406,7 @@ The frontend cannot supply an executable, URI, command ID, or host to interpolat
 
 ### 9.5 Configuration sync after login
 
-Only after selected clients have compatible identity states should PilotWeave offer to:
+Only after selected clients have compatible identity states should CopilotBYOKManager offer to:
 
 - deploy the chosen Connection/model configuration to writable supported targets;
 - present manual provider instructions for the GitHub Copilot app while its adapter is read-only;
@@ -415,9 +415,9 @@ Only after selected clients have compatible identity states should PilotWeave of
 
 Login success itself does not authorize configuration writes; use the normal deployment preview/confirmation lifecycle.
 
-### 9.6 Separate PilotWeave GitHub authorization
+### 9.6 Separate CopilotBYOKManager GitHub authorization
 
-Official personal usage/Billing retrieval uses a PilotWeave-owned least-privilege authorization, separate from client login.
+Official personal usage/Billing retrieval uses a CopilotBYOKManager-owned least-privilege authorization, separate from client login.
 
 Required behavior:
 
@@ -433,7 +433,7 @@ A registered OAuth/device flow may replace manual token entry only when implemen
 
 ## 10. Shared resources
 
-Within required scope, PilotWeave manages only publicly supported filesystem/configuration resources that can be previewed and rolled back safely:
+Within required scope, CopilotBYOKManager manages only publicly supported filesystem/configuration resources that can be previewed and rolled back safely:
 
 - MCP configuration;
 - Skills;
@@ -513,12 +513,12 @@ AI credits and legacy premium requests are incompatible units and are never summ
 Usage import is local. Enabling any client debug/agent log that changes client behavior requires explicit opt-in explaining:
 
 - which client setting/file is affected;
-- what metadata PilotWeave reads;
+- what metadata CopilotBYOKManager reads;
 - that raw conversation content may coexist in the source file;
-- that PilotWeave persists only allowlisted numeric/identity metadata;
-- how to disable and clear PilotWeave's imported records.
+- that CopilotBYOKManager persists only allowlisted numeric/identity metadata;
+- how to disable and clear CopilotBYOKManager's imported records.
 
-PilotWeave must never persist raw lines, prompts, responses, tool calls/results, source code, environment values, cookies, headers, or authentication material.
+CopilotBYOKManager must never persist raw lines, prompts, responses, tool calls/results, source code, environment values, cookies, headers, or authentication material.
 
 ### 12.2 Source model
 
@@ -675,7 +675,7 @@ Unknown
 Evidence priority:
 
 1. explicit supported route/provider/connection data from the source;
-2. stable PilotWeave connection identity embedded in a managed runtime/session;
+2. stable CopilotBYOKManager connection identity embedded in a managed runtime/session;
 3. unique match against deployment timeline, concrete target, time interval, and model, labeled inferred;
 4. Unknown.
 
@@ -825,29 +825,30 @@ Long-running operations emit bounded redacted progress events and persist final 
 
 ## 17. UI requirements
 
-Primary navigation:
+Primary navigation follows the approved lightweight manager layout:
 
 ```text
 Overview
 Connections
 Clients
-Resources
 Usage
-Activity
-Settings
+More
+  Resources
+  Activity
+  Settings
+  About
 ```
 
 ### 17.1 Overview
 
-Show real native data only:
+Show real native data in this order:
 
-- installed/ready/missing surface count;
-- account consistency summary;
-- Connection/client deployment drift;
-- official usage refresh status;
-- local usage coverage/status;
-- recent install/login/deployment/usage activity;
-- primary actions: Set up this computer, Add Connection, Sign in and sync, View Usage, Preview deployment.
+- pending actions only when needed, with a concrete route to installation, accounts or recovery;
+- one row per client/profile with owned published-source chips and observed model counts;
+- enabled Connection cards with Add/Edit and Publish actions;
+- the latest per-target publication result with persistent client-specific next steps.
+
+Detailed component/account state belongs on Clients, usage coverage on Usage, and operation history on Activity. A published source is evidence of owned configuration, never proof of the client's currently selected model, authentication or a successful request. Disabling a Connection hides its Home card and blocks new publication without silently revoking the existing source.
 
 No static success rate, resource count, or token value.
 
@@ -918,6 +919,8 @@ Filters:
 
 The UI must explain cache-hit formula and price source/snapshot. Unknown values render as unavailable, not `0`.
 
+Place the tab navigation before detailed metrics and filters. Keep official quota/Billing independent of local filters. In model/session views, show date/client/route fields directly and retain Connection/model/attribution/source/status fields in an advanced section. Provide model suggestions, filter reset and focus preservation after redraw; resetting local filters must not reset the Billing month. Preserve the full metric set, readable table contrast and horizontal comparison through a fixed model column.
+
 ### 17.5 Activity
 
 Combine typed records from installation, login, deployment, official refresh, local sync, and rollback. Each record shows status, timestamp, affected clients/sources, redacted diagnostic, and safe next action.
@@ -925,6 +928,12 @@ Combine typed records from installation, login, deployment, official refresh, lo
 ### 17.6 Browser fallback
 
 Browser-only mode must display a prominent Demo/Preview badge, use disposable data, disable native writes, and never look like an authoritative machine scan.
+
+### 17.7 Forms, dialogs and publication feedback
+
+Dialogs must move focus inside, contain keyboard navigation, isolate the background, support Escape where the operation can be dismissed, and restore focus after closure. Connection/resource editors confirm before discarding unsaved changes; dirty tracking must not serialize passwords or other input values into draft storage. Saving prevents duplicate submission or misleading cancellation, and errors persist with retained input and a focused field/summary.
+
+Keep common Connection fields visible and provider/protocol/header details under advanced options. Do not infer or rewrite the selected protocol from a display label. Publishing retains per-target results beyond a toast: VS Code requires model selection, JetBrains requires IDE restart and model selection, CLI requires a new terminal/session, and Copilot app setup remains manual. The legacy exclusive CLI route is not preselected by default; its scope is explained before review.
 
 ## 18. Implementation sequence
 
@@ -948,7 +957,7 @@ Complete vertical slices in this order:
    - target selection/conflict UI;
    - official flow launchers;
    - login run state machine;
-   - separate PilotWeave GitHub authorization.
+   - separate CopilotBYOKManager GitHub authorization.
 
 4. **Official usage**
    - runtime quota/model adapter;
@@ -1056,20 +1065,20 @@ CI must run relevant checks on Windows, macOS, and Linux; Windows must also perf
 
 ## 21. Final acceptance
 
-The required milestone is complete only when an evaluator who did not implement PilotWeave can perform this Windows 11 x64 flow:
+The required milestone is complete only when an evaluator who did not implement CopilotBYOKManager can perform this Windows 11 x64 flow:
 
-1. install/run PilotWeave from a clean package;
+1. install/run CopilotBYOKManager from a clean package;
 2. observe missing/installed states without fabricated data;
 3. preview and install one selected missing component;
 4. preview and install all remaining missing components, with shared operations deduplicated;
 5. verify actual post-install clients/versions;
 6. start `Sign in and sync`;
 7. reuse one verified account or resolve an inferred/conflicting state through official flows;
-8. confirm no client credential was copied into PilotWeave state/logs/DB;
+8. confirm no client credential was copied into CopilotBYOKManager state/logs/DB;
 9. add a Connection and models once;
 10. preview and apply supported configuration/resources without destroying unrelated client state;
 11. force one target failure and observe safe rollback/accurate audit state;
-12. authorize PilotWeave separately for official personal usage;
+12. authorize CopilotBYOKManager separately for official personal usage;
 13. refresh runtime quota and personal GitHub usage, including a handled unavailable/not-covered case;
 14. import supported CLI and VS Code local usage twice without duplication;
 15. show official and BYOK models with input/output/cache fields, unknown values, route confidence, source coverage, and cache-hit formula;

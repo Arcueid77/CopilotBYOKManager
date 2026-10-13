@@ -1,6 +1,8 @@
-# Security policy
+# CopilotBYOKManager security policy
 
-PilotWeave manages developer-tool configuration, may launch allowlisted application installers, orchestrates official GitHub sign-in flows, stores a separate GitHub personal-usage authorization, and reads local usage metadata. Treat reports and diagnostic files as potentially sensitive.
+CopilotBYOKManager manages developer-tool configuration, may launch allowlisted application installers, orchestrates official GitHub sign-in flows, stores a separate GitHub personal-usage authorization, and reads local usage metadata. Treat reports and diagnostic files as potentially sensitive.
+
+The public project was renamed from PilotWeave. Existing storage directories, credential services, ownership markers, build identifiers and validation paths still use compatibility names. Renaming the repository does not migrate secrets or grant access to client authentication material.
 
 ## Do not publish secrets or private workspace content
 
@@ -19,7 +21,7 @@ Use synthetic credentials and a minimal temporary fixture whenever possible.
 
 ## Reporting a vulnerability
 
-Report suspected vulnerabilities privately through GitHub's private vulnerability reporting feature when enabled. Do not open a public proof of concept before the maintainer has had a reasonable opportunity to investigate.
+Use the [repository security page](https://github.com/AvaloNero/CopilotBYOKManager/security) and report suspected vulnerabilities privately through GitHub's private vulnerability reporting feature when enabled. Do not open a public proof of concept before the maintainer has had a reasonable opportunity to investigate.
 
 Reports are especially valuable for:
 
@@ -43,7 +45,7 @@ Reports are especially valuable for:
 
 Include:
 
-- the PilotWeave commit;
+- the CopilotBYOKManager commit;
 - operating system, architecture, and relevant client versions;
 - the affected logical surface and physical target/profile;
 - whether the issue occurs during detection, preview, install, sign-in, deployment, Billing refresh, usage sync, pricing, or rollback;
@@ -57,11 +59,12 @@ Do not attach a real token or raw session log. Extract the smallest synthetic re
 
 ## Credential handling expectations
 
-- Connection API keys and PilotWeave's least-privilege personal-usage GitHub token use separate operating-system credential-store references.
-- PilotWeave must never import client-owned OAuth tokens, cookies, passwords, passkeys, or credential databases.
+- Connection API keys and CopilotBYOKManager's least-privilege personal-usage GitHub token use separate operating-system credential-store references.
+- CopilotBYOKManager must never import client-owned OAuth tokens, cookies, passwords, passkeys, or credential databases.
 - Credential-store failure must be distinguishable from a missing credential.
 - Redaction must occur before errors or progress events cross into the frontend.
 - URL, header, process, tracing, and panic diagnostics must be tested for secret leakage.
+- Editor focus/dirty-state tracking must not copy field values or serialize passwords into drafts. Closing a credential dialog clears its password fields; failed saves retain input only in the current editor.
 
 ## Installer handling expectations
 
@@ -70,14 +73,14 @@ Do not attach a real token or raw session log. Extract the smallest synthetic re
 - Downloaded GitHub Copilot app assets must pass bounded-download, architecture, digest when available, and expected-publisher validation before launch.
 - Redirects must remain inside a documented allowlist and must never downgrade transport security.
 - Installation success is confirmed by post-install rediscovery, not by process exit code alone.
-- PilotWeave does not automatically uninstall or downgrade applications as rollback.
+- CopilotBYOKManager does not automatically uninstall or downgrade applications as rollback.
 
 ## Sign-in expectations
 
-- PilotWeave launches official client/browser/device sign-in flows only.
+- CopilotBYOKManager launches official client/browser/device sign-in flows only.
 - It may compare non-secret account observations, but must not copy authentication state between applications.
 - Verified, inferred, user-confirmed, unknown, unsupported, and conflict states remain distinct.
-- Conflicting verified accounts block automatic completion; PilotWeave does not silently sign a client out.
+- Conflicting verified accounts block automatic completion; CopilotBYOKManager does not silently sign a client out.
 
 ## Official usage and Billing expectations
 
@@ -104,4 +107,4 @@ Do not attach a real token or raw session log. Extract the smallest synthetic re
 
 ## Supported status
 
-PilotWeave is pre-release. Security fixes are applied to `main`; there is not yet a stable-version support matrix.
+CopilotBYOKManager is pre-release. Security fixes are applied to `main`; there is not yet a stable-version support matrix.

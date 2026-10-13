@@ -1,5 +1,7 @@
 # September 2026 hardening slice
 
+> Historical record for the project now named CopilotBYOKManager. Preserve this slice's original behavior and evidence. Its remaining-work list predates the connected Usage, Resources, installation/account lifecycle and JetBrains implementations; use [current implementation status](implementation-status.md) before planning further work.
+
 This describes the code in this slice, not a claim that the complete MVP is finished.
 
 ## Implemented
@@ -15,7 +17,7 @@ This describes the code in this slice, not a claim that the complete MVP is fini
 - Personal Billing is compiled, registered and connected to the Official usage page. Account keys use host/user ID; queries and stale fallback are restricted to the requested month and endpoint family. Decimal strings are displayed without floating-point money arithmetic.
 - CI checks fixed source and never searches/replaces business code or automatically commits repairs. Frontend plan-state regressions use Node's test runner.
 
-## Remaining required-scope work
+## Remaining required-scope work at the time of this slice
 
 - Installation publisher verification, pinned asset/version plans, richer progress/cancellation and clean Windows installation acceptance.
 - Verified or explicit user-confirmed three-client account reconciliation; opening an application is not authentication success.

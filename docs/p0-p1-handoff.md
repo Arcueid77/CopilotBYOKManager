@@ -1,5 +1,7 @@
 # P0 / P1 handoff
 
+> Historical CopilotBYOKManager record, verified 2026-09-10. The Home/navigation/default-selection descriptions below belong to that source: current navigation includes Clients, Resources is implemented under More, and the legacy CLI route is unchecked by default. Use [implementation status](implementation-status.md) and [architecture](architecture.md) for current behavior; do not treat the original test totals or remaining-work list as current results.
+
 Scope: the requested Home setup flow and connected Usage implementation. Development remains on `main`. The worktree already contained deployment/state hardening changes when this work began; those changes were preserved. Validation does not perform real installation, real login, real credential reads or real usage import. The remote main updates through `cbdbb9a` were integrated before independent review and publication.
 
 ## Implemented
@@ -42,7 +44,7 @@ New regression coverage includes metadata-only persistence, unknown versus zero 
 
 The source and calculation contracts, fixture provenance and regression coverage are detailed in [usage-sources.md](usage-sources.md). No live-latest response is a test dependency.
 
-## Known blockers inside the required product scope
+## Known blockers at the time of this handoff
 
 | Evidence / limitation | Current behavior | Next step |
 | --- | --- | --- |

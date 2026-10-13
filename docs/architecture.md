@@ -1,10 +1,10 @@
-# PilotWeave architecture
+# CopilotBYOKManager architecture
 
 ## Authority and scope
 
-This document separates the checked-in prototype from the architecture required by `docs/mvp-implementation-spec.md`.
+This document describes the checked-in native services and the architecture required by [the MVP contract](mvp-implementation-spec.md). The [implementation status](implementation-status.md) records current coverage and validation dates.
 
-The repository currently contains a basic connection/deployment prototype. The required MVP must first harden that loop, then add environment installation, account orchestration, official usage, local usage, attribution, and pricing. Sections labeled **required** are contracts for implementation, not claims that the current code already satisfies them.
+The repository implements deployment/recovery, reviewed installation, account orchestration, resources, official usage, local import, attribution and pricing slices. Sections labeled **required** remain acceptance contracts; implemented modules and passing isolated tests do not establish clean-machine or real-client acceptance. Public naming is CopilotBYOKManager; persisted PilotWeave identities and build/storage names remain compatible.
 
 ## Product model
 
@@ -12,9 +12,9 @@ The repository currently contains a basic connection/deployment prototype. The r
 
 `adapters/jetbrains` reads bounded public standard plugin directories, `disabled_plugins.txt`, and `META-INF/plugin.xml` in the public plugin JAR, not every dependency JAR. ID/vendor is metadata identity, not signature or live-IDE verification. Profile hashes give distinct target IDs; metadata digests invalidate reviews. `jetbrains/byok` owns reviewed 1.19 namespace/root selection, bounded duplicate-key rejecting JSON parsing and narrow provider projection. Automatic deployment publishes endpoint, protocol, models, capabilities, headers and the Connection's own provider key through existing native plans/transactions. Unmanaged values/precision survive; shared writes are deduplicated with per-profile proofs/audit. Proofs bind owner, Connection, resource and the three owned provider keys. Global fingerprints reject stale reviews and externally changed rollback; recovery recognizes the dedicated path even after plugin removal. Unknown versions/incompatible endpoints refuse writing. No authentication files or Password Safe are opened; publication is not model-picker refresh/provider execution. Accounts remain official per-IDE flows; resource/usage coverage remains explicit pending separate verified interfaces. Existing state/ownership and old account history stay compatible without a SQLite migration. See `jetbrains-support.md`.
 
-JetBrains has two storage layers: supplier keys/endpoints/models in the shared language-server BYOK namespace, and independent IDE XML preferences for group labels, enablement, context and reasoning. The plugin fetches supplier metadata from the server and reconciles local groups. PilotWeave neither publishes credentials to XML nor resets local preferences; sharing is conditional on the same user and runtime root. Per-profile proofs remain publication evidence, not selected-model, authentication or successful-request evidence.
+JetBrains has two storage layers: supplier keys/endpoints/models in the shared language-server BYOK namespace, and independent IDE XML preferences for group labels, enablement, context and reasoning. The plugin fetches supplier metadata from the server and reconciles local groups. CopilotBYOKManager neither publishes credentials to XML nor resets local preferences; sharing is conditional on the same user and runtime root. Per-profile proofs remain publication evidence, not selected-model, authentication or successful-request evidence.
 
-PilotWeave is not organized as an application switcher. The source of truth is client-neutral and is projected into concrete client targets.
+CopilotBYOKManager is not organized as an application switcher. The source of truth is client-neutral and is projected into concrete client targets.
 
 ```text
 Connection
@@ -32,7 +32,7 @@ Prepared change / rollback snapshot
 Journaled apply result
 ```
 
-The required MVP adds three more control loops:
+The application also implements these control loops, with the source and platform limits described below:
 
 ```text
 Environment
@@ -54,7 +54,7 @@ These loops share stable client identities and dashboard summaries, but they do 
 
 Use identifiers rather than display names:
 
-- `installation_owner_id`: this PilotWeave installation's ownership identity.
+- `installation_owner_id`: this CopilotBYOKManager installation's ownership identity.
 - `connection_id`: a BYOK connection.
 - `client_target_id`: a concrete target such as VS Code Stable default profile, a named profile, CLI environment, or Copilot app installation.
 - `deployment_plan_id`: one native-held deployment intent.
@@ -104,9 +104,9 @@ Required behavior:
 Secrets are separated by purpose:
 
 - BYOK provider API keys;
-- PilotWeave's separate least-privilege GitHub personal-usage authorization.
+- CopilotBYOKManager's separate least-privilege GitHub personal-usage authorization.
 
-PilotWeave never extracts or reuses client-owned OAuth tokens, cookies, VS Code SecretStorage values, passwords, passkeys, refresh tokens, or private Copilot credential databases.
+CopilotBYOKManager never extracts or reuses client-owned OAuth tokens, cookies, VS Code SecretStorage values, passwords, passkeys, refresh tokens, or private Copilot credential databases.
 
 Credential state is not a Boolean. It must distinguish at least stored, missing, unavailable, locked, and permission denied.
 
@@ -132,24 +132,32 @@ Process execution and HTTP clients are backend-owned adapters with fixed strateg
 
 ## Current backend layout
 
-The prototype starts from:
+The current backend is organized around these modules (supporting helpers and tests omitted):
 
 ```text
 apps/desktop/src-tauri/src/
 ├── commands.rs
 ├── domain.rs
-├── error.rs
-├── secrets.rs
-├── state.rs
+├── state.rs / secrets.rs / usage_db.rs / decimal.rs
+├── deployment.rs / deployment/ / transaction.rs
+├── installer.rs / installer/
+├── account.rs / account/ / github_auth.rs
+├── github_billing.rs / github_billing_store.rs
+├── setup.rs / model_discovery.rs
+├── resources/
+├── usage/
+├── safe_io.rs / safe_file.rs / write_lock.rs / redact.rs
 └── adapters/
     ├── vscode.rs
-    ├── copilot_cli.rs
-    └── github_app.rs
+    ├── vscode_install.rs / vscode_window.rs
+    ├── copilot_cli.rs / copilot_cli/
+    ├── github_app.rs
+    └── jetbrains.rs / jetbrains/
 ```
 
 Do not continue expanding `commands.rs` and `domain.rs` indefinitely. Move behavior into focused services and adapters.
 
-### P0/P1 implementation additions
+### Setup and usage services
 
 `setup.rs` retains component/account/deployment observations and legacy setup progress. User account confirmations, their original evidence and time, the Connection used for manual guidance, and manual provider confirmation are persisted in `setup_preferences`; that preference is not a globally active supplier or a client's selected model. Home now renders owned per-client publication sources independently. A saved confirmation never becomes automatically verified. New deployment audit records include optional target and Connection fingerprints; legacy records remain readable but cannot prove current synchronization.
 
@@ -229,7 +237,7 @@ The exact filenames may vary, but the responsibility boundaries are required.
 
 ## Required deployment lifecycle
 
-The prototype preview/apply path must be hardened to this lifecycle before installation or login workflows rely on it.
+The native plan, transaction and ownership services implement this lifecycle. Installation/login workflows must not bypass it; each change must retain its invariants and regression coverage.
 
 ### 1. Preview
 
@@ -269,7 +277,7 @@ Persist:
 - Recheck the relevant before-state immediately before each target write.
 - Apply targets in deterministic order.
 - On failure, roll back successful prior targets in reverse order.
-- Refuse rollback if a target changed externally after PilotWeave's write.
+- Refuse rollback if a target changed externally after CopilotBYOKManager's write.
 - Use platform-appropriate atomic replacement; Windows must not use delete-then-rename.
 
 ### 6. Commit audit state
@@ -308,7 +316,7 @@ The frontend never supplies a shell command.
 
 ### Supported MVP path
 
-Windows 11 x64 is the primary acceptance platform. Prefer official package-manager IDs where identity can be fixed and verified. For direct GitHub Copilot app assets, use the official release API and strict asset-name/architecture policy; validate bounded size, redirects, digest where authoritative data exists, and Authenticode publisher before launch.
+Windows 11 x64 is the primary acceptance platform. The implemented path uses pinned package-manager plans with reviewed identity checks. The direct GitHub Copilot app asset fallback remains unimplemented; if added, it must use the official release API and strict asset-name/architecture policy, bounded size, redirects, authoritative digest when available and Authenticode publisher checks. See [hardening](hardening-handoff.md) for the exact current package policy.
 
 An exit code is not success. Re-run discovery and verify the component identity/version. Bulk installation reports one result per component; partial remains partial. No automatic uninstall or downgrade is performed as rollback.
 
@@ -340,7 +348,7 @@ A login display name alone is insufficient. Inferred identity requires confirmat
 5. verify identity consistency;
 6. only after consistency, offer configuration deployment.
 
-PilotWeave does not silently sign out a client and never copies authentication material between clients.
+CopilotBYOKManager does not silently sign out a client and never copies authentication material between clients.
 
 Clients exposes reviewed official sign-in actions; Home shows a concise account-alignment action when needed. On Windows, VS Code account actions only focus an existing visible editor window whose process executable matches the resolved installation. They never spawn VS Code: an initial launch can restore multiple saved windows and hot-exit backups, even with `--new-window`. If no matching window exists (or on another platform), the result gives manual Accounts instructions and remains ActionRequired. No window titles, editor state, authentication stores, or restore settings are read or changed. Other clients retain their bounded, backend-owned official launch plans. An installed client without a safe launcher is Unsupported, distinct from NotInstalled. See [local validation](local-validation-plan.md) for the failure and regression scope.
 
@@ -354,9 +362,9 @@ Add/Edit, catalog selection and deployment are separate. Saving does not select 
 
 The shared frontend lifecycle moves focus into dialogs, makes the app background inert, traps keyboard navigation and restores the invoking control. Connection/resource editors track only an in-memory dirty Boolean, ask before discarding edits, and never serialize passwords into a draft. Saving freezes the form until the native result; failures retain input with a persistent alert. Account mounting updates its explicit container without moving it into installation details. Local usage filters are progressively disclosed inside model/session views, remain separate from official quota/Billing, and preserve focus on redraw. Resetting them does not reset the Billing month. Per-target operation results are reconstructed from existing native audit records, with client-specific next steps and no claim of authentication, model selection or request success. CLI's exclusive environment route requires an explicit target selection by default; supplied reviewed selections and native plan safety rules are unchanged. No state/SQLite migration or credential-store behavior changes are introduced by these UI refinements.
 
-### PilotWeave GitHub authorization
+### CopilotBYOKManager GitHub authorization
 
-Official personal usage/Billing retrieval uses PilotWeave-owned authorization, separate from all client sign-ins. Store the token in the OS credential store and persist only host, login, scopes/capabilities, last validation, and secret reference.
+Official personal usage/Billing retrieval uses CopilotBYOKManager-owned authorization, separate from all client sign-ins. Store the token in the OS credential store and persist only host, login, scopes/capabilities, last validation, and secret reference.
 
 ## Official usage architecture
 
@@ -438,7 +446,7 @@ Unknown
 Evidence priority:
 
 1. explicit route/provider from the supported source;
-2. stable PilotWeave connection identity in the request/session;
+2. stable CopilotBYOKManager connection identity in the request/session;
 3. unique deployment timeline + client + model match, marked inferred;
 4. unknown.
 
@@ -471,17 +479,17 @@ An estimate is available only when token semantics are known, required rates are
 
 Adapters own installation/profile discovery, safe account evidence, supported usage sources, and `chatLanguageModels.json` projection.
 
-Managed configuration must include installation-owner and connection identity. A similarly named group or a marker created by another PilotWeave installation is not owned. Semantic no-op must not rewrite JSON5 comments/formatting.
+Managed configuration must include installation-owner and connection identity. A similarly named group or a marker created by another CopilotBYOKManager installation is not owned. Semantic no-op must not rewrite JSON5 comments/formatting.
 
 ### Copilot CLI
 
 Separate adapters/services own environment projection, executable discovery/version verification, official sign-in launch/evidence, official runtime quota/model data, and local usage import.
 
-PilotWeave refuses to overwrite unmanaged or foreign-owner provider overrides. Unix changes across managed environment and shell files form one prepared transaction.
+CopilotBYOKManager refuses to overwrite unmanaged or foreign-owner provider overrides. Unix changes across managed environment and shell files form one prepared transaction.
 
 ### GitHub Copilot app
 
-Provider projection remains detection/manual guidance until a stable external interface exists. PilotWeave may launch official sign-in and consume supported non-secret identity/usage interfaces. Missing support remains unknown/partial; it does not justify parsing private credential state.
+Provider projection remains detection/manual guidance until a stable external interface exists. CopilotBYOKManager may launch official sign-in and consume supported non-secret identity/usage interfaces. Missing support remains unknown/partial; it does not justify parsing private credential state.
 
 CLI and app may share runtime/session data. Deduplication must use physical source identity so the same record is not counted twice.
 

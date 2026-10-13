@@ -1,6 +1,8 @@
-# PilotWeave implementation handoff
+# CopilotBYOKManager implementation handoff
 
 This file is the entry point for a coding agent continuing the repository on `main`.
+
+The public repository is `AvaloNero/CopilotBYOKManager`. Legacy PilotWeave storage paths, credential references, ownership markers, binary/package names and environment flags remain compatibility identifiers; do not rename them as a cosmetic cleanup.
 
 ## Read first
 
@@ -14,28 +16,36 @@ Read these files before changing code:
 
 Do not substitute an earlier conversation, mockup, local patch, or stale design note for the checked-in requirements.
 
+Read `docs/implementation-status.md` for the current implementation/evidence baseline and `docs/README.md` for the document index. Dated handoffs retain historical results, not the current backlog.
+
 ## Branch policy
 
-`main` is the active development branch while PilotWeave is pre-release. Do not create a feature branch or pull request unless the maintainer explicitly requests one. Keep commits reviewable and leave `main` buildable after every completed vertical slice.
+`main` is the active development branch while CopilotBYOKManager is pre-release. Do not create a feature branch or pull request unless the maintainer explicitly requests one. Keep commits reviewable and leave `main` buildable after every completed vertical slice.
 
 ## Current repository state
 
-The checked-in implementation is an initial connection/deployment prototype. It currently provides:
+The checked-in implementation is a pre-release desktop application with connected native vertical slices. As of the application changes in `3791283`, it provides:
 
 - client-neutral Connection and Model records;
 - operating-system credential-store integration for provider API keys;
-- discovery of VS Code Stable/Insiders profiles, GitHub Copilot CLI, and the GitHub Copilot app;
-- deployment preview DTOs;
-- VS Code Custom Endpoint projection that preserves non-PilotWeave groups and creates an original backup;
+- discovery of VS Code Stable/Insiders profiles, GitHub Copilot CLI, the GitHub Copilot app and reviewed JetBrains plugin profiles;
+- native-held, expiring, one-shot deployment plans, live fingerprints, durable ownership, prepare-all transactions, private journals, conditional rollback and reviewed revocation;
+- VS Code Custom Endpoint projection that preserves non-CopilotBYOKManager groups and creates an original backup;
 - Copilot CLI provider activation through the user environment on Windows and managed shell files on macOS/Linux;
 - a read-only/manual boundary for GitHub Copilot app provider configuration;
+- pinned Windows component installation plans, persisted outcomes, cancellation and post-install rediscovery;
+- official client account flows, safe CLI identity follow-up and separate GitHub personal-usage authorization;
+- `state.json` schema v2 and migration-safe `usage.sqlite3` schema v3, explicit recovery, exact monetary arithmetic and metadata-only local usage;
+- runtime quota/model observations, personal Billing, opt-in usage import, immutable price catalogs and connected Usage views;
+- MCP, Markdown-only Skills and Instructions authoring/publication on reviewed public paths;
+- the approved lightweight manager UI, shared dialog focus/draft/error handling, progressive usage filters and persistent per-target publication next steps;
 - a browser fallback for reviewing the frontend without native writes.
 
-The maintainer requires automatic JetBrains GitHub Copilot BYOK deployment, not only manual runbooks. The adapter observes public IDE/profile metadata and projects reviewed plugin versions into the official runtime's dedicated `github-copilot/byok.json` namespace through normal native-held plans, ownership, journals and rollback. Shared writes are deduplicated. Only PilotWeave's own provider keys may be materialized; never read/copy GitHub login credentials, Password Safe, authentication files or conversations. Unknown plugin versions remain unsupported pending verification. Publication is not proof of running/authenticated IDEs or successful provider requests. See `docs/jetbrains-support.md`; JetBrains is not a mandatory installation dependency of the original three-surface setup.
+The maintainer requires automatic JetBrains GitHub Copilot BYOK deployment, not only manual runbooks. The adapter observes public IDE/profile metadata and projects reviewed plugin versions into the official runtime's dedicated `github-copilot/byok.json` namespace through normal native-held plans, ownership, journals and rollback. Shared writes are deduplicated. Only CopilotBYOKManager's own provider keys may be materialized; never read/copy GitHub login credentials, Password Safe, authentication files or conversations. Unknown plugin versions remain unsupported pending verification. Publication is not proof of running/authenticated IDEs or successful provider requests. See `docs/jetbrains-support.md`; JetBrains is not a mandatory installation dependency of the original three-surface setup.
 
-Treat this as a prototype. It does not prove that transactions, ownership, rollback, recovery, installer, login, official-usage, local-usage, or pricing guarantees are complete.
+This is not a completed MVP or release-acceptance claim. Required clean-Windows installation, real-account/client/request and resource-consumption acceptance remains open. Direct Copilot app asset-download fallback is not implemented; unsupported upstream identity/usage/resource interfaces remain explicit limitations. Rider runtime work is deferred by maintainer direction.
 
-The repository does not yet implement the complete required MVP: workstation installation, account orchestration, official runtime quota and personal Billing, local usage import, price catalog, complete Usage UI, and the deployment hardening defined by the specification.
+The 2026-10-13 UX changes passed web/Rust and isolated browser checks. NativeIsolated B00–B32 last passed on the earlier 2026-10-12 closeout source; the changed suite was only syntax-checked for `3791283`. Do not reuse that older run as fresh native acceptance. See `docs/implementation-status.md` and `docs/local-validation-plan.md`.
 
 ## Required scope boundary
 
@@ -81,7 +91,7 @@ Implement these invariants before installation or login workflows are allowed to
 - GitHub Copilot app credential stores or opaque authentication databases;
 - passwords, passkeys, device secrets, or session cookies.
 
-PilotWeave's GitHub API authorization is a separate least-privilege secret stored under its own operating-system credential-store reference.
+CopilotBYOKManager's GitHub API authorization is a separate least-privilege secret stored under its own operating-system credential-store reference.
 
 ### No arbitrary installer execution
 
@@ -113,7 +123,7 @@ Use `rust_decimal` or another exact fixed-point representation for credits, pric
 
 ## Implementation order
 
-Follow section 15 of `docs/mvp-implementation-spec.md`:
+Follow section 18 of `docs/mvp-implementation-spec.md`:
 
 1. deployment hardening and SQLite/domain foundation;
 2. environment detection and reviewed installation plans;
@@ -128,23 +138,11 @@ Follow section 15 of `docs/mvp-implementation-spec.md`:
 
 Do not start with a large static UI mock. Build each vertical slice through domain, persistence, native command, tests, and UI.
 
-## Suggested first slice
+## Continuing the current implementation
 
-Start by implementing:
+The deployment/persistence foundation and connected feature slices above already exist. Inspect their code and current tests before selecting work; do not restart from the original prototype or replay a historical handoff as unimplemented requirements.
 
-- native-held deployment plans with TTL and one-shot consumption;
-- target fingerprints and stale-preview rejection;
-- prepare-all cross-target writes;
-- write-ahead deployment journal and rollback manifest;
-- central error redaction and read-only state recovery;
-- a migration-safe SQLite module;
-- a separate `usage.sqlite3` with source, cursor, record, quota, Billing, model alias, price snapshot, and estimate tables;
-- exact decimal serialization;
-- bounded domain enums and DTOs;
-- dashboard states that report unavailable data without fake values;
-- regression tests for stale plans, external changes, interrupted apply, rollback refusal, migration/reopen behavior, unique source keys, foreign keys, and decimal round trips.
-
-Keep `state.json` compatibility and current tests intact.
+Use the remaining-work and validation sections in `docs/implementation-status.md` to choose the next required slice. Preserve `state.json` and Usage DB migrations, native plan/ownership/recovery invariants, exact decimals, unknown/partial states and existing regression coverage. Tests must remain isolated. Real client/account/installation acceptance must use the documented dedicated environment and the maintainer's current scope; deferred Rider work is not an automatic next action.
 
 ## Coding conventions
 
@@ -162,7 +160,7 @@ Keep `state.json` compatibility and current tests intact.
 
 ## Upstream-source discipline
 
-Before implementing an adapter, verify the current official source listed in section 18 of the specification. Package IDs, API versions, endpoint schemas, release asset names, log paths, and token semantics can change.
+Before implementing an adapter, verify the current official source categories listed in section 19 of the specification and the fixed provenance in the relevant adapter document. Package IDs, API versions, endpoint schemas, release asset names, log paths, and token semantics can change.
 
 A changed upstream schema requires:
 

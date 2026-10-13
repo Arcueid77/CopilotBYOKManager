@@ -1,7 +1,7 @@
-# 任务：应用已确认的 BYOK 管理器领域模型修正与界面简化
+# CopilotBYOKManager：已确认的领域模型与界面交接
 
-> 用途：交给本地 coding agent 执行。以下是产品评审中**已确认**的事实与设计决定，逐条落实。
-> 交互参考原型：`prototype/copilot-byok-manager.html`（已通过评审的版本，以此为准的视觉/文案基准）。
+> 状态更新：核心领域修正与界面简化已落实，后续 UX 收尾已提交为 `3791283`（2026-10-13）。本文保留已确认的设计决定；继续工作前先读 `docs/implementation-status.md`，不要把历史交接重放为尚未实现的任务。
+> 交互参考原型：`prototype/copilot-byok-manager.html` 是已评审的视觉方向；当前交互行为以 `apps/desktop/web/`、实现规范与最新验证记录为准。
 
 ## 0. 先读
 
@@ -18,11 +18,12 @@
 - 证据：VS Code Language Models 编辑器按供应商分组（code.visualstudio.com/docs/agent-customization/language-models）；GitHub Copilot JetBrains 自定义端点公告（github.blog/changelog/2026-07-14-github-copilot-for-jetbrains-expands-byok-capabilities）。原引用的 JetBrains BYOK 文章介绍 AI Assistant，不是 GitHub Copilot 插件。
 - 检查现有 planner/adapter 文案与逻辑，把"切换/替换"语义改为"新增/更新供应商组（保留其他来源）"。发布结果的引导语必须包含："请到客户端的模型选择器中选用刚发布的模型"。
 
-### 1.2 Copilot CLI 是单活排他
+### 1.2 本版 Copilot CLI 环境路由是单活排他
 
 - 机制：用户环境变量 `COPILOT_PROVIDER_BASE_URL` / `COPILOT_PROVIDER_TYPE` / `COPILOT_PROVIDER_API_KEY`（或 `COPILOT_PROVIDER_BEARER_TOKEN`）/ `COPILOT_PROVIDER_WIRE_API` / `COPILOT_PROVIDER_HEADERS` + `COPILOT_MODEL`（必填）。
 - 已在本机 `copilot help providers`（CLI 1.0.81-3）验证；与仓库现有的"用户环境变量激活"实现一致。
 - 排他：自定义供应商生效期间 GitHub 官方模型路由不可用；**重启终端会话后生效**。预览中必须用醒目文案说明这两点。
+- 发布目标中 CLI 默认不勾选，卡片提前说明排他范围；结果保留“新终端 + 新 CLI 会话”的下一步。这描述本版适配器，不代表当前 CLI 所有接口都不支持供应商共存。
 - `~/.copilot/providers.json`：官方配置目录参考里提到（providers/models 键、优先于环境变量），但**无公开字段级 schema**，本版不使用，列为后续调研项。
 
 ### 1.3 JetBrains 是两层存储（2026-10-12 发布包复核修正）
@@ -34,7 +35,7 @@
 
 ### 1.4 Copilot App 保持手动边界（已调研定案）
 
-- 结论：App 的供应商配置无可写的文档化目标，位于不透明私有存储（`~/.copilot/data.db`）。强行写入违反项目红线（无文档格式、无校验、可能与凭据混存、无回滚路径）。
+- 结论：尚未建立已审核、可安全写入的 App 供应商配置接口。任何不透明私有存储均不作为自动写入目标；不通过读取真实凭据或数据库来补齐支持。
 - UI 文案直接说明原因（"已调研：无可写的文档化配置目标，故保持手动"），不是模糊的"暂不支持"。
 - 升级通道：若官方日后文档化 App 的 provider 配置，走 JetBrains 同款"已审核版本"门禁再开放自动写。
 
@@ -51,6 +52,9 @@
 - 连接页：连接启用开关（停用不出现在总览）、测试连接按钮、获取模型列表后**勾选添加**（不自动全加）、API Key 遮蔽且保存后不回显。
 - 预览**页内展开**（非弹窗仪式）；预览/确认严格分离；连接或目标变更后旧预览失效需重新生成。
 - 文案风格：短句；原则性说明只保留一处；删除重复解释。
+- UX 收尾：弹窗焦点/键盘/未保存保护；保存失败保留输入并持续显示错误；账号面板固定在客户端的账号区域；用量分类前置，官方与本地筛选分开，保留高级选项、模型建议、重置及固定模型列；每个发布目标持续展示下一步。
+
+Rider 真机操作已由维护者暂缓；不得把隔离浏览器或此前原生替身的通过结果当作 IDE 模型选择器/真实请求通过。代码与验收范围见 `docs/implementation-status.md`。
 
 ## 3. 明确不做（本次范围外）
 

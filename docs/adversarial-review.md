@@ -1,8 +1,8 @@
-# Adversarial review
+# CopilotBYOKManager adversarial review
 
-This document records hostile inputs, failure modes, ambiguity, and privacy cases that shape PilotWeave's required implementation. The normative behavior is in `docs/mvp-implementation-spec.md`.
+This document records hostile inputs, failure modes, ambiguity, and privacy cases that shape CopilotBYOKManager's required implementation. The normative behavior is in `docs/mvp-implementation-spec.md`.
 
-Sections below describe required mitigations. They are not claims that the current prototype already implements every item.
+Sections below describe required mitigations. They are not claims that every item has passed real-client acceptance. Consult [implementation status](implementation-status.md) for current behavior and dated evidence.
 
 ## Threat model
 
@@ -13,9 +13,9 @@ Sections below describe required mitigations. They are not claims that the curre
 - Standard profiles may survive uninstallation and custom/portable paths may be missed. Report these limitations, disabled plugins, and scan errors; do not manufacture readiness.
 - Automatic writes require an exact reviewed version; a forged writable flag cannot bypass native metadata. Only the dedicated BYOK namespace is projected. Bound JSON size/depth/keys/strings and reject duplicates without echoing raw values. Preserve unknown fields/decimal precision. Replacing the three owned provider keys requires matching durable owner/Connection/resource/projection proof, not markers alone. Missing/foreign/modified/per-model overriding keys conflict. Shared IDE targets get one physical write. Include BYOK in stale checks, prepare-all, private journals, post-write verification and conditional rollback; interrupted recovery still works after plugin removal.
 - One IDE's account check is not proof for another; adding/changing observed profiles invalidates aggregate manual confirmation. The Copilot app provider confirmation belongs only to that app.
-- Materialize only PilotWeave's own BYOK key after confirmation. Never read Password Safe, authentication settings/databases or conversation/debug logs to infer accounts/costs. BYOK JSON and rollback snapshots are native-only secret-bearing data. Catalog publication is not an open chat's selected model, sign-in or provider execution. CLI/shared-runtime records must not be relabeled JetBrains without authoritative evidence.
+- Materialize only CopilotBYOKManager's own BYOK key after confirmation. Never read Password Safe, authentication settings/databases or conversation/debug logs to infer accounts/costs. BYOK JSON and rollback snapshots are native-only secret-bearing data. Catalog publication is not an open chat's selected model, sign-in or provider execution. CLI/shared-runtime records must not be relabeled JetBrains without authoritative evidence.
 
-PilotWeave runs as the local user and intentionally modifies developer-tool configuration. It may launch installers, open official authentication flows, read local usage metadata, query GitHub personal-usage endpoints, and calculate monetary estimates.
+CopilotBYOKManager runs as the local user and intentionally modifies developer-tool configuration. It may launch installers, open official authentication flows, read local usage metadata, query GitHub personal-usage endpoints, and calculate monetary estimates.
 
 An attacker or faulty dependency may influence:
 
@@ -30,7 +30,7 @@ An attacker or faulty dependency may influence:
 - timestamps, model aliases, and deployment history used for attribution or pricing;
 - files containing prompts, code, tool output, or credentials next to desired counters.
 
-PilotWeave does not assume that an allowlisted host, installed client, package manager, release asset, or local file is inherently trustworthy.
+CopilotBYOKManager does not assume that an allowlisted host, installed client, package manager, release asset, or local file is inherently trustworthy.
 
 ## Deployment threats
 
@@ -108,7 +108,7 @@ Required mitigation:
 
 ### Forged ownership markers
 
-A third party can add a PilotWeave-looking marker to unrelated configuration.
+A third party can add a CopilotBYOKManager-looking marker to unrelated configuration.
 
 Required mitigation:
 
@@ -119,7 +119,7 @@ Required mitigation:
 
 ### Rollback overwrites newer user work
 
-A target may change after PilotWeave wrote it but before rollback.
+A target may change after CopilotBYOKManager wrote it but before rollback.
 
 Required mitigation:
 
@@ -270,7 +270,7 @@ Required mitigation:
 - Verified, Inferred, UserConfirmed, Unknown, Unsupported, and Conflict remain distinct;
 - inferred identity requires explicit confirmation;
 - conflicting verified identities block completion;
-- PilotWeave never silently signs out a client;
+- CopilotBYOKManager never silently signs out a client;
 - final validation shows evidence for each observation.
 
 ### Unsupported-host confusion
@@ -295,7 +295,7 @@ Required mitigation:
 - no user-controlled interpolation into a shell string;
 - display instructions are escaped before rendering.
 
-### PilotWeave GitHub token leakage
+### CopilotBYOKManager GitHub token leakage
 
 HTTP errors or tracing may include Authorization values.
 
@@ -550,6 +550,22 @@ Required mitigation:
 
 ## UI and reporting threats
 
+### Lost edits, focus escape and misleading completion
+
+A replaced dialog can discard unsaved input, leave keyboard focus on a background action or allow duplicate submission. A short-lived success count can hide which client still requires manual work.
+
+Required mitigation:
+
+- shared dialog ownership, initial focus, contained keyboard navigation and background isolation;
+- Escape/backdrop close uses the same dirty-editor guard; a competing dialog cannot replace unsaved edits silently;
+- record control identity and a dirty Boolean, never password/input values in a serialized draft;
+- freeze a pending save, keep failed input with a persistent error, and restore focus to a surviving control or safe fallback;
+- retain escaped per-target results and client-specific next steps beyond transient notifications;
+- require explicit selection of the legacy exclusive CLI route by default;
+- keep official quota/Billing outside local-usage filter state, preserving unknown/partial values and exact decimals.
+
+The isolated browser suite covers these behaviors, including replacement attempts and failure recovery. Its synthetic data does not prove native IPC or real-client readiness.
+
 ### Mock data presented as native data
 
 Browser fallback or unfinished pages may look authoritative.
@@ -620,3 +636,4 @@ The implementation is not complete without tests covering at least:
 - model alias collision and ambiguous route attribution;
 - exact decimal arithmetic, immutable historical pricing, threshold ambiguity, and missing rates;
 - hostile UI strings and redacted diagnostic export.
+- keyboard focus/draft protection, pending-save behavior, persistent failure/results, and official/local filter separation.

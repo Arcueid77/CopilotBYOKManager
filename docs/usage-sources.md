@@ -1,6 +1,14 @@
-# Usage adapters: provenance, schemas and coverage
+# CopilotBYOKManager usage adapters: provenance, schemas and coverage
 
 Verified against official sources on 2026-09-09. These are implementation contracts, not proof that a real installed client/account has passed release acceptance. All fixtures are synthetic, sanitized reductions of the listed schemas. No developer session or credential data was used.
+
+Documentation reconciled with the 2026-10-13 application state; source-specific verification dates and parser versions below are unchanged. See [implementation status](implementation-status.md) for current test evidence and remaining acceptance.
+
+## Where the data appears
+
+Usage opens with four sections: Official subscription/usage, Model statistics, Sessions/details, and Data sources/pricing. Official runtime and personal Billing keep their own refresh/status/period controls. Local date/client/route filters and advanced Connection/model/attribution/source/status filters appear only in model/session views; Reset restores the local query without changing the Billing month. Model suggestions are bounded and retain exact model identity. All required token, price and coverage columns remain available, with the model column fixed during horizontal scrolling.
+
+Source consent, enable/disable/clear, import jobs and price refresh remain in Data sources/pricing. UI filtering does not restrict which historical source bytes an enabled importer reads. The `PilotWeave/usage-inbox` directory and other persisted identifiers remain unchanged after the public rename.
 
 ## Copilot runtime quota and models
 
@@ -23,7 +31,7 @@ Fixture: `apps/desktop/src-tauri/tests/fixtures/usage/copilot-quota-v3.json`. Fa
 
 - [Official personal Billing REST endpoints, API 2026-03-10](https://docs.github.com/en/rest/billing/usage?apiVersion=2026-03-10)
 
-PilotWeave's own separately authorized identity/token accesses only fixed personal `/users/{login}/settings/billing/ai_credit/usage` and `/users/{login}/settings/billing/premium_request/usage` endpoint families. No organization, enterprise, overage, purchasing, provider invoice or account-administration operation is implemented. Identity and period in successful reports must match the request. Endpoint families retain their original units, amounts and coverage independently.
+CopilotBYOKManager's own separately authorized identity/token accesses only fixed personal `/users/{login}/settings/billing/ai_credit/usage` and `/users/{login}/settings/billing/premium_request/usage` endpoint families. No organization, enterprise, overage, purchasing, provider invoice or account-administration operation is implemented. Identity and period in successful reports must match the request. Endpoint families retain their original units, amounts and coverage independently.
 
 Snapshots are keyed by stable GitHub user ID and host, so a reused login cannot inherit another user's stored Billing. Reads and stale fallback are scoped to account, endpoint family and requested month. Legacy snapshots with only an unverified login key are retained but are not attributed to a current stable identity. Up to 120 recent attempts per account/family are retained, together with the most recent successful snapshot for each stored month. A long failure sequence cannot evict the successful fallback.
 
@@ -70,7 +78,7 @@ The UI provides the exact native-owned inbox path, under the platform configurat
 }
 ```
 
-Restart VS Code after changing export settings. Export affects future observations. Disabling PilotWeave import does not disable VS Code export; the instructions explain how to turn off the client setting separately.
+Restart VS Code after changing export settings. Export affects future observations. Disabling CopilotBYOKManager import does not disable VS Code export; the instructions explain how to turn off the client setting separately.
 
 The file exporter writes JSONL spans, logs and metrics. Parser v1 accepts only `gen_ai.operation.name=chat` CLIENT spans (`kind=2`) with a stable trace/span context and start/end HrTime arrays in seconds + nanoseconds. Non-inference parent/tool spans, log bodies, inference-detail events and metric objects are ignored to avoid double counting. Unknown envelopes produce explicit errors, not guessed token data.
 

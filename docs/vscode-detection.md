@@ -1,6 +1,8 @@
-# VS Code installation and Copilot capability detection
+# CopilotBYOKManager VS Code installation and capability detection
 
-The Windows adapter recognizes the official `code.cmd` launcher as data, then invokes the verified adjacent `Code.exe` with the installed `cli.js` as the first argument. It sets `ELECTRON_RUN_AS_NODE=1` only in that child, removes `VSCODE_DEV` and inherited sensitive variables, and uses `CREATE_NO_WINDOW`. It never executes the wrapper or a shell command. Interactive sign-in continues to use the GUI entry point and clears the Electron CLI variable.
+The Windows adapter recognizes the official `code.cmd` launcher as data, then invokes the verified adjacent `Code.exe` with the installed `cli.js` as the first argument. It sets `ELECTRON_RUN_AS_NODE=1` only in that child, removes `VSCODE_DEV` and inherited sensitive variables, and uses `CREATE_NO_WINDOW`. It never executes the wrapper or a shell command. The separate sign-in action does not spawn the GUI executable: it focuses a matching existing Windows editor or gives manual Accounts instructions. This avoids triggering saved-window and hot-exit restoration.
+
+This document records the detection contract; [local validation](local-validation-plan.md) records the 2026-09-11 sign-in correction and its test limits. The [current status](implementation-status.md) distinguishes later UI checks from real client/account acceptance.
 
 Wrapper parser **v1** supports the legacy `resources/app/out/cli.js` layout and the versioned `<10-or-40-hex-commit>/resources/app/out/cli.js` layout. The latter must match the adjacent product metadata commit. Executable, wrapper and metadata paths reject symlinks/reparse points; reads, extension counts, versions and process output are bounded. Unknown layouts, failed probes and malformed metadata return Unknown and cannot authorize installation. Updating VS Code during detection may therefore require a rescan.
 

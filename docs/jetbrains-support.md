@@ -1,12 +1,14 @@
 # JetBrains GitHub Copilot integration
 
+CopilotBYOKManager implements the automatic adapter below. The reviewed version list and fixed inspection dates remain authoritative; the repository rename does not broaden supported plugin versions. See [current implementation status](implementation-status.md) for validation evidence. Rider runtime acceptance is deferred at the maintainer's request as of 2026-10-13.
+
 ## Automatic BYOK deployment
 
 The maintainer requires automatic configuration, not manual instructions as the completed integration. Home and Clients expose an automatic BYOK review, and bulk deployment includes detected writable JetBrains profiles. Viewing the guide reads no key and allocates no apply-plan slot. Apply receives only the native-held reviewed plan ID and confirmation.
 
 The adapter publishes endpoint, protocol (`chatCompletions`, `responses`, `messages`), enabled model IDs/names, registration, tool calling/vision/reasoning, explicit input/output limits, request headers with native secret substitution, and the Connection's own provider key. It writes the official runtime's **dedicated BYOK namespace**, not per-IDE preference XML, authentication stores or Password Safe. No keys/header values cross the frontend preview. The native BYOK file and private rollback journal may contain materialized provider keys; never publish them.
 
-Each owner/Connection gets a stable provider name with exactly three managed keys: `<provider>-api-key`, `<provider>-provider-config`, `<provider>-models-config`. Provider config contains upstream `groupName`/`apiType` plus PilotWeave owner/Connection/schema markers, ignored by the upstream reader. Markers alone are not authority: replacement/revocation requires matching persisted owner/Connection/physical-resource/projection proof. Missing, foreign, partial, externally changed or per-model overriding keys cause conflict. Other providers and unknown values (including precise JSON numbers) survive. Semantic no-ops preserve source bytes. Revoke removes only owned keys and does not require the current Connection's key/endpoint to remain deployable; the current target/schema and ownership checks still apply. Detach leaves client data untouched.
+Each owner/Connection gets a stable provider name with exactly three managed keys: `<provider>-api-key`, `<provider>-provider-config`, `<provider>-models-config`. Provider config contains upstream `groupName`/`apiType` plus CopilotBYOKManager owner/Connection/schema markers, ignored by the upstream reader. Markers alone are not authority: replacement/revocation requires matching persisted owner/Connection/physical-resource/projection proof. Missing, foreign, partial, externally changed or per-model overriding keys cause conflict. Other providers and unknown values (including precise JSON numbers) survive. Semantic no-ops preserve source bytes. Revoke removes only owned keys and does not require the current Connection's key/endpoint to remain deployable; the current target/schema and ownership checks still apply. Detach leaves client data untouched.
 
 Reviewed runtime root selection:
 
@@ -16,7 +18,7 @@ Reviewed runtime root selection:
 
 IDE profiles using the same root share one physical file. Multiple selected IDE targets produce one deduplicated write with per-profile proofs/audit, not a last-writer-wins sequence. All IDEs using that root can observe the shared change, including unselected profiles. IDE-specific environment overrides are not inferred from private process/IDE settings.
 
-Close IDEs before applying and reopen them to refresh cached model pickers. Select a deployed model in Copilot Chat and verify provider compatibility. Native post-write verification proves bytes on disk, **not** live IDE behavior, successful network requests, policy eligibility, GitHub sign-in or a changed open chat selection. PilotWeave never kills/restarts/installs an IDE automatically.
+Close IDEs before applying and reopen them to refresh cached model pickers. Select a deployed model in Copilot Chat and verify provider compatibility. Native post-write verification proves bytes on disk, **not** live IDE behavior, successful network requests, policy eligibility, GitHub sign-in or a changed open chat selection. CopilotBYOKManager never kills/restarts/installs an IDE automatically.
 
 ## Version and compatibility boundary
 
@@ -48,7 +50,7 @@ The fixed Windows x64 update 1190136 was downloaded again: 127292229 bytes, SHA-
 - `core-1.19.0-261.jar`, SHA-256 `edba3a5c5ffda524908846f1eb4bc42d859a1eaed3e2f432111bda13c198b85c`, declares `CopilotBYOKGroupNames`, `CopilotBYOKProviderLabels`, `CopilotModelEnabledState`, `CopilotContextWindows` and `CopilotReasoningEfforts` with storage `github-copilot.xml`. These hold per-IDE grouping, labels, disablement and model preferences; XML is not unrelated to BYOK or merely an authentication file.
 - `BYOKModelService` fetches `listCustomProviderConfigs`, derives server group names and calls `reconcileLocalGroupNames`. This supports the two-layer interpretation, not a claim that disk publication guarantees picker visibility or clears existing disablement.
 
-The [official XML documentation](https://docs.github.com/en/copilot/how-tos/copilot-in-your-ide/set-up-copilot/configure-in-ide?tool=jetbrains) documents language enablement and per-IDE paths; it does not document the complete XML BYOK preference schema or a stable external provider-write API. No real IDE XML, Password Safe, authentication store or conversation was opened or modified. PilotWeave leaves preferences unchanged and requires separate per-IDE official sign-in and runtime acceptance. Locally computed hashes are inspection evidence, not authoritative published checksums. See the [isolated runtime acceptance procedure](local-validation-plan.md#jetbrains-隔离真机验收).
+The [official XML documentation](https://docs.github.com/en/copilot/how-tos/copilot-in-your-ide/set-up-copilot/configure-in-ide?tool=jetbrains) documents language enablement and per-IDE paths; it does not document the complete XML BYOK preference schema or a stable external provider-write API. No real IDE XML, Password Safe, authentication store or conversation was opened or modified. CopilotBYOKManager leaves preferences unchanged and requires separate per-IDE official sign-in and runtime acceptance. Locally computed hashes are inspection evidence, not authoritative published checksums. See the [isolated runtime acceptance procedure](local-validation-plan.md#jetbrains-隔离真机验收).
 
 Dashboard source chips verify each owned provider projection independently against persisted proofs and report only its observed model count. Adding another Connection does not remove existing suppliers or select a model in a running IDE. Unknown versions, inaccessible catalogs and changed ownership remain explicit unavailable/changed states.
 
@@ -68,5 +70,7 @@ Verified 2026-10-10 before automatic implementation:
 Coverage: three protocols, enabled-model filtering, limits/capabilities/headers/key projection, preview non-disclosure, unmanaged/precision preservation, no-op, ownership/revocation, absent keys, unknown versions, duplicate/deep/oversize JSON, unsafe paths, shared write deduplication, one-shot/stale plans, private interrupted recovery and conditional rollback refusal. UI/browser checks exercise automatic review → single-target preview → confirmed ID-only apply, manual/version/account/usage boundaries.
 
 Still required: an isolated current Windows IDE run to validate visibility after restart, real provider requests, policy and multi-IDE sharing. Static upstream inspection and fixture/browser tests are not real runtime or release-ready proof.
+
+The UI retains per-profile publication outcomes and restart/model-selection guidance after the notification disappears. This is a usability improvement to the existing audit data, not additional runtime evidence; the latest browser pass must not be described as a successful IDE request.
 
 Dependencies: `quick-xml` parses bounded public XML without entity resolution; `zip` 6 reads classic descriptor JARs with only the required deflate backend. No new dependency is needed for BYOK JSON projection.
