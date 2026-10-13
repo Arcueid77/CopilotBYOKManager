@@ -1,61 +1,63 @@
 # CopilotBYOKManager
 
-**简体中文** | [English](README.en.md)
+**English** | [简体中文](README.zh-CN.md)
 
-**Provider 一次配置，多端 Copilot 复用。**
+**Configure your provider once. Use it across Copilot clients.**
 
-在一个地方保存 AI 供应商的接口地址、API 密钥和模型，再将同一份配置应用到 **VS Code、Copilot CLI 和受支持的 JetBrains IDE**。Copilot App 提供手动配置引导。
+Save your AI provider's endpoint, API key, and models in one place, then apply the same configuration to **VS Code, Copilot CLI, and supported JetBrains IDEs**. Copilot App is covered through guided manual setup.
 
-不用为每个客户端重新维护一份 Provider。换地址、换密钥或增减模型时，修改连接，再预览并发布到需要更新的客户端即可。
+You do not need to maintain a separate provider configuration for every client. When you change an endpoint or key, or add or remove models, edit the connection, preview the changes, and publish them to the clients you want to update.
 
-[开始使用](#getting-started) · [支持的客户端](#supported-clients) · [首次配置](#first-connection) · [日常管理](#everyday-use) · [用量与费用](#usage) · [常见问题](#faq)
+[Get started](#getting-started) · [Supported clients](#supported-clients) · [First connection](#first-connection) · [Everyday use](#everyday-use) · [Usage and costs](#usage) · [FAQ](#faq)
 
-> 当前为预发布版本，尚未提供 GitHub Releases 安装包。可以先试用浏览器界面，或从源码启动桌面版。干净 Windows 安装、真实账号和客户端实际请求仍有待验收；具体范围见[当前实现与验证状态](docs/implementation-status.md)。
+> This is a pre-release application with no published GitHub Releases installers yet. You can try the browser interface or run the desktop app from source. Clean-Windows installation, real-account access, and actual client requests still require acceptance testing; see [implementation and validation status](docs/implementation-status.md).
 
-## 它能帮你做什么
+The app's current interface is in Chinese. This manual provides English instructions and includes the Chinese labels for key controls; it does not imply that the app has an English-language interface.
 
-- **统一管理 Provider：**保存多个连接，获取或手动填写模型，设置首选模型。
-- **将配置应用到多个客户端：**选择目标、查看变更、确认发布，并逐项查看结果和下一步。
-- **维护客户端：**检查安装状态，按审核过的计划安装支持的 Windows 组件，逐个完成官方登录与账号核对。
-- **查看用量：**分别查看官方配额、个人 GitHub 账单、本地 Token 记录和 API 等价估算。
-- **复用资源：**管理 MCP、Skills 和 Instructions，预览后发布到支持的公开配置位置。
+## What you can do
 
-界面中的“连接”就是一份可复用的 Provider 配置；“发布”是把它写入选定客户端。**保存不等于发布，发布不等于客户端已经选用。**
+- **Manage providers centrally:** save multiple connections, fetch or manually enter models, and choose a preferred model.
+- **Apply configuration to multiple clients:** select targets, review changes, confirm publication, and check each target's result and next steps.
+- **Set up clients:** check installation status, install supported Windows components through reviewed plans, and complete official sign-in and account checks for each client.
+- **Inspect usage:** view official quota, personal GitHub Billing, local token records, and API-equivalent estimates separately.
+- **Reuse resources:** manage MCP, Skills, and Instructions, then preview and publish them to supported public configuration locations.
+
+A **connection** is a reusable provider configuration. **Publishing** writes it to the selected clients. **Saving is not publishing, and publishing does not mean a client has selected the model.**
 
 <a id="supported-clients"></a>
 
-## 支持的客户端
+## Supported clients
 
-| 客户端 | Provider 配置方式 | 使用前需要知道 |
+| Client | Provider configuration | Before you use it |
 | --- | --- | --- |
-| VS Code Stable / Insiders 及检测到的配置档案 | 自动添加或更新本连接的供应商分组，保留其他供应商 | 发布后，在对应配置档案的 Copilot 模型选择器中选用 |
-| GitHub Copilot CLI | 自动配置一条环境变量路由及首选模型 | 默认不勾选；一次只使用一条此类路由，发布后新开终端和 CLI 会话 |
-| JetBrains IDE 中的 GitHub Copilot 插件 | 对审核过的插件版本自动写入共享 BYOK 配置 | 先关闭相关 IDE，发布后重新打开、登录并选用模型 |
-| GitHub Copilot App | 提供配置步骤，不自动写入 Provider | 在 App 内手动添加供应商并验证 |
+| VS Code Stable / Insiders and detected profiles | Automatically adds or updates this connection's provider group while preserving other providers | After publishing, select the model in Copilot's model picker in the corresponding profile |
+| GitHub Copilot CLI | Automatically configures one environment-variable route and the preferred model | Unchecked by default; only one such route is active at a time. Open a new terminal and CLI session afterward |
+| GitHub Copilot plugin in JetBrains IDEs | Automatically writes shared BYOK configuration for reviewed plugin versions | Close the relevant IDEs first; reopen them after publishing, sign in, and select a model |
+| GitHub Copilot App | Provides setup instructions; does not automatically write provider configuration | Add the provider and verify it manually in the app |
 
-JetBrains 仅支持[版本表中的 1.19 插件发行版](docs/jetbrains-support.md#version-and-compatibility-boundary)，不表示所有 1.19 或更新版本都兼容。使用同一运行时目录的 IDE 会共享配置，包括未勾选的 IDE。
+JetBrains support is limited to the [1.19 plugin distributions in the version table](docs/jetbrains-support.md#version-and-compatibility-boundary), not every 1.19 or newer release. IDEs using the same runtime directory share the configuration, including IDEs you did not select.
 
-各客户端可接受的协议、地址和模型能力可能不同，以发布预览为准。本软件管理配置，不提供模型服务、订阅或免费额度，也不替代客户端自身的权限要求。
+Accepted protocols, endpoints, and model capabilities can differ between clients; review the publication preview. This app manages configuration. It does not provide model hosting, subscriptions, or free credits, and it does not replace a client's own access requirements.
 
 <a id="getting-started"></a>
 
-## 开始使用
+## Get started
 
-### 先试用界面，不改动电脑配置
+### Try the interface without changing your configuration
 
-1. 在本仓库页面选择 **Code → Download ZIP**，下载并解压源码。
-2. 用浏览器打开本地的 [apps/desktop/web/index.html](apps/desktop/web/index.html)。
-3. 尝试添加连接、选择客户端和查看发布预览。
+1. On this repository's GitHub page, select **Code → Download ZIP** and extract the source.
+2. Open the local [apps/desktop/web/index.html](apps/desktop/web/index.html) file in your browser.
+3. Try adding a connection, selecting clients, and reviewing a publication preview.
 
-页面会显示“浏览器试用”。该模式使用模拟数据，不写入真实客户端、不执行安装或登录，也不向 Provider 发起请求；请使用示例数据，不要填写真实密钥。资源管理与真实用量导入需要桌面版。
+The page displays **Browser preview (浏览器试用)**. This mode uses simulated data: it does not write to real clients, run installers, sign you in, or send requests to providers. Use sample data, not real API keys. Resource management and real usage imports require the desktop app.
 
-[交互设计原型](prototype/copilot-byok-manager.html)另行保留供设计参考；体验当前界面请使用上面的前端入口。
+The [interactive design prototype](prototype/copilot-byok-manager.html) is retained separately as a design reference. Use the frontend entry point above to try the current interface.
 
-### 启动可实际配置客户端的桌面版
+### Run the desktop app to configure real clients
 
-准备 Git、Node.js 22+、Rust 1.88+，以及 [Tauri 2 的系统依赖](https://v2.tauri.app/start/prerequisites/)。Windows 还需要 MSVC C++ 构建工具和 WebView2；macOS/Linux 请按官方依赖说明准备环境。
+Prepare Git, Node.js 22+, Rust 1.88+, and the [Tauri 2 system dependencies](https://v2.tauri.app/start/prerequisites/). Windows also requires the MSVC C++ build tools and WebView2. For macOS/Linux, follow the official dependency instructions.
 
-在终端中运行：
+Run in a terminal:
 
 ```bash
 git clone https://github.com/AvaloNero/CopilotBYOKManager.git
@@ -64,268 +66,268 @@ npm ci
 npm run dev
 ```
 
-当前开发分支是 `main`。首次启动需要下载依赖并编译；成功后会打开桌面窗口。窗口标题仍可能显示旧名 PilotWeave，见[名称兼容说明](#naming-and-compatibility)。
+The active development branch is `main`. The first launch downloads dependencies and compiles the app; a successful launch opens a desktop window. Its title may still show the former name, PilotWeave; see [naming and compatibility](#naming-and-compatibility).
 
-如需构建不带安装器的桌面程序，运行 `npm run build -- --no-bundle`。打包细节见[本地验证说明](docs/local-validation-plan.md)；构建成功不代表已经通过干净机器安装验收。
+To build the desktop executable without an installer, run `npm run build -- --no-bundle`. See [local validation](docs/local-validation-plan.md) for packaging details. A successful build is not proof of clean-machine installation acceptance.
 
 <a id="first-connection"></a>
 
-## 首次配置：从一个 Provider 到多个 Copilot
+## First setup: one provider, multiple Copilot clients
 
-### 1. 确认要使用的客户端
+### 1. Check the clients you want to use
 
-进入 **客户端**，核对已检测到的应用和配置档案。只需准备自己要用的客户端，不必全部安装。
+Open **Clients (客户端)** and review the detected apps and profiles. You only need the clients you intend to use, not every supported app.
 
-- 已安装但状态未更新：在 **安装与更新** 中点击 **刷新状态**。
-- 缺少支持的 Windows 组件：点击对应组件的 **安装**，核对计划后再确认；不支持自动安装的客户端需自行安装。
-- 展开 **官方登录与账号核对**，按提示在各客户端完成官方登录。软件不会把一个客户端的登录凭据复制给另一个客户端。
+- If an installed component's status is outdated, open **Installation and updates (安装与更新)** and click **Refresh status (刷新状态)**.
+- For a missing supported Windows component, click its **Install (安装)** button, review the plan, and confirm. Install clients without an automatic installation path yourself.
+- Expand **Official sign-in and account checks (官方登录与账号核对)** and follow the official sign-in steps in each client. The manager never copies one client's sign-in credentials to another.
 
-可以通过 **逐个核对同一 GitHub 账号**记录自己的确认。手动确认和软件已核验身份会分别显示。**配置 Provider 不要求先授权本软件读取个人账单**，账单授权是单独的可选步骤。
+Use **Check the same GitHub account in each client (逐个核对同一 GitHub 账号)** to record your own confirmation. Manual confirmation and software-verified identity are shown separately. **Provider setup does not require granting this manager access to personal Billing.** Billing authorization is a separate, optional step.
 
-### 2. 添加连接
+### 2. Add a connection
 
-进入 **连接 → 添加连接**，填写：
+Go to **Connections (连接) → Add connection (添加连接)** and fill in:
 
-| 字段 | 应该填写什么 |
+| Field | What to enter |
 | --- | --- |
-| 名称 | 便于识别的名称，例如“工作用 Provider” |
-| 端点地址 | 供应商提供的 API 基址，不是官网或控制台地址 |
-| API 密钥 | 该供应商的密钥；只有允许匿名访问的端点才可留空，目标客户端也须支持 |
-| 模型 | 通过“获取模型”添加，或手动填写上游模型 ID |
+| Name (名称) | A recognizable name, such as “Work provider” |
+| Endpoint URL (端点地址) | The API base URL supplied by your provider, not its website or dashboard URL |
+| API key (API 密钥) | That provider's key. Leave it blank only if the endpoint permits anonymous access and the target client supports it |
+| Models (模型) | Fetch models with the corresponding button, or enter upstream model IDs manually |
 
-`https://api.example.com/v1` 只是地址格式示例，不能实际调用。远程端点需使用 HTTPS；本机回环地址可使用 HTTP。
+`https://api.example.com/v1` is only an example of the URL format, not a working endpoint. Remote endpoints require HTTPS; local loopback endpoints may use HTTP.
 
-如果供应商并非默认的 OpenAI 兼容 Chat Completions 接口，先展开 **高级选项：供应商类型、接口协议与请求头**：
+If your provider does not use the default OpenAI-compatible Chat Completions interface, first expand **Advanced options: provider type, protocol, and headers (高级选项：供应商类型、接口协议与请求头)**:
 
-- 按供应商说明选择 **Chat Completions、Responses 或 Messages**。
-- 更改供应商类型不会自动修改地址或协议；请分别核对。
-- 仅在需要时填写请求头，每行采用 `名称: 值`。用 `${apiKey}` 引用密钥，不要把真实密钥写进请求头文本。
+- Select **Chat Completions, Responses, or Messages** according to the provider's documentation.
+- Changing the provider type does not automatically change the URL or protocol; check them separately.
+- Add headers only when needed, one `Name: Value` per line. Reference the key with `${apiKey}`; do not put a real key directly in the header text.
 
-API 密钥在管理器中保存在系统凭据库，不会回显到表单。发布时，部分客户端格式需要将密钥写入其配置，相关文件不能公开分享。
+The manager stores API keys in the operating-system credential store and does not display saved keys in the form. During publication, some client formats require the key to be written into their configuration. Do not share those files publicly.
 
-### 3. 添加模型并保存
+### 3. Add models and save
 
-推荐先点击 **获取模型**，按名称或 ID 筛选，勾选需要的模型，再点击 **添加已选**。不会自动选中整个目录，也不会覆盖已有的手动条目。
+Start with **Fetch models (获取模型)**. Filter by name or ID, select the models you want, then click **Add selected (添加已选)**. The manager does not automatically select the entire catalog or overwrite existing manual entries.
 
-供应商不提供模型目录时，可以直接在 **模型**中每行填写一个模型：
+If the provider has no model catalog endpoint, enter one model per line in **Models (模型)**:
 
 ```text
-your-model-id | 工作模型
-another-model-id | 备用模型
+your-model-id | Work model
+another-model-id | Backup model
 ```
 
-请把示例 ID 换成供应商实际提供的 ID；竖线后的显示名称可以省略。Azure 连接需手动填写实际部署名称，不能直接用基础模型名称替代。
+Replace these example IDs with the actual IDs supplied by your provider. The display name after the vertical bar is optional. For Azure connections, manually enter the actual deployment name, not the underlying model name.
 
-选择 **首选模型**，然后点击 **保存连接**：
+Choose a **Preferred model (首选模型)**, then click **Save connection (保存连接)**:
 
-- Copilot CLI 会把首选模型用于 `COPILOT_MODEL`。
-- VS Code、JetBrains 等有模型选择器的客户端仍需在客户端内选择；这里的“首选”不会强制切换打开的会话。
+- Copilot CLI uses the preferred model for `COPILOT_MODEL`.
+- Clients with model pickers, such as VS Code and JetBrains, still require you to select the model inside the client. This preference does not force an open session to switch models.
 
-**此时只保存了连接，尚未修改客户端。**“获取模型”和连接卡片上的“测试连接”都只检查模型目录，不验证聊天、工具调用或视觉能力。
+**You have only saved the connection; no client configuration has changed yet.** Both Fetch models and the connection card's **Test connection (测试连接)** check catalog access only. They do not verify chat, tool calling, or vision support.
 
-### 4. 预览并发布
+### 4. Preview and publish
 
-1. 在连接卡片上点击 **发布到客户端**。
-2. 逐个核对目标，取消不需要的客户端或配置档案。**Copilot CLI 默认不勾选**，需要使用其单一路由时再主动选择。
-3. 如果包含 JetBrains，先关闭使用该共享配置的相关 IDE。
-4. 点击 **生成预览**，核对每个目标的处理方式；需要时展开 **写入明细**。标为“需手动处理”的目标不会自动配置成功。
-5. 确认无误后点击 **确认发布**。
+1. On the connection card, click **Publish to clients (发布到客户端)**.
+2. Review each target and uncheck any clients or profiles you do not want to update. **Copilot CLI is unchecked by default**; select it explicitly if you want its single-route environment configuration.
+3. If JetBrains is included, close the relevant IDEs using that shared configuration first.
+4. Click **Generate preview (生成预览)** and check how each target will be handled. Expand **Write details (写入明细)** when needed. Targets marked **Manual action required (需手动处理)** will not be configured automatically.
+5. When the preview is correct, click **Confirm publication (确认发布)**.
 
-更改连接或目标、预览过期、配置被其他程序修改后，都需要重新预览。预览有效期为 15 分钟，且只能使用一次。
+Generate a new preview after changing the connection or targets, after the preview expires, or if another program changes the target configuration. Previews are valid for 15 minutes and can be used only once.
 
-完成后，在 **总览 → 最近一次发布**或 **连接 → 最近配置操作**查看各目标的结果。这里会保留需要重启、手动处理或选用模型的提示，不必依赖短暂弹出的通知。
+Afterward, check each target's result under **Overview (总览) → Latest publication (最近一次发布)** or **Connections (连接) → Recent configuration operations (最近配置操作)**. Restart instructions, manual steps, and model-selection guidance remain visible after the notification disappears.
 
-### 5. 到客户端里选用并验证
+### 5. Select and verify the model in each client
 
 **VS Code**
 
-打开发布时选中的配置档案，在 Copilot 的模型选择器中选择刚发布的模型。多个 Provider 可以保留在不同分组中，实际用哪个模型由客户端选择。
+Open the profile you selected when publishing, then choose the published model in Copilot's model picker. Multiple providers can remain in separate groups; the client determines which model is actually used.
 
 **Copilot CLI**
 
-新开终端，再启动新的 CLI 会话，核对实际选用的模型。旧终端不会自动获得新的环境变量。本软件当前使用旧式环境变量配置方式，不写入 `providers.json`；这条 BYOK 路由生效期间，不要期待同时使用 GitHub 官方模型路由。
+Open a new terminal, start a new CLI session, and check the selected model. An existing terminal does not automatically receive updated environment variables. This adapter currently uses a legacy environment-variable configuration method, not `providers.json`. While this BYOK route is active, do not expect to use the GitHub official model route at the same time.
 
 **JetBrains**
 
-重新打开对应 IDE，完成 GitHub Copilot 官方登录，在 Copilot Chat 的模型选择器中选用已发布模型。共享配置不等于共享登录状态，每个 IDE 都要单独核对。未知插件版本不会自动写入；更多限制见[JetBrains 使用与兼容说明](docs/jetbrains-support.md)。
+Reopen the relevant IDE, complete official GitHub Copilot sign-in, and select the published model in Copilot Chat's model picker. Shared configuration does not mean shared sign-in state; check each IDE separately. Unknown plugin versions are not written automatically. See [JetBrains usage and compatibility](docs/jetbrains-support.md) for further limits.
 
 **Copilot App**
 
-进入 **客户端 → Copilot App 供应商 → 查看手动配置步骤**。在 App 的 **Model providers**中添加供应商，填写提示的地址与模型，并在 App 内输入需要的密钥。完成后可点击 **我已完成手动配置**记录确认；这不是软件自动验证的结果。
+Go to **Clients (客户端) → Copilot App providers (Copilot App 供应商) → View manual setup steps (查看手动配置步骤)**. In the app's **Model providers**, add the provider using the displayed endpoint and model, and enter the required key inside the app. You can then click **I have completed manual setup (我已完成手动配置)** to record your confirmation. This is not an automatic verification result.
 
-最后，在要使用的客户端里发送一条不含敏感项目内容的简短请求，确认模型能正常响应。真实请求可能产生供应商费用。**配置已写入、账号已登录、模型已选用、请求成功是四个不同的状态。**
+Finally, send a short request containing no sensitive project content from the client you intend to use, and confirm that the model responds. Real requests may incur provider charges. **Configuration written, account signed in, model selected, and request successful are four different states.**
 
 <a id="everyday-use"></a>
 
-## 日常管理
+## Everyday use
 
-### 修改地址、密钥或模型
+### Change an endpoint, key, or model list
 
-在 **连接**中找到 Provider，点击 **编辑**：
+Find the provider under **Connections (连接)** and click **Edit (编辑)**:
 
-1. 修改相应字段。已有密钥留空表示保留；替换时输入新密钥，删除时勾选 **移除已保存的密钥**。
-2. 点击 **保存连接**。
-3. 再次 **发布到客户端 → 生成预览 → 确认发布**，更新需要的目标。
-4. 按发布结果提示重新打开客户端或新建会话。
+1. Update the relevant fields. Leave an existing key blank to keep it, enter a new key to replace it, or check **Remove saved key (移除已保存的密钥)** to remove it.
+2. Click **Save connection (保存连接)**.
+3. Use **Publish to clients → Generate preview → Confirm publication** again to update the intended targets.
+4. Reopen clients or create new sessions as instructed by the publication results.
 
-修改连接不会后台自动同步到所有客户端。若修改了端点、协议或请求头后获取模型提示需要凭据，请为当前端点重新输入密钥，软件不会静默把已存密钥发到变更后的地址。
+Editing a connection does not automatically synchronize it to all clients in the background. If fetching models asks for credentials after you change the endpoint, protocol, or headers, enter the key for the current endpoint again. Catalog discovery will not silently send the stored key to a changed destination.
 
-### 增加或切换 Provider
+### Add or switch providers
 
-在 **连接**中添加另一份连接，再发布到所需客户端：
+Add another connection under **Connections (连接)**, then publish it to the clients you want:
 
-- VS Code / JetBrains：多个供应商分组可共存，去客户端模型选择器切换。
-- Copilot CLI：此环境变量方式一次只使用一条路由。先核对现有归属；遇到其他连接或外部配置冲突时，不会直接覆盖。必要时先按下节撤销旧连接的受管配置，再发布新连接。
-- Copilot App：在 App 内手动添加或切换。
+- **VS Code / JetBrains:** multiple provider groups can coexist. Switch using the client's model picker.
+- **Copilot CLI:** this environment-variable method uses one route at a time. Check the current ownership first; conflicting configuration from another connection or an external source is not overwritten directly. If necessary, revoke the old connection's managed configuration as described below before publishing the new connection.
+- **Copilot App:** add or switch providers manually inside the app.
 
-这里不是自动故障切换或负载均衡；更改首选模型也不会强制切换其他客户端正在使用的模型。
+This is not automatic failover or load balancing. Changing a preferred model also does not force other clients to switch the model they are currently using.
 
-### 停用、停止管理和撤销有什么区别
+### Disable, stop managing, or revoke: which should you choose?
 
-| 操作 | 管理器中的变化 | 客户端中的变化 |
+| Action | What changes in the manager | What changes in the client |
 | --- | --- | --- |
-| 关闭连接的启用开关 | 保留连接，停止新的发布 | 已发布配置仍保留，不会自动切回官方模型 |
-| **移除 → 仅停止管理… → 确认停止管理** | 删除连接、发布记录、受管证明及专用凭据 | 配置和其中已写入的密钥仍保留，之后由你自行管理 |
-| **移除 → 预览撤销并删除 → 确认撤销并删除** | 撤销成功后删除连接 | 仅清理能核验为本软件管理的配置，不删除其他供应商 |
+| Turn off the connection's enable switch | Keeps the connection but prevents new publication | Published configuration remains; clients do not automatically return to official models |
+| **Remove (移除) → Stop managing only (仅停止管理…) → Confirm (确认停止管理)** | Removes the connection, publication records, ownership proofs, and its dedicated credential | Configuration and any materialized keys remain; you are responsible for managing them afterward |
+| **Remove (移除) → Preview revocation and deletion (预览撤销并删除) → Confirm (确认撤销并删除)** | Removes the connection after successful revocation | Removes only configuration verified as managed by this app, not other providers |
 
-**想让客户端不再使用这份配置，请选择“撤销并删除”，不要只停用连接。**撤销前核对预览中的所有目标；它会处理该连接已发布的受管配置，不只是某一个客户端。
+**To remove this configuration from clients, choose revocation and deletion rather than simply disabling the connection.** Review every target in the preview: revocation covers this connection's published managed configuration, not just one client.
 
-如果目标已被外部修改，撤销或回滚会拒绝覆盖，连接可能保留以便继续处理。先查看 **更多 → 活动记录**与 **更多 → 设置**中的恢复状态，不要直接删除配置文件或备份。
+If a target has been changed externally, revocation or rollback refuses to overwrite it, and the connection may remain so you can resolve the issue. Check **More (更多) → Activity (活动记录)** and the recovery status under **More → Settings (设置)** first. Do not delete configuration files or backups directly.
 
 <a id="usage"></a>
 
-## 查看用量与费用
+## View usage and costs
 
-进入 **用量**，按目的选择视图：
+Open **Usage (用量)** and choose a view:
 
-| 视图 | 适合查看什么 | 数据前提 |
+| View | What it shows | Data requirements |
 | --- | --- | --- |
-| 官方订阅 / 用量 | 官方运行时配额、个人 GitHub 月度账单 | 运行时可读取；个人账单另需本软件独立授权 |
-| 模型统计 | 各模型的 Token、缓存、估算与覆盖情况 | 已导入支持的本地记录；可按日期、客户端和路由筛选 |
-| 会话 / 详情 | 逐条检查导入的用量元数据 | 不展示对话正文；更多条件在“高级筛选” |
-| 数据来源 / 价格 | 管理导入来源，查看价格目录 | 来源需主动启用；价格由单独的刷新操作获取 |
+| Official subscription / usage (官方订阅 / 用量) | Official runtime quota and personal monthly GitHub Billing | A readable runtime; personal Billing also requires separate authorization for this manager |
+| Model statistics (模型统计) | Tokens, cache data, estimates, and coverage by model | Supported local records must be imported; filter by date, client, and route |
+| Sessions / details (会话 / 详情) | Individual imported usage metadata records | No conversation text; additional conditions are under Advanced filters (高级筛选) |
+| Data sources / prices (数据来源 / 价格) | Import sources and the price catalog | Enable sources explicitly; prices are fetched through a separate refresh action |
 
-### 开启本地用量导入
+### Enable local usage imports
 
-1. 进入 **用量 → 数据来源 / 价格**。
-2. 在需要的来源卡片上点击 **配置与隐私**，阅读范围和配置要求。
-3. 点击 **启用导入…**，确认后点击 **导入已启用来源**。
-4. 回到 **模型统计**或 **会话 / 详情**查看结果。
+1. Open **Usage (用量) → Data sources / prices (数据来源 / 价格)**.
+2. On the source card, click **Setup and privacy (配置与隐私)** and read the scope and setup requirements.
+3. Click **Enable import (启用导入…)**, confirm, then click **Import enabled sources (导入已启用来源)**.
+4. Return to **Model statistics** or **Sessions / details** to inspect the results.
 
-VS Code 来源还需要按页面给出的说明，手动配置 OTel 文件导出并重启；只会产生启用后的观察数据。CLI / App 的共享运行时记录只计一次，不会把同一份记录重复算给两个客户端。JetBrains 独立用量当前未覆盖，Copilot App 也没有已审核的独立用量来源。
+The VS Code source also requires you to configure OTel file export manually according to the displayed instructions and restart VS Code. Only observations generated after enabling export are available. CLI / App shared-runtime records are counted once, not once for each client. Standalone JetBrains usage is not currently covered, and Copilot App has no separately reviewed usage source.
 
-**停用导入**会停止读取，但保留已导入记录；**清除已导入元数据…**会删除本软件中的对应记录并停用导入，不删除原始日志。要停止 VS Code 自身继续导出，还需按说明关闭 OTel。
+**Disable import (停用导入)** stops reading while keeping imported records. **Clear imported metadata (清除已导入元数据…)** removes that source's records from this manager and disables its import; it does not delete the original logs. To stop VS Code itself from exporting, also turn off OTel as instructed.
 
-### 查看个人 GitHub 账单
+### View personal GitHub Billing
 
-在 **官方订阅 / 用量**中点击 **管理授权**，或进入 **更多 → 设置 → GitHub 个人账单授权**，按界面要求授权本软件。然后回到用量页选择月份并刷新账单。
+In **Official subscription / usage**, click **Manage authorization (管理授权)**, or go to **More → Settings → GitHub personal Billing authorization (GitHub 个人账单授权)**. Follow the instructions to authorize this manager, then return to Usage, select a month, and refresh Billing.
 
-这份授权与 VS Code、CLI 或 IDE 的登录独立。已登录客户端不代表管理器能读取账单；无权限、组织付费或接口不可用也不代表费用为零。
+This authorization is separate from VS Code, CLI, or IDE sign-in. Being signed into a client does not grant the manager Billing access. Missing permissions, organization-paid coverage, or unavailable endpoints do not mean your cost is zero.
 
-### 正确理解金额和空白值
+### Understand amounts and missing values
 
-- **官方账单**是 GitHub 返回的个人账单数据；不包含第三方 Provider 的发票或实际扣费。
-- **API 等价估算**是按价格目录换算的参考值，不是实际账单，也不是“节省了多少钱”。
-- 在 **数据来源 / 价格**中点击 **刷新官方 OpenRouter 目录**可更新价格；历史估算保留所用的价格快照。
-- 缺失 Token、价格或归属证据时，页面会显示未知、部分覆盖或不可用，不补成 0。CLI 当前来源还缺少部分输入 Token 语义，因此不保证能生成完整成本估算。
+- **Official Billing** is personal Billing data returned by GitHub. It does not include third-party provider invoices or actual charges.
+- **API-equivalent estimates** are reference values calculated from a price catalog, not actual bills or claims about money saved.
+- Under **Data sources / prices**, click **Refresh official OpenRouter catalog (刷新官方 OpenRouter 目录)** to update prices. Historical estimates retain their original price snapshots.
+- Missing tokens, prices, or attribution evidence remain unknown, partially covered, or unavailable rather than becoming 0. The current CLI source also lacks some input-token semantics, so a complete cost estimate is not guaranteed.
 
-详细覆盖范围见[用量来源说明](docs/usage-sources.md)。
+See [usage sources](docs/usage-sources.md) for detailed coverage.
 
-## 管理 MCP、Skills 和 Instructions
+## Manage MCP, Skills, and Instructions
 
-进入 **更多 → 资源**：
+Go to **More (更多) → Resources (资源)**:
 
-1. 点击 **添加资源**，填写名称、类型和内容。
-2. 点击 **保存到本地**。此时不会修改客户端。
-3. 点击资源卡片上的 **预览发布 → 生成预览**，逐项核对目标和内容，再 **确认发布**。
-4. 不再需要时，使用 **撤销并删除…**，预览并确认清理受管内容。
+1. Click **Add resource (添加资源)** and enter its name, type, and content.
+2. Click **Save locally (保存到本地)**. This does not change clients yet.
+3. On the resource card, choose **Preview publication (预览发布) → Generate preview (生成预览)**, review each target and its content, then **Confirm publication (确认发布)**.
+4. When the resource is no longer needed, choose **Revoke and delete (撤销并删除…)**, review the preview, and confirm removal of the managed content.
 
-当前支持不含凭据的 HTTPS MCP 地址、Markdown 正文形式的 Skills 和 Instructions。MCP 请求头、密钥、本地命令，以及技能脚本和附属资源需手动管理。App、命名配置档案和自定义路径等未支持的目标不会被当作发布成功。
+Currently supported resources are credential-free HTTPS MCP URLs and Markdown-only Skills and Instructions. Manage MCP headers, keys, local commands, skill scripts, and supporting assets manually. Unsupported targets such as the app, named profiles, and custom paths are not reported as successfully published.
 
 <a id="faq"></a>
 
-## 常见问题
+## Frequently asked questions
 
-### 已经保存连接，为什么客户端没有变化？
+### I saved a connection. Why has nothing changed in my client?
 
-保存只更新管理器。还要点击 **发布到客户端**，生成预览并确认，然后按客户端要求选模型、重启 IDE 或新开终端。更新已有连接也是同样的流程。
+Saving only updates the manager. You must also click **Publish to clients**, generate a preview, and confirm it. Then select the model, restart the IDE, or open a new terminal as required by that client. The same process applies when updating an existing connection.
 
-### “测试连接”成功，为什么聊天仍然失败？
+### Test connection succeeded. Why does chat still fail?
 
-它只检查模型目录接口。请继续核对模型 ID、接口协议、客户端支持的能力、账号权限和供应商可用额度，并在实际客户端中验证。目录返回了某个模型，不代表它一定支持工具调用、图片或特定上下文长度。
+The test only checks the model catalog endpoint. Check the model ID, protocol, client capabilities, account access, and available provider quota, then verify a request in the actual client. A model appearing in the catalog does not prove support for tools, images, or a particular context length.
 
-### 获取不到模型，能不能继续配置？
+### Can I continue if fetching models does not work?
 
-可以。若供应商没有兼容的目录接口，直接手动填写模型 ID；Azure 填部署名称。如果提示权限被拒绝、网络错误或格式不支持，先核对地址、密钥和供应商文档，不能把目录读取失败直接等同于模型不可用。
+Yes. If the provider does not expose a compatible catalog endpoint, enter model IDs manually; use deployment names for Azure. If access is denied, a network error occurs, or the response format is unsupported, check the endpoint, key, and provider documentation. Failure to read the catalog does not by itself prove that inference is unavailable.
 
-### 发布后仍看不到模型，先查哪里？
+### I published the configuration but still cannot see the model. What should I check?
 
-先查看 **总览 → 最近一次发布**的逐目标结果，再核对：
+Start with the per-target results under **Overview → Latest publication**, then check:
 
-1. 是否发布到了实际正在使用的 VS Code 配置档案或 JetBrains 运行时目录。
-2. 该目标是自动写入成功，还是仍需手动处理。
-3. IDE 是否需要重新打开，CLI 是否在新终端、新会话中运行。
-4. 插件版本和客户端是否受支持；JetBrains 尤其需要核对固定版本表。
-5. 客户端是否已完成官方登录，并在模型选择器中主动选用。
+1. Whether you published to the VS Code profile or JetBrains runtime directory you are actually using.
+2. Whether the target was written successfully or still requires manual setup.
+3. Whether the IDE needs reopening, or the CLI is running in a new terminal and session.
+4. Whether the client and plugin version are supported; JetBrains requires the exact reviewed versions.
+5. Whether you completed official sign-in and explicitly selected the model in the client.
 
-“客户端模型来源”只核对本软件发布的配置，不读取客户端当前选中的模型。
+**Client model sources (客户端模型来源)** only checks configuration published by this manager. It does not read the client's currently selected model.
 
-### CLI 提示已有配置冲突，或者我想回到官方路由怎么办？
+### What if the CLI reports a configuration conflict, or I want to return to the official route?
 
-当前适配器不接管已有的 `providers.json` 注册表。若其优先级遮蔽了环境变量路由，软件会拒绝发布；请自行核对 CLI 的现有配置，不要直接删除含凭据的文件。
+The current adapter does not take over an existing `providers.json` registry. If that registry takes precedence over the environment route, publication is refused. Review the CLI's existing configuration yourself; do not simply delete credential-bearing files.
 
-要撤销本软件的覆盖，使用对应连接的 **预览撤销并删除**，先查看它会影响哪些已发布目标，确认后新开终端和 CLI 会话。该操作只撤销本软件拥有的配置；若仍有用户自行设置的路由，它们会保留，还需在 CLI 内核对实际路由。
+To remove this manager's override, use **Preview revocation and deletion** on the relevant connection. Review all affected published targets, confirm, then open a new terminal and CLI session. This only revokes configuration owned by the manager. Any independently configured routes remain, so check the effective route inside the CLI afterward.
 
-### 为什么 JetBrains 不支持我的版本？
+### Why is my JetBrains version unsupported?
 
-自动写入只对已审核的确切插件发行版开放。较新、未知、禁用或自定义路径中的插件可能需要手动处理。请提供 IDE 与插件版本反馈兼容性问题，不要为绕过检查修改版本标记。检测到了 IDE 配置目录，也不等于已验证这个 IDE 能运行或发起请求。
+Automatic writes are enabled only for exact reviewed plugin distributions. Newer, unknown, disabled, or custom-path plugins may require manual handling. Report compatibility issues with the IDE and plugin versions; do not change version markers to bypass checks. Detecting an IDE configuration directory does not prove that the IDE can run or make a request.
 
-### 为什么发布按钮不可用，或者要求重新预览？
+### Why is publishing disabled, or why must I generate another preview?
 
-检查连接是否启用，以及是否出现只读恢复提示。修改目标、配置变化、预览使用过或超过 15 分钟后，都需重新生成预览。如果提示上次操作中断，先按 **核对安全恢复**引导处理；详情在 **更多 → 设置**和 **活动记录**。
+Check whether the connection is enabled and whether a read-only recovery notice is displayed. A changed target, changed configuration, used preview, or preview older than 15 minutes requires a new review. If the app reports an interrupted operation, follow **Review safe recovery (核对安全恢复)** first. Details are under **More → Settings** and **Activity**.
 
-### 用量为什么为空，或者显示“未知”“部分覆盖”？
+### Why is usage empty, unknown, or only partially covered?
 
-检查来源是否已启用并导入、时间筛选是否正确、VS Code 是否已经产生支持的导出记录。正在进行的 CLI 会话可能尚未写入可导入的结束统计。未覆盖的来源、缺失字段和无权限的账单都会保留其真实状态，空白不等于没使用或不收费。
+Check that the source is enabled and imported, the date filters are correct, and VS Code has generated supported export records. An active CLI session may not have written its importable shutdown statistics yet. Unsupported sources, missing fields, and inaccessible Billing retain their actual states. An empty view does not mean no usage or no charges.
 
-### 密钥和数据放在哪里？能否直接分享配置排查问题？
+### Where are keys and data stored? Can I share configuration files for troubleshooting?
 
-在 **更多 → 设置**中查看实际状态文件和用量数据库位置。管理器的 API 密钥与独立 GitHub 授权存放在系统凭据库；发布后的客户端配置及私有回滚数据可能包含密钥。
+Check **More → Settings** for the actual state-file and usage-database locations. The manager's API keys and separate GitHub authorization are stored in the operating-system credential store. Published client configuration and private rollback data may contain keys.
 
-不要分享完整配置、数据库、环境变量、回滚文件或原始会话日志。反馈时只提供版本、操作步骤、脱敏后的错误和状态。完整规则见[安全说明](SECURITY.md)。
+Do not share complete configuration files, databases, environment variables, rollback files, or raw session logs. Reports should contain versions, reproduction steps, and redacted errors and statuses only. See the [security policy](SECURITY.md) for complete guidance.
 
 <a id="naming-and-compatibility"></a>
 
-### 为什么部分地方仍叫 PilotWeave？
+### Why do some places still say PilotWeave?
 
-项目已更名为 CopilotBYOKManager，但旧配置目录、凭据服务、受管标记、`dev.pilotweave.desktop`、`pilotweave` 程序/包名和 `PILOTWEAVE_*` 选项仍保留兼容名称。窗口或本地构建产物也可能显示旧名。**不要手动重命名这些数据目录或凭据标识。**
+The project has been renamed to CopilotBYOKManager, but existing configuration directories, credential services, ownership markers, `dev.pilotweave.desktop`, `pilotweave` executable/package names, and `PILOTWEAVE_*` options retain their compatibility identifiers. Window titles or locally built artifacts may also use the former name. **Do not rename these data directories or credential identifiers manually.**
 
-旧仓库克隆可以更新远程地址，不需要因此重建用户配置：
+Existing clones can update their remote URL without rebuilding user configuration:
 
 ```bash
 git remote set-url origin https://github.com/AvaloNero/CopilotBYOKManager.git
 ```
 
-## 隐私与当前边界
+## Privacy and current limits
 
-- 不复制客户端的 OAuth Token、浏览器 Cookie、VS Code SecretStorage 或 JetBrains Password Safe。
-- 用量导入只持久化允许的元数据，不保存或上传提示词、回复、源代码、工具内容或原始日志行。
-- 发布前展示变更，并保留受管写入的恢复信息；目标被外部修改后不会强行回滚覆盖。
-- 当前不提供组织/企业账单、Provider 发票查询、云端用量同步、超额付费设置，也不提供完整的 macOS/Linux 一键安装。
-- 自动化与隔离环境测试不能替代真实客户端验收。已实现能力、未覆盖范围及验证记录见[实现状态](docs/implementation-status.md)。
+- No copying client OAuth tokens, browser cookies, VS Code SecretStorage, or JetBrains Password Safe.
+- Usage imports persist only allowlisted metadata. They do not retain or upload prompts, responses, source code, tool content, or raw log lines.
+- Publication displays changes before writing and retains recovery information for managed writes. Rollback does not force an overwrite after an external change.
+- Organization/enterprise Billing, provider invoice retrieval, cloud usage synchronization, overage settings, and full macOS/Linux one-click installation are not provided.
+- Automated and isolated tests do not replace real-client acceptance. See [implementation status](docs/implementation-status.md) for implemented capabilities, coverage gaps, and validation records.
 
-## 获取帮助与参与开发
+## Help and contributing
 
-使用问题可提交到 [GitHub Issues](https://github.com/AvaloNero/CopilotBYOKManager/issues)。建议提供操作系统、软件提交版本、相关客户端和插件版本、复现步骤、预期与实际结果，以及脱敏后的状态信息。安全问题请按 [SECURITY.md](SECURITY.md) 私下报告。
+Report usage problems through [GitHub Issues](https://github.com/AvaloNero/CopilotBYOKManager/issues). Include your operating system, application commit, relevant client and plugin versions, reproduction steps, expected and actual behavior, and redacted status information. Report security issues privately as described in [SECURITY.md](SECURITY.md).
 
-更多资料：[文档索引](docs/README.md) · [模型目录兼容性](docs/provider-model-discovery.md) · [JetBrains 支持](docs/jetbrains-support.md) · [用量来源](docs/usage-sources.md)。
+Further reading: [Documentation index](docs/README.md) · [Model catalog compatibility](docs/provider-model-discovery.md) · [JetBrains support](docs/jetbrains-support.md) · [Usage sources](docs/usage-sources.md).
 
 <details>
-<summary>开发、构建与检查</summary>
+<summary>Development, builds, and checks</summary>
 
-桌面端使用 Tauri、Rust 和轻量 Web 前端。参与实现前请阅读 [AGENTS.md](AGENTS.md)、[MVP 规范](docs/mvp-implementation-spec.md)和[架构说明](docs/architecture.md)。
+The desktop app uses Tauri, Rust, and a lightweight web frontend. Before implementing changes, read [AGENTS.md](AGENTS.md), the [MVP specification](docs/mvp-implementation-spec.md), and the [architecture](docs/architecture.md).
 
-在仓库根目录运行：
+Run from the repository root:
 
 ```bash
 npm run check:web
@@ -335,23 +337,23 @@ cargo clippy --workspace --all-targets -- -D warnings
 git diff --check
 ```
 
-`npm run check` 包含 Web 与 Rust 检查，差异空白检查需另行运行。CI 在 Ubuntu、Windows 和 macOS 上检查，并在 Windows 构建原生应用。
+`npm run check` includes the web and Rust checks; run the whitespace check separately. CI checks Ubuntu, Windows, and macOS, and builds the native app on Windows.
 
-可选浏览器回归入口为 `node apps/desktop/web/tests/browser-smoke.cjs`。需要时设置 `PILOTWEAVE_PLAYWRIGHT` 为已安装的 Playwright 模块路径，`PILOTWEAVE_BROWSER` 指定浏览器。测试使用隔离配置、模拟数据和临时截图，不代表真实客户端验收。
+The optional browser regression entry point is `node apps/desktop/web/tests/browser-smoke.cjs`. If needed, set `PILOTWEAVE_PLAYWRIGHT` to an installed Playwright module path and `PILOTWEAVE_BROWSER` to the browser executable. These tests use isolated profiles, simulated data, and temporary screenshots. They are not real-client acceptance.
 
-源码位置：
+Source locations:
 
-- [原生后端与适配器](apps/desktop/src-tauri/)
-- [桌面前端](apps/desktop/web/)
-- [交互设计参考](prototype/)
-- [验证与打包脚本](scripts/)
+- [Native backend and adapters](apps/desktop/src-tauri/)
+- [Desktop frontend](apps/desktop/web/)
+- [Interactive design reference](prototype/)
+- [Validation and packaging scripts](scripts/)
 
-测试和验收边界见[本地验证计划](docs/local-validation-plan.md)与[验证记录](docs/implementation-status.md#validation-evidence)。
+See the [local validation plan](docs/local-validation-plan.md) and [validation records](docs/implementation-status.md#validation-evidence) for test and acceptance boundaries.
 
 </details>
 
-## 许可证
+## License
 
-[MIT](LICENSE)。
+[MIT](LICENSE).
 
-本项目独立开发，与 GitHub、JetBrains 无隶属、赞助或背书关系。GitHub、GitHub Copilot 和 JetBrains 等名称属于各自权利人。
+This is an independent community project, not affiliated with, sponsored by, or endorsed by GitHub or JetBrains. GitHub, GitHub Copilot, and JetBrains product names belong to their respective owners.
