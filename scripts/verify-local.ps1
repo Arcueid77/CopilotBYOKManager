@@ -5,7 +5,7 @@ param(
     [ValidateSet('HostObserve', 'DedicatedUser')][string]$LiveTarget = 'HostObserve',
     [switch]$Resume,
     [ValidateSet('InstallPackage', 'InstallFirstComponent', 'InstallRemainingComponents', 'SignIn', 'AccountConfirmation', 'ProviderSetup', 'GitHubAuthorization', 'UsageSources')][string]$CompletedAction,
-    [string]$ToolRoot = "$env:LOCALAPPDATA\PilotWeave-validation\tools"
+    [string]$ToolRoot = "$env:LOCALAPPDATA\CopilotBYOKManager-validation\tools"
 )
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path $PSScriptRoot -Parent
@@ -20,7 +20,7 @@ function Assert-PlainPath([string]$Path) {
     }
 }
 if (!$RunId) { $RunId = (Get-Date -Format 'yyyyMMdd-HHmmss') + '-' + ([guid]::NewGuid().ToString('N').Substring(0,8)) }
-$runRoot = Join-Path "$env:LOCALAPPDATA\PilotWeave-validation\runs" $RunId
+$runRoot = Join-Path "$env:LOCALAPPDATA\CopilotBYOKManager-validation\runs" $RunId
 Assert-PlainPath $runRoot
 Assert-PlainPath $ToolRoot
 New-Item -ItemType Directory -Path $runRoot -Force | Out-Null
@@ -43,7 +43,7 @@ foreach ($arg in @((Join-Path $PSScriptRoot 'verify-local.mjs'), $Mode, $runRoot
 . (Join-Path $PSScriptRoot 'validation-job.ps1')
 
 $release = Join-Path $runRoot ('launch-' + [guid]::NewGuid().ToString('N'))
-$start.Environment['PILOTWEAVE_VALIDATION_RELEASE'] = $release
+$start.Environment['COPILOT_BYOK_MANAGER_VALIDATION_RELEASE'] = $release
 $process = [Diagnostics.Process]::Start($start)
 # A hidden child must have owned output pipes rather than inherited console
 # handles. Drain both concurrently so verbose failures cannot block the runner.
@@ -51,12 +51,12 @@ $validationStdout = $process.StandardOutput.ReadToEndAsync()
 $validationStderr = $process.StandardError.ReadToEndAsync()
 $job = [IntPtr]::Zero
 try {
-    $job = [PilotWeaveValidationJob]::Attach($process.Handle)
+    $job = [CopilotBYOKManagerValidationJob]::Attach($process.Handle)
     [IO.File]::WriteAllText($release, 'ready')
     while (!$process.WaitForExit(500)) { }
     $result = $process.ExitCode
 } finally {
-    if ($job -ne [IntPtr]::Zero) { [PilotWeaveValidationJob]::CloseHandle($job) | Out-Null }
+    if ($job -ne [IntPtr]::Zero) { [CopilotBYOKManagerValidationJob]::CloseHandle($job) | Out-Null }
     elseif (!$process.HasExited) { $process.Kill($true) }
     if (Test-Path -LiteralPath $release) { Remove-Item -LiteralPath $release }
 }

@@ -1,5 +1,5 @@
 {
-  "productName": "PilotWeave Local Validation",
-  "identifier": "dev.pilotweave.local-validation",
+  "productName": "CopilotBYOKManager Local Validation",
+  "identifier": "io.github.avalonero.copilotbyokmanager.local-validation",
   "bundle": { "active": false }
 }

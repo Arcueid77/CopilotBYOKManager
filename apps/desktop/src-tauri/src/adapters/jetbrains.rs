@@ -12,7 +12,7 @@ use std::path::{Path, PathBuf};
 use uuid::Uuid;
 
 pub const PLUGIN_ID: &str = "com.github.copilot";
-pub const MANUAL_PROVIDER: &str = "This plugin version or endpoint is not supported by the automatic BYOK adapter. Update to a reviewed plugin version or use Copilot Chat > Manage Models. PilotWeave never reads client authentication or Password Safe.";
+pub const MANUAL_PROVIDER: &str = "This plugin version or endpoint is not supported by the automatic BYOK adapter. Update to a reviewed plugin version or use Copilot Chat > Manage Models. CopilotBYOKManager never reads client authentication or Password Safe.";
 pub const SIGN_IN: &str = "In each listed JetBrains IDE, use Tools > GitHub Copilot > Login to GitHub and complete the official browser flow. Check the selected account in each IDE. Public plugin metadata does not prove the IDE is running, authenticated, or configured.";
 const MAX_ENTRIES: usize = 128;
 const MAX_PROFILES: usize = 32;
@@ -250,7 +250,7 @@ fn inspect_profile(
 fn children(path: &Path, limit: usize) -> AppResult<Vec<String>> {
     // Checking a nonexistent sentinel checks every directory ancestor without
     // following junctions or treating an existing directory as a regular file.
-    safe_file::ensure_regular_or_missing(&path.join(".pilotweave-discovery-sentinel"))?;
+    safe_file::ensure_regular_or_missing(&path.join(".copilot-byok-manager-discovery-sentinel"))?;
     let entries = match fs::read_dir(path) {
         Ok(entries) => entries,
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(Vec::new()),

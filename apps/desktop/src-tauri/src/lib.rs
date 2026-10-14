@@ -26,6 +26,8 @@ pub mod transaction;
 mod usage;
 pub mod usage_db;
 mod validation;
+mod window_preferences;
+mod window_shell;
 mod write_lock;
 
 use account::LoginStore;
@@ -33,6 +35,7 @@ use commands::ManagedState;
 use github_auth::GithubAuthorizationStore;
 use redact::redact_text;
 use state::StateStore;
+use tauri::Manager;
 use usage_db::UsageDb;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -57,33 +60,48 @@ pub fn run() {
     #[cfg(feature = "local-e2e")]
     let context = {
         let mut context = context;
-        context.config_mut().identifier = "dev.pilotweave.local-validation".into();
+        context.config_mut().identifier = window_shell::isolated_instance_identifier(
+            test_support::root().expect("validated context"),
+        );
         // Build the test window in setup so its absolute WebView directory is native-owned.
         context.config_mut().app.windows.clear();
         context
     };
-    let store = StateStore::open().unwrap_or_else(StateStore::unavailable);
-    let login_store = LoginStore::open();
-    let github_authorization = GithubAuthorizationStore::open();
-    // The usage database is isolated from connection management: when it
-    // cannot be opened the app still runs and reports the unavailable state.
-    let (usage_db, usage_db_error) = match UsageDb::open().and_then(|db| {
-        usage::importer::initialize(&db)?;
-        usage::store::recover(&db)?;
-        Ok(db)
-    }) {
-        Ok(db) => (Some(db), None),
-        Err(error) => (None, Some(redact_text(&error.to_string()))),
-    };
-    tauri::Builder::default()
+    let builder = tauri::Builder::default();
+    // Register first: a second launch must exit before opening/recovering stores.
+    #[cfg(target_os = "windows")]
+    let builder = builder.plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+        window_shell::restore(app);
+    }));
+    builder
         .setup(|app| {
+            let store = StateStore::open().unwrap_or_else(StateStore::unavailable);
+            let login_store = LoginStore::open();
+            let github_authorization = GithubAuthorizationStore::open();
+            // Unavailable Usage storage must not block provider management.
+            let (usage_db, usage_db_error) = match UsageDb::open().and_then(|db| {
+                usage::importer::initialize(&db)?;
+                usage::store::recover(&db)?;
+                Ok(db)
+            }) {
+                Ok(db) => (Some(db), None),
+                Err(error) => (None, Some(redact_text(&error.to_string()))),
+            };
+            app.manage(ManagedState::new(
+                store,
+                login_store,
+                github_authorization,
+                usage_db,
+                usage_db_error,
+            ));
+            app.manage(window_shell::WindowShellState::open());
             #[cfg(feature = "local-e2e")]
             tauri::WebviewWindowBuilder::new(
                 app,
                 "main",
                 tauri::WebviewUrl::App("index.html".into()),
             )
-            .title("PilotWeave — ISOLATED VALIDATION")
+            .title("CopilotBYOKManager — ISOLATED VALIDATION")
             .inner_size(1180.0, 820.0)
             .data_directory(
                 test_support::root()
@@ -94,17 +112,17 @@ pub fn run() {
             #[cfg(not(feature = "local-e2e"))]
             app.handle()
                 .plugin(tauri_plugin_log::Builder::new().build())?;
+            if window_shell::initialize(app.handle()).is_err() {
+                log::warn!("System tray unavailable; closing the window will exit normally");
+            }
             Ok(())
         })
+        .on_window_event(window_shell::on_window_event)
         .plugin(tauri_plugin_opener::init())
-        .manage(ManagedState::new(
-            store,
-            login_store,
-            github_authorization,
-            usage_db,
-            usage_db_error,
-        ))
         .invoke_handler(tauri::generate_handler![
+            window_shell::get_window_behavior,
+            window_shell::set_close_action,
+            window_shell::set_tray_locale,
             commands::get_dashboard,
             resources::commands::get_resources,
             resources::commands::upsert_resource,
@@ -155,5 +173,5 @@ pub fn run() {
             setup::confirm_manual_provider,
         ])
         .run(context)
-        .expect("error while running PilotWeave");
+        .expect("error while running CopilotBYOKManager");
 }

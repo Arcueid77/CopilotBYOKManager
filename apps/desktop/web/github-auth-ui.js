@@ -1,5 +1,7 @@
 (() => {
   "use strict";
+  const i18n = typeof module === "object" && module.exports ? require("./i18n.js") : globalThis.CopilotBYOKManagerI18n;
+  const tr = i18n.t;
 
   const invokeNative = window.__TAURI__?.core?.invoke ?? null;
   const isDesktop = typeof invokeNative === "function";
@@ -20,9 +22,8 @@
     hasSecret: false,
     scopes: [],
     billingCapability: "unknown",
-    billingDetail:
-      "读取个人账单前需要为本软件独立授权",
-    detail: "浏览器试用：没有独立 GitHub 授权",
+    get billingDetail() { return tr("读取个人账单前需要为本软件独立授权"); },
+    get detail() { return tr("浏览器试用：没有独立 GitHub 授权"); },
     validatedAt: null,
     recovery: null,
     cleanupWarning: null,
@@ -70,62 +71,62 @@
     return `
       <div class="github-auth-header">
         <div>
-          <p class="eyebrow">本软件独立授权</p>
-          <h2>GitHub 个人账单授权</h2>
-          <p>独立于客户端登录。令牌保存在系统凭据库，界面不回读。</p>
+          <p class="eyebrow">${tr("本软件独立授权")}</p>
+          <h2>${tr("GitHub 个人账单授权")}</h2>
+          <p>${tr("独立于客户端登录。令牌保存在系统凭据库，界面不回读。")}</p>
         </div>
         <div class="github-auth-actions">
-          <button class="button ghost small" data-github-auth-action="refresh" ${loading || !canRefresh ? "disabled" : ""}>${loading ? "检查中…" : "重新核验"}</button>
-          <button class="button primary small" data-github-auth-action="authorize" ${loading || readOnly ? "disabled" : ""}>${value?.hasSecret ? "更换授权" : "授权本软件"}</button>
-          <button class="button danger small" data-github-auth-action="clear" ${loading || !canClear ? "disabled" : ""}>清除</button>
+          <button class="button ghost small" data-github-auth-action="refresh" ${loading || !canRefresh ? "disabled" : ""}>${loading ? tr("检查中…") : tr("重新核验")}</button>
+          <button class="button primary small" data-github-auth-action="authorize" ${loading || readOnly ? "disabled" : ""}>${value?.hasSecret ? tr("更换授权") : tr("授权本软件")}</button>
+          <button class="button danger small" data-github-auth-action="clear" ${loading || !canClear ? "disabled" : ""}>${tr("清除")}</button>
         </div>
       </div>
       ${value?.recovery ? renderRecovery(value.recovery) : ""}
       ${value?.cleanupWarning ? renderCleanupWarning(value.cleanupWarning) : ""}
-      ${loading && !value ? '<div class="github-auth-loading">读取独立授权中…</div>' : ""}
-      ${!loading && !value ? '<div class="github-auth-loading">尚未读取授权状态，请刷新。</div>' : ""}
+      ${loading && !value ? `<div class="github-auth-loading">${tr("读取独立授权中…")}</div>` : ""}
+      ${!loading && !value ? `<div class="github-auth-loading">${tr("尚未读取授权状态，请刷新。")}</div>` : ""}
       ${value ? `
         <div class="github-auth-grid">
           <article class="github-auth-identity">
             <div class="github-auth-card-heading">
-              <span>已核验身份</span>
+              <span>${tr("已核验身份")}</span>
               <span class="github-auth-state ${stateClass(value.state)}">${escapeHtml(stateLabel(value.state))}</span>
             </div>
-            <strong>${identity ? `${escapeHtml(identity.login)} · ${escapeHtml(identity.host)}` : "未授权"}</strong>
+            <strong>${identity ? `${escapeHtml(identity.login)} · ${escapeHtml(identity.host)}` : tr("未授权")}</strong>
             <p>${escapeHtml(value.detail)}</p>
             <div class="github-auth-meta">
-              <span>${identity?.userId != null ? `GitHub 用户 ID ${escapeHtml(identity.userId)}` : "用户 ID 不可用"}</span>
-              <span>${value.validatedAt ? `核验时间 ${escapeHtml(formatDateTime(value.validatedAt))}` : "尚未核验"}</span>
+              <span>${identity?.userId != null ? tr("GitHub 用户 ID {0}", escapeHtml(identity.userId)) : tr("用户 ID 不可用")}</span>
+              <span>${value.validatedAt ? tr("核验时间 {0}", escapeHtml(formatDateTime(value.validatedAt))) : tr("尚未核验")}</span>
             </div>
           </article>
           <article class="github-auth-billing">
             <div class="github-auth-card-heading">
-              <span>个人账单访问能力</span>
+              <span>${tr("个人账单访问能力")}</span>
               <span class="github-auth-state ${billingClass(value.billingCapability)}">${escapeHtml(billingLabel(value.billingCapability))}</span>
             </div>
             <strong>${billingTitle(value.billingCapability)}</strong>
             <p>${escapeHtml(value.billingDetail)}</p>
-            <div class="github-auth-permission">高级请求账单需要精细权限令牌，用户权限为 <strong>Plan · read</strong> 。</div>
+            <div class="github-auth-permission">${tr("高级请求账单需要精细权限令牌，用户权限为")} <strong>Plan · read</strong> 。</div>
           </article>
         </div>
         <div class="github-auth-scopes">
-          <div><strong>返回的 OAuth 权限</strong><span>精细权限令牌可能不返回权限列表，以账单接口核验结果为准。</span></div>
-          <div class="github-auth-scope-list">${scopes.length ? scopes.slice(0, 12).map((scope) => `<span>${escapeHtml(scope)}</span>`).join("") : '<span class="muted-scope">未提供</span>'}</div>
+          <div><strong>${tr("返回的 OAuth 权限")}</strong><span>${tr("精细权限令牌可能不返回权限列表，以账单接口核验结果为准。")}</span></div>
+          <div class="github-auth-scope-list">${scopes.length ? scopes.slice(0, 12).map((scope) => `<span>${escapeHtml(scope)}</span>`).join("") : `<span class="muted-scope">${tr("未提供")}</span>`}</div>
         </div>
       ` : ""}
       <div class="github-auth-boundary">
-        <strong>安全边界</strong>
-        <span>不读取客户端凭据。更换授权失败时保留原有效授权。</span>
+        <strong>${tr("安全边界")}</strong>
+        <span>${tr("不读取客户端凭据。更换授权失败时保留原有效授权。")}</span>
       </div>
     `;
   }
 
   function renderRecovery(reason) {
-    return `<div class="github-auth-warning danger"><strong>只读恢复</strong><span>${escapeHtml(reason)}</span></div>`;
+    return `<div class="github-auth-warning danger"><strong>${tr("只读恢复")}</strong><span>${escapeHtml(reason)}</span></div>`;
   }
 
   function renderCleanupWarning(reason) {
-    return `<div class="github-auth-warning"><strong>凭据清理需要核对</strong><span>${escapeHtml(reason)}</span></div>`;
+    return `<div class="github-auth-warning"><strong>${tr("凭据清理需要核对")}</strong><span>${escapeHtml(reason)}</span></div>`;
   }
 
   async function invoke(command, args = {}) {
@@ -137,7 +138,7 @@
       case "authorize_github": {
         const token = String(args.token ?? "");
         if (!token || token.trim() !== token || /[\r\n\0]/.test(token)) {
-          throw new Error("令牌须为单行，且首尾没有空格");
+          throw new Error(tr("令牌须为单行，且首尾没有空格"));
         }
         Object.assign(browserStatus, {
           state: "verified",
@@ -151,9 +152,9 @@
           scopes: [],
           billingCapability: "available",
           billingDetail:
-            "浏览器试用：仅模拟个人高级请求账单访问",
+            tr("浏览器试用：仅模拟个人高级请求账单访问"),
           detail:
-            "浏览器试用：仅模拟独立授权，令牌未保存",
+            tr("浏览器试用：仅模拟独立授权，令牌未保存"),
           validatedAt: new Date().toISOString(),
           recovery: null,
           cleanupWarning: null,
@@ -172,15 +173,15 @@
           scopes: [],
           billingCapability: "unknown",
           billingDetail:
-            "读取个人账单前需要为本软件独立授权",
-          detail: "浏览器试用：没有独立 GitHub 授权",
+            tr("读取个人账单前需要为本软件独立授权"),
+          detail: tr("浏览器试用：没有独立 GitHub 授权"),
           validatedAt: null,
           recovery: null,
           cleanupWarning: null,
         });
         return structuredClone(browserStatus);
       default:
-        throw new Error(`不支持的 GitHub 授权试用操作：${command}`);
+        throw new Error(tr("不支持的 GitHub 授权试用操作：{0}", command));
     }
   }
 
@@ -192,8 +193,8 @@
       const value = await invoke("get_github_authorization_status");
       validateStatus(value);
       status = value;
-      document.dispatchEvent(new Event("pilotweave:refresh-setup"));
-      if (!quiet) showToast("GitHub 授权状态已刷新");
+      document.dispatchEvent(new Event("copilot-byok-manager:refresh-setup"));
+      if (!quiet) showToast(tr("GitHub 授权状态已刷新"));
     } catch (error) {
       showToast(error?.message ?? String(error), "error");
     } finally {
@@ -204,7 +205,7 @@
 
   function validateStatus(value) {
     if (!value || typeof value.state !== "string") {
-      throw new Error("GitHub 授权响应格式不受支持");
+      throw new Error(tr("GitHub 授权响应格式不受支持"));
     }
     if (!Array.isArray(value.scopes)) value.scopes = [];
   }
@@ -213,26 +214,26 @@
     if (!dialog().prepare()) return;
     modalRoot.innerHTML = `
       <div class="modal-backdrop github-auth-modal-backdrop" role="presentation">
-        <section class="modal github-auth-modal" role="dialog" aria-modal="true" aria-label="独立 GitHub 授权">
+        <section class="modal github-auth-modal" role="dialog" aria-modal="true" aria-label="${tr("独立 GitHub 授权")}">
           <header class="modal-header">
-            <div><p class="eyebrow">独立授权</p><h2>授权本软件</h2></div>
-            <button class="icon-button" data-github-auth-close aria-label="关闭">×</button>
+            <div><p class="eyebrow">${tr("独立授权")}</p><h2>${tr("授权本软件")}</h2></div>
+            <button class="icon-button" data-github-auth-close aria-label="${tr("关闭")}">×</button>
           </header>
           <div class="modal-body">
             <div class="github-auth-modal-copy">
-              使用你自己的精细权限令牌，授予 <strong>Plan · read</strong> 用户权限。先核验身份，再检查个人账单访问；令牌不写入 JSON。
+              ${tr("使用你自己的精细权限令牌，授予")} <strong>Plan · read</strong> ${tr("用户权限。先核验身份，再检查个人账单访问；令牌不写入 JSON。")}
             </div>
             <form id="github-auth-form" class="form-grid">
               <div class="form-field full">
-                <label for="github-auth-token">GitHub 精细权限令牌</label>
+                <label for="github-auth-token">${tr("GitHub 精细权限令牌")}</label>
                 <input id="github-auth-token" name="token" type="password" autocomplete="new-password" required maxlength="65536" placeholder="github_pat_…" />
-                <small>更换失败不会覆盖原有效令牌。</small>
+                <small>${tr("更换失败不会覆盖原有效令牌。")}</small>
               </div>
             </form>
           </div>
           <footer class="modal-footer">
-            <button class="button ghost" data-github-auth-close>取消</button>
-            <button class="button primary" data-github-auth-submit>核验并保存</button>
+            <button class="button ghost" data-github-auth-close>${tr("取消")}</button>
+            <button class="button primary" data-github-auth-submit>${tr("核验并保存")}</button>
           </footer>
         </section>
       </div>`;
@@ -260,18 +261,18 @@
     const submit = modalRoot.querySelector("[data-github-auth-submit]");
     if (submit) {
       submit.disabled = true;
-      submit.textContent = "核验中…";
+      submit.textContent = tr("核验中…");
     }
     try {
       const value = await invoke("authorize_github", { token });
       tokenInput.value = "";
       validateStatus(value);
       status = value;
-      document.dispatchEvent(new Event("pilotweave:refresh-setup"));
+      document.dispatchEvent(new Event("copilot-byok-manager:refresh-setup"));
       closeModal();
       showToast(
         value.state === "verified"
-          ? "独立 GitHub 授权已保存"
+          ? tr("独立 GitHub 授权已保存")
           : value.detail,
         value.state === "verified" ? "success" : "error",
       );
@@ -281,7 +282,7 @@
       showToast(error?.message ?? String(error), "error");
       if (submit) {
         submit.disabled = false;
-        submit.textContent = "核验并保存";
+        submit.textContent = tr("核验并保存");
       }
     }
   }
@@ -290,10 +291,10 @@
     if (!dialog().prepare()) return;
     modalRoot.innerHTML = `
       <div class="modal-backdrop github-auth-modal-backdrop" role="presentation">
-        <section class="modal github-auth-modal" role="dialog" aria-modal="true" aria-label="清除 GitHub 授权">
-          <header class="modal-header"><h2>清除独立 GitHub 授权</h2><button class="icon-button" data-github-auth-close aria-label="关闭">×</button></header>
-          <div class="modal-body"><p class="github-auth-modal-copy">删除本软件的授权记录和专用凭据，不退出任何客户端账号。</p></div>
-          <footer class="modal-footer"><button class="button ghost" data-github-auth-close>取消</button><button class="button danger" data-github-auth-confirm-clear>确认清除授权</button></footer>
+        <section class="modal github-auth-modal" role="dialog" aria-modal="true" aria-label="${tr("清除 GitHub 授权")}">
+          <header class="modal-header"><h2>${tr("清除独立 GitHub 授权")}</h2><button class="icon-button" data-github-auth-close aria-label="${tr("关闭")}">×</button></header>
+          <div class="modal-body"><p class="github-auth-modal-copy">${tr("删除本软件的授权记录和专用凭据，不退出任何客户端账号。")}</p></div>
+          <footer class="modal-footer"><button class="button ghost" data-github-auth-close>${tr("取消")}</button><button class="button danger" data-github-auth-confirm-clear>${tr("确认清除授权")}</button></footer>
         </section>
       </div>`;
     dialog().mount();
@@ -312,10 +313,10 @@
       const value = await invoke("clear_github_authorization");
       validateStatus(value);
       status = value;
-      document.dispatchEvent(new Event("pilotweave:refresh-setup"));
+      document.dispatchEvent(new Event("copilot-byok-manager:refresh-setup"));
       closeModal();
       showToast(
-        value.cleanupWarning ?? "独立 GitHub 授权已清除",
+        value.cleanupWarning ?? tr("独立 GitHub 授权已清除"),
         value.cleanupWarning ? "error" : "success",
       );
       markChanged();
@@ -333,9 +334,9 @@
       const value = await invoke("refresh_github_authorization");
       validateStatus(value);
       status = value;
-      document.dispatchEvent(new Event("pilotweave:refresh-setup"));
+      document.dispatchEvent(new Event("copilot-byok-manager:refresh-setup"));
       showToast(
-        value.state === "verified" ? "授权已核验" : value.detail,
+        value.state === "verified" ? tr("授权已核验") : value.detail,
         value.state === "verified" ? "success" : "error",
       );
     } catch (error) {
@@ -347,22 +348,22 @@
   }
 
   let modalLifecycle;
-  function dialog() { return modalLifecycle ??= window.PilotWeaveUI.modal({ root: modalRoot, background: document.querySelector(".app-shell"), cleanup() { modalRoot.replaceChildren(); } }); }
+  function dialog() { return modalLifecycle ??= window.CopilotBYOKManagerUI.modal({ root: modalRoot, background: document.querySelector(".app-shell"), cleanup() { modalRoot.replaceChildren(); } }); }
   function closeModal(event) {
     return event?.type ? dialog().requestClose() : dialog().close();
   }
 
   function stateLabel(value) {
     return {
-      missing: "缺失",
-      verified: "已验证",
-      unauthorized: "授权失效",
-      forbidden: "无权限",
-      networkError: "网络错误",
-      credentialUnavailable: "凭据库不可用",
-      schemaError: "格式不受支持",
-      conflict: "冲突",
-      readOnlyRecovery: "只读恢复",
+      missing: tr("缺失"),
+      verified: tr("已验证"),
+      unauthorized: tr("授权失效"),
+      forbidden: tr("无权限"),
+      networkError: tr("网络错误"),
+      credentialUnavailable: tr("凭据库不可用"),
+      schemaError: tr("格式不受支持"),
+      conflict: tr("冲突"),
+      readOnlyRecovery: tr("只读恢复"),
     }[value] ?? value;
   }
 
@@ -381,11 +382,11 @@
 
   function billingLabel(value) {
     return {
-      available: "可用",
-      insufficientPermission: "需要授权",
-      notCovered: "未覆盖",
-      unavailable: "不可用",
-      unknown: "未知",
+      available: tr("可用"),
+      insufficientPermission: tr("需要授权"),
+      notCovered: tr("未覆盖"),
+      unavailable: tr("不可用"),
+      unknown: tr("未知"),
     }[value] ?? value;
   }
 
@@ -401,18 +402,18 @@
 
   function billingTitle(value) {
     return {
-      available: "可读取高级请求账单",
-      insufficientPermission: "身份有效，但缺少 Plan read 权限",
-      notCovered: "此账号未提供个人账单访问",
-      unavailable: "账单能力核验未完成，请重试",
-      unknown: "尚未核验账单能力",
-    }[value] ?? "账单能力未知";
+      available: tr("可读取高级请求账单"),
+      insufficientPermission: tr("身份有效，但缺少 Plan read 权限"),
+      notCovered: tr("此账号未提供个人账单访问"),
+      unavailable: tr("账单能力核验未完成，请重试"),
+      unknown: tr("尚未核验账单能力"),
+    }[value] ?? tr("账单能力未知");
   }
 
   function formatDateTime(value) {
     const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return "时间未知";
-    return new Intl.DateTimeFormat(undefined, {
+    if (Number.isNaN(date.getTime())) return tr("时间未知");
+    return new Intl.DateTimeFormat(i18n.locale(), {
       dateStyle: "medium",
       timeStyle: "short",
     }).format(date);
@@ -434,7 +435,7 @@
     }
   });
 
-  window.PilotWeaveGithubAuth = {
+  window.CopilotBYOKManagerGithubAuth = {
     hydrate(value) { status = value; renderVersion += 1; },
     mount: ensurePanel,
     previewStatus: () => structuredClone(browserStatus),

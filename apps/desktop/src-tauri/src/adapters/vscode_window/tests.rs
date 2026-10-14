@@ -13,7 +13,7 @@ fn unresponsive_window_does_not_block_account_discovery() {
     let (stop_tx, stop_rx) = mpsc::channel();
     let window_thread = thread::spawn(move || {
         let class: Vec<u16> = "STATIC\0".encode_utf16().collect();
-        let title: Vec<u16> = "PilotWeave test fixture\0".encode_utf16().collect();
+        let title: Vec<u16> = "CopilotBYOKManager test fixture\0".encode_utf16().collect();
         // Own an off-screen, non-activating 1px window in this test process.
         // It deliberately has no message loop. No real client is opened.
         let window = unsafe {

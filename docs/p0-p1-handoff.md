@@ -36,7 +36,7 @@ Final verification on 2026-09-10, against the uncommitted worktree on `main@cbdb
 | `cargo clippy --workspace --all-targets -- -D warnings` | Passed |
 | `git diff --check` | Passed after removing one trailing space |
 | `node apps/desktop/web/tests/browser-smoke.cjs` | Passed all 12 isolated browser scenarios |
-| `npm run build -- --no-bundle` | Passed Windows Release build; produced `target/release/pilotweave.exe` without launching it |
+| `npm run build -- --no-bundle` | Passed a Windows Release build without launching it; this historical result does not validate the current executable identity |
 
 The optional browser test uses a fresh headless Edge profile and in-memory native fixtures. It covers preview routes, account confirmation, reviewed deployment arguments, manual provider completion, quota/Billing refresh, model/session views, source consent/import/clear, price refresh, filters and reviewed interrupted-deployment recovery, external conflicts and missing targets. Home, model and source screenshots were visually inspected. These fixture screenshots do not prove native readiness or real account/usage data.
 

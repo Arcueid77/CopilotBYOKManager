@@ -1,5 +1,7 @@
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
+const i18n = require("../i18n.js");
+test.beforeEach(() => i18n.setLocale("zh-CN", { persist: false }));
 const setup = require("../setup-ui.js");
 const usage = require("../usage-ui.js");
 const connection = { id: "connection", name: "Fixture", models: [{ modelId: "gpt-5", name: "GPT-5", enabled: true }] };
@@ -26,7 +28,8 @@ test("money rendering preserves decimal precision and unknown is distinct from e
   assert.equal(usage.value(0), "0"); assert.match(usage.value(null), /未知/);
 });
 
-test("legacy setup renderer keeps editable controls and scoped sign-in for compatibility", () => {
+test("setup renderer keeps editable controls and scoped sign-in in English", () => {
+  i18n.setLocale("en", { persist: false });
   const d = data();
   d.setup.accounts = {surfaces:[{surface:'vsCodeCopilot',state:'actionRequired'}]};
   const html = setup.render(snapshot,d,true);
@@ -73,4 +76,12 @@ test("remote strings and source setup paths are escaped and cannot inject markup
   assert.doesNotMatch(usage.setupInstructions({ id: "vscode-otel", pathHint: "<script>attack()</script>", setupPath: 'C:\\<img onerror="bad">' }), /<script>|<img/);
   const markup = usage.render(snapshot, { errors: { localUsage: "<script>bad</script>" }, billing: { families: [] } }, false);
   assert.match(markup, /浏览器试用/); assert.doesNotMatch(markup, /<script>/); assert.match(markup, /disabled/);
+});
+
+test("session detail leads with labeled allowlisted metadata and preserves unknown and exact estimates", () => {
+  const markup = usage.recordDetails({ id: "hash", sourceId: "vscode-otel", rawModel: "<img src=x>", route: "unknown", confidence: "unknown", inputReported: "10000000000000000001", estimateUsd: "0.00000000000000000001", cacheWrite: null, prompt: "MUST_NOT_RENDER", response: "MUST_NOT_RENDER", headers: { secret: "MUST_NOT_RENDER" } });
+  assert.ok(markup.indexOf('usage-record-summary') < markup.indexOf('查看完整元数据 JSON'));
+  assert.match(markup, /&lt;img/); assert.doesNotMatch(markup, /<img|MUST_NOT_RENDER/);
+  assert.match(markup, /10000000000000000001/); assert.match(markup, /\$0.00000000000000000001/);
+  assert.match(markup, /未知/);
 });

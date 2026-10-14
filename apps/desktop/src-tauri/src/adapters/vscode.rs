@@ -13,9 +13,9 @@ const LANGUAGE_MODELS_FILE: &str = "chatLanguageModels.json";
 const PROFILE_STORAGE_FILE: &str = "storage.json";
 const MAX_CONFIG_BYTES: u64 = 8 * 1024 * 1024;
 const MAX_DISCOVERED_TARGETS: usize = 64;
-const MANAGED_MARKER: &str = "pilotWeaveManaged";
-const CONNECTION_ID_FIELD: &str = "pilotWeaveConnectionId";
-const OWNER_ID_FIELD: &str = "pilotWeaveInstallationOwnerId";
+const MANAGED_MARKER: &str = "copilotByokManagerManaged";
+const CONNECTION_ID_FIELD: &str = "copilotByokManagerConnectionId";
+const OWNER_ID_FIELD: &str = "copilotByokManagerInstallationOwnerId";
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -144,14 +144,15 @@ pub fn preview(connection: &Connection, target: &ClientTarget) -> DeploymentOper
     let model_count = connection.enabled_models().count();
     let changes = if model_count == 0 {
         vec![
-            "Remove the Custom Endpoint group owned by this PilotWeave connection".to_string(),
-            "Preserve every group not owned by this PilotWeave connection".to_string(),
+            "Remove the Custom Endpoint group owned by this CopilotBYOKManager connection"
+                .to_string(),
+            "Preserve every group not owned by this CopilotBYOKManager connection".to_string(),
             "Create a private rollback backup before the first write".to_string(),
         ]
     } else {
         vec![
             format!("Publish {model_count} enabled model(s) as one Custom Endpoint group"),
-            "Preserve every group not owned by this PilotWeave connection".to_string(),
+            "Preserve every group not owned by this CopilotBYOKManager connection".to_string(),
             "Create a private rollback backup before the first write".to_string(),
             "Materialize the credential only in the native client configuration".to_string(),
             "Publishing adds or updates only this supplier group; select a published model in the client's model picker".to_string(),
@@ -440,23 +441,19 @@ fn resolve_profile_dir(profiles_dir: &Path, location: &str) -> Option<PathBuf> {
 }
 
 fn read_groups(path: &Path) -> AppResult<Vec<Value>> {
-    if !path.exists() {
+    let Some(bytes) = crate::safe_io::read_optional(path, MAX_CONFIG_BYTES)? else {
         return Ok(Vec::new());
-    }
-    let metadata = fs::metadata(path).map_err(|error| AppError::io(path, error))?;
-    if metadata.len() > MAX_CONFIG_BYTES {
-        return Err(AppError::InvalidInput(format!(
-            "VS Code model configuration exceeds {} MiB",
-            MAX_CONFIG_BYTES / 1024 / 1024
-        )));
-    }
-    let text = fs::read_to_string(path).map_err(|error| AppError::io(path, error))?;
+    };
+    let text = std::str::from_utf8(&bytes)
+        .map_err(|_| AppError::Config("VS Code model configuration is not valid UTF-8".into()))?;
     if text.trim().is_empty() {
         return Ok(Vec::new());
     }
-    let value: Value = json5::from_str(&text).map_err(|error| {
+    let value: Value = json5::from_str(text).map_err(|_| {
+        // JSON5 diagnostics echo whole source lines, including foreign API keys.
+        // Redaction cannot know every secret or key name in client-owned data.
         AppError::Config(format!(
-            "Failed to parse VS Code model configuration {}: {error}",
+            "Failed to parse VS Code model configuration {}; repair its JSON/JSON5 syntax and preview again",
             path.display()
         ))
     })?;
@@ -513,8 +510,8 @@ fn render_group(connection: &Connection, secret: Option<&str>) -> Value {
         "vendor": "customendpoint",
         "apiKey": secret.unwrap_or_default(),
         "apiType": connection.protocol.as_str(),
-        "pilotWeaveManaged": true,
-        "pilotWeaveConnectionId": connection.id,
+        "copilotByokManagerManaged": true,
+        "copilotByokManagerConnectionId": connection.id,
         "models": models
     })
 }
@@ -559,7 +556,7 @@ fn effective_headers(connection: &Connection, secret: Option<&str>) -> BTreeMap<
 }
 
 fn backup_path(path: &Path) -> PathBuf {
-    path.with_extension("json.pilotweave.bak")
+    path.with_extension("json.copilot-byok-manager.bak")
 }
 
 #[cfg(test)]
@@ -660,8 +657,8 @@ mod tests {
         let connection = connection();
         let mut groups = vec![
             json!({"name":"User","vendor":"customendpoint"}),
-            json!({"name":"Old","vendor":"customendpoint", "pilotWeaveManaged":true, "pilotWeaveConnectionId":"openrouter"}),
-            json!({"name":"Other","vendor":"customendpoint", "pilotWeaveManaged":true, "pilotWeaveConnectionId":"other"}),
+            json!({"name":"Old","vendor":"customendpoint", "copilotByokManagerManaged":true, "copilotByokManagerConnectionId":"openrouter"}),
+            json!({"name":"Other","vendor":"customendpoint", "copilotByokManagerManaged":true, "copilotByokManagerConnectionId":"other"}),
         ];
         groups.retain(|group| !is_owned_group(group, &connection.id));
         groups.push(render_group(&connection, Some("secret")));
@@ -732,7 +729,7 @@ mod tests {
             "upstream/model-a"
         );
 
-        // The backup captured the pre-PilotWeave file exactly once.
+        // The backup captured the pre-CopilotBYOKManager file exactly once.
         let backup = fs::read_to_string(backup_path(&path)).expect("backup after first write");
         assert_eq!(backup, seed);
 

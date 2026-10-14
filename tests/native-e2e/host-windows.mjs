@@ -32,7 +32,7 @@ export class HostWindowWatch {
         const line = pending.slice(0, newline); pending = pending.slice(newline + 1);
         try {
           const windows = JSON.parse(line);
-          if (!Array.isArray(windows) || windows.length > 4096 || !windows.every(w => /^(?:code(?: - insiders)?|pilotweave):\d+:\d+$/.test(w))) throw new Error();
+          if (!Array.isArray(windows) || windows.length > 4096 || !windows.every(w => /^(?:code(?: - insiders)?|copilot-byok-manager):\d+:\d+$/.test(w))) throw new Error();
           this.current = windows;
           this.baseline ??= windows;
           for (const w of addedCodeWindows(this.baseline, windows)) this.added.add(w);
@@ -57,7 +57,7 @@ export class HostWindowWatch {
       await until(() => {
         if (failed || child.exitCode !== null) throw new Error('Default application exited during normal startup');
         this.assertClean();
-        return this.current.some(w => w.startsWith(`pilotweave:${child.pid}:`));
+        return this.current.some(w => w.startsWith(`copilot-byok-manager:${child.pid}:`));
       }, 'Normal application did not show a window', 20000);
       // Observe the real desktop entry point, without WebDriver navigation.
       for (let i = 0; i < 50; i++) { await delay(100); this.assertClean(); }

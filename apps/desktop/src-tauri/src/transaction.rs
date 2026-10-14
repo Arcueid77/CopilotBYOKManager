@@ -393,6 +393,7 @@ impl Transaction {
     }
 
     pub fn clear(self) -> AppResult<()> {
+        safe_io::ensure_regular_or_missing(&self.path)?;
         fs::remove_file(&self.path).map_err(|error| AppError::io(&self.path, error))
     }
 

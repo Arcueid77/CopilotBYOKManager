@@ -57,13 +57,13 @@ pub(super) fn routing_fingerprint() -> AppResult<String> {
 
 pub(super) fn ensure_environment_is_effective() -> AppResult<()> {
     if override_presence()?.into_iter().any(|value| value) {
-        return Err(AppError::Unsupported("Copilot has a custom public configuration root. Manage provider routing in the official client; PilotWeave did not change those overrides".into()));
+        return Err(AppError::Unsupported("Copilot has a custom public configuration root. Manage provider routing in the official client; CopilotBYOKManager did not change those overrides".into()));
     }
     let home = crate::platform::home_dir().ok_or_else(|| {
         AppError::Config("Cannot resolve Copilot provider configuration root".into())
     })?;
     if has_declarations(&home.join(".copilot/providers.json"))? {
-        return Err(AppError::Unsupported("Copilot providers.json takes precedence over legacy COPILOT_PROVIDER_* variables. Its existing declarations are not owned by PilotWeave; use the official client to review them before environment deployment".into()));
+        return Err(AppError::Unsupported("Copilot providers.json takes precedence over legacy COPILOT_PROVIDER_* variables. Its existing declarations are not owned by CopilotBYOKManager; use the official client to review them before environment deployment".into()));
     }
     Ok(())
 }

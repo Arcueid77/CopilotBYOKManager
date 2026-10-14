@@ -188,7 +188,7 @@ fn write_expected(
     let parent = path
         .parent()
         .ok_or_else(|| AppError::Config("File has no parent".into()))?;
-    let temp = parent.join(format!(".pilotweave-{}.tmp", Uuid::new_v4()));
+    let temp = parent.join(format!(".copilot-byok-manager-{}.tmp", Uuid::new_v4()));
     let result = (|| {
         let mut file = create_private(&temp).map_err(|error| AppError::io(&temp, error))?;
         #[cfg(unix)]

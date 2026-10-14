@@ -1,3 +1,3 @@
 fn main() {
-    pilotweave_lib::run();
+    copilot_byok_manager_lib::run();
 }

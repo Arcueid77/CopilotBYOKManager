@@ -541,9 +541,9 @@ mod tests {
         fs::remove_dir(manifest.parent().unwrap()).unwrap();
         use std::os::windows::process::CommandExt;
         let status = std::process::Command::new("powershell.exe")
-            .args(["-NoProfile", "-NonInteractive", "-Command", "New-Item -ItemType Junction -Path $env:PILOTWEAVE_LINK_PATH -Target $env:PILOTWEAVE_LINK_TARGET | Out-Null"])
-            .env("PILOTWEAVE_LINK_PATH", manifest.parent().unwrap())
-            .env("PILOTWEAVE_LINK_TARGET", &outside)
+            .args(["-NoProfile", "-NonInteractive", "-Command", "New-Item -ItemType Junction -Path $env:COPILOT_BYOK_MANAGER_LINK_PATH -Target $env:COPILOT_BYOK_MANAGER_LINK_TARGET | Out-Null"])
+            .env("COPILOT_BYOK_MANAGER_LINK_PATH", manifest.parent().unwrap())
+            .env("COPILOT_BYOK_MANAGER_LINK_TARGET", &outside)
             .creation_flags(windows_sys::Win32::System::Threading::CREATE_NO_WINDOW)
             .status().unwrap();
         assert!(status.success());

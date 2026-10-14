@@ -410,7 +410,11 @@ impl LoginStore {
                 disk_bytes: None,
             };
         };
-        Self::open_at(config_dir.join("PilotWeave").join("login-runs.json"))
+        Self::open_at(
+            config_dir
+                .join("CopilotBYOKManager")
+                .join("login-runs.json"),
+        )
     }
 
     pub fn open_at(path: PathBuf) -> Self {
@@ -422,7 +426,7 @@ impl LoginStore {
                     if run.status == LoginRunStatus::InProgress {
                         run.status = LoginRunStatus::Interrupted;
                         run.summary =
-                            "PilotWeave restarted before this sign-in run reached a final state"
+                            "CopilotBYOKManager restarted before this sign-in run reached a final state"
                                 .to_string();
                         run.finished_at = Some(now);
                         changed = true;
@@ -853,7 +857,7 @@ fn observe_surface(
                     "Authentication override variable(s) are present: {}",
                     environment_overrides.join(", ")
                 ),
-                detail: "An environment credential can override the OAuth account stored by Copilot CLI; PilotWeave did not read any value"
+                detail: "An environment credential can override the OAuth account stored by Copilot CLI; CopilotBYOKManager did not read any value"
                     .to_string(),
                 observed_at,
             }
@@ -971,7 +975,7 @@ fn executable_operation(surface: LoginSurface) -> AppResult<ExecutableLoginOpera
 fn operation_description(surface: LoginSurface) -> &'static str {
     match surface {
         LoginSurface::VsCodeCopilot => {
-            "Focus an already-open VS Code window and use Accounts. If VS Code is closed, open it yourself; PilotWeave will not restore its saved windows"
+            "Focus an already-open VS Code window and use Accounts. If VS Code is closed, open it yourself; CopilotBYOKManager will not restore its saved windows"
         }
         LoginSurface::CopilotCli => {
             "Launch the discovered Copilot CLI with its official github.com browser sign-in flow"

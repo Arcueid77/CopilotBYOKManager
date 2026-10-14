@@ -1,11 +1,13 @@
 (function (root, factory) {
   const api = factory();
   if (typeof module === "object" && module.exports) module.exports = api;
-  else root.PilotWeaveUI = api;
+  else root.CopilotBYOKManagerUI = api;
 })(globalThis, function () {
   "use strict";
+  const i18n = typeof module === "object" && module.exports ? require("./i18n.js") : globalThis.CopilotBYOKManagerI18n;
+  const tr = i18n.t;
   const focusable = 'button, input:not([type="hidden"]), select, textarea, a[href], summary, [tabindex]';
-  const identityKeys = ["name", "data-action", "data-id", "data-route", "data-usage-tab", "data-usage-action", "data-source-id", "data-record-id", "data-resource-action", "data-resource-id", "data-install-action", "data-component-id", "data-account-action", "data-github-auth-action"];
+  const identityKeys = ["name", "data-action", "data-id", "data-route", "data-client-id", "data-usage-tab", "data-usage-action", "data-source-id", "data-record-id", "data-resource-action", "data-resource-id", "data-install-action", "data-component-id", "data-account-action", "data-github-auth-action"];
   const owners = new WeakMap();
   // Describe controls, never their values (in particular passwords and headers).
   function capture(container) {
@@ -52,7 +54,7 @@
         guard = doc.createElement("div");
         guard.className = "modal-discard";
         guard.setAttribute("role", "alert");
-        guard.innerHTML = '<p>有未保存的修改。关闭后将放弃这些修改；密钥不会保存为草稿。</p><div class="inline-actions"><button type="button" class="button primary" data-keep-editing>继续编辑</button><button type="button" class="button ghost" data-discard-editing>放弃修改并关闭</button></div>';
+        guard.innerHTML = `<p>${tr("有未保存的修改。关闭后将放弃这些修改；密钥不会保存为草稿。")}</p><div class="inline-actions"><button type="button" class="button primary" data-keep-editing>${tr("继续编辑")}</button><button type="button" class="button ghost" data-discard-editing>${tr("放弃修改并关闭")}</button></div>`;
         root.querySelector(".modal-footer, .modal-body").append(guard);
         guard.querySelector("[data-keep-editing]").addEventListener("click", () => { guard.hidden = true; (root.querySelector('form input:not([type="hidden"])') ?? root.querySelector("[data-modal-close]")).focus(); });
         guard.querySelector("[data-discard-editing]").addEventListener("click", close);
@@ -92,7 +94,7 @@
       root.querySelectorAll("form").forEach(form => { form.inert = value; });
       root.querySelectorAll("[data-modal-close], [data-resource-close]").forEach(button => { button.disabled = value; });
     }
-    const controller = { mount, close, requestClose, setBusy, prepare() { return owners.get(root)?.requestClose() ?? true; }, get active() { return active; } };
+    const controller = { mount, close, requestClose, setBusy, prepare() { return owners.get(root)?.requestClose() ?? true; }, get active() { return active; }, get busy() { return busy; } };
     return controller;
   }
   return { capture, restore, modal };

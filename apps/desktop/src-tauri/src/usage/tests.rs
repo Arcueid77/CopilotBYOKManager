@@ -816,9 +816,9 @@ fn sensitive_usage_symlink_is_refused_without_reading_its_content() {
     if let Err(error) = created {
         if (error.kind() == std::io::ErrorKind::PermissionDenied
             || error.raw_os_error() == Some(1314))
-            && std::env::var_os("PILOTWEAVE_TEST_REQUIRE_LINKS").is_none()
+            && std::env::var_os("COPILOT_BYOK_MANAGER_TEST_REQUIRE_LINKS").is_none()
         {
-            eprintln!("SKIP: symlink creation is unavailable to this test account (Windows privilege 1314). Set PILOTWEAVE_TEST_REQUIRE_LINKS=1 to require this capability");
+            eprintln!("SKIP: symlink creation is unavailable to this test account (Windows privilege 1314). Set COPILOT_BYOK_MANAGER_TEST_REQUIRE_LINKS=1 to require this capability");
             return;
         }
         panic!("Could not create temporary test symlink: {error}");

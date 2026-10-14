@@ -1,4 +1,4 @@
-//! Crash-released cross-process exclusion for PilotWeave's managed mutations.
+//! Crash-released cross-process exclusion for CopilotBYOKManager's managed mutations.
 //! The empty lock file is never deleted or replaced while instances may use it.
 use crate::error::{AppError, AppResult};
 use crate::safe_file;

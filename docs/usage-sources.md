@@ -8,7 +8,7 @@ Documentation reconciled with the 2026-10-13 application state; source-specific 
 
 Usage opens with four sections: Official subscription/usage, Model statistics, Sessions/details, and Data sources/pricing. Official runtime and personal Billing keep their own refresh/status/period controls. Local date/client/route filters and advanced Connection/model/attribution/source/status filters appear only in model/session views; Reset restores the local query without changing the Billing month. Model suggestions are bounded and retain exact model identity. All required token, price and coverage columns remain available, with the model column fixed during horizontal scrolling.
 
-Source consent, enable/disable/clear, import jobs and price refresh remain in Data sources/pricing. UI filtering does not restrict which historical source bytes an enabled importer reads. The `PilotWeave/usage-inbox` directory and other persisted identifiers remain unchanged after the public rename.
+Source consent, enable/disable/clear, import jobs and price refresh remain in Data sources/pricing. UI filtering does not restrict which historical source bytes an enabled importer reads. The native-owned inbox is under `CopilotBYOKManager/usage-inbox`; enabling import does not change client settings.
 
 ## Copilot runtime quota and models
 
@@ -67,7 +67,7 @@ Source revision: `microsoft/vscode-copilot-chat@5863f5a7088958050792b5dccbe8b46c
 - [Anthropic BYOK instrumentation and token normalization](https://github.com/microsoft/vscode-copilot-chat/blob/5863f5a7088958050792b5dccbe8b46c6e13eccc/src/extension/byok/vscode-node/anthropicProvider.ts)
 - [OpenTelemetry GenAI token semantics](https://opentelemetry.io/docs/specs/semconv/registry/attributes/gen-ai/)
 
-The UI provides the exact native-owned inbox path, under the platform configuration directory at `PilotWeave/usage-inbox/vscode-otel.jsonl`. Enabling import creates that inbox directory only. It does not alter VS Code settings. The user explicitly enables export in VS Code's User settings, with:
+The UI provides the exact native-owned inbox path, under the platform configuration directory at `CopilotBYOKManager/usage-inbox/vscode-otel.jsonl`. Enabling import creates that inbox directory only. It does not alter VS Code settings. The user explicitly enables export in VS Code's User settings, with:
 
 ```json
 {

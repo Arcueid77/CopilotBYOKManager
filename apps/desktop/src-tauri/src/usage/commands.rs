@@ -115,7 +115,7 @@ pub fn clear_local_usage(
     confirmed: bool,
 ) -> Result<(), String> {
     if !confirmed {
-        return Err("Confirm clearing PilotWeave's imported metadata".into());
+        return Err("Confirm clearing CopilotBYOKManager's imported metadata".into());
     }
     let _job = JobGuard::begin(state.usage_jobs.local_busy.clone()).map_err(error)?;
     let mut guard = lock(&state.usage_db).map_err(error)?;
@@ -345,16 +345,15 @@ pub async fn refresh_personal_github_usage(
     let (token, identity, authorization_revision) = {
         let auth = state.github_authorization().map_err(error)?;
         if auth.status().state != crate::github_auth::GithubAuthorizationState::Verified {
-            return Err("Validate PilotWeave's separate GitHub authorization before refreshing personal Billing".into());
+            return Err("Validate CopilotBYOKManager's separate GitHub authorization before refreshing personal Billing".into());
         }
-        let identity = auth
-            .status()
-            .identity
-            .ok_or_else(|| "Authorize PilotWeave separately for personal Billing".to_string())?;
+        let identity = auth.status().identity.ok_or_else(|| {
+            "Authorize CopilotBYOKManager separately for personal Billing".to_string()
+        })?;
         let token = auth
             .secret_for_refresh()
             .map_err(error)?
-            .ok_or_else(|| "PilotWeave authorization is missing".to_string())?;
+            .ok_or_else(|| "CopilotBYOKManager authorization is missing".to_string())?;
         (token, identity, auth.revision())
     };
     let previous = with_db(&state, |db| {

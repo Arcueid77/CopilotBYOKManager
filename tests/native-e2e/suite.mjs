@@ -19,7 +19,16 @@ export async function nativeSuite(options, record) {
   const write = (name, bytes) => { fs.mkdirSync(path.dirname(file(name)), { recursive: true }); fs.writeFileSync(file(name), bytes); };
   const fault = point => write('fault.json', JSON.stringify(point));
   let d;
-  const restart = async () => { if (d) await d.stop(); d = new NativeDriver({ ...options, root }); await d.start(); };
+  const restart = async () => {
+    if (d) await d.stop();
+    d = new NativeDriver({ ...options, root });
+    await d.start();
+    await d.browser.$('#content[data-route="overview"]').waitForExist();
+    // Text assertions below use Chinese, independently of the Windows language.
+    // This preference belongs only to the suite's private WebView directory.
+    await d.browser.$('#interface-language').selectByAttribute('value', 'zh-CN');
+    assert.equal(await d.browser.$('html').getAttribute('lang'), 'zh-CN');
+  };
   const step = async (name, fn) => { const start = Date.now(); try { const value = await fn(); record(name, 'PASS', value ?? 'Verified through real native IPC', Date.now() - start); }
     catch (e) { record(name, 'FAIL', e.message, Date.now() - start); throw e; } };
   let connection, targets, settings, original, knownPrice;
@@ -87,10 +96,10 @@ export async function nativeSuite(options, record) {
       }
       await d.click('#preview-deployment');
       const button = await d.browser.$('#apply-deployment'); await button.waitForClickable(); await button.click();
-      await until(() => fs.readFileSync(settings, 'utf8').includes('pilotWeave'), 'Native deployment did not write');
+      await until(() => fs.readFileSync(settings, 'utf8').includes('copilotByokManager'), 'Native deployment did not write');
       await until(async () => { const state = await d.ipc('get_dashboard'); return !state.deploymentRecovery && state.deployments.some(r => r.status === 'applied'); }, 'Deployment audit did not finish');
       assert.match(fs.readFileSync(settings, 'utf8'), /Foreign/);
-      assert.deepEqual(fs.readFileSync(settings.replace(/\.json$/, '.json.pilotweave.bak')), original);
+      assert.deepEqual(fs.readFileSync(settings.replace(/\.json$/, '.json.copilot-byok-manager.bak')), original);
       const app = (await d.ipc('get_dashboard')).clients.find(c => c.kind === 'github-copilot-app');
       assert.equal(app.supportsWrite, false);
       assert.equal((await d.ipc('get_setup_status')).manualConfirmed, false);
@@ -138,7 +147,7 @@ export async function nativeSuite(options, record) {
       assert.ok(!(await d.ipc('get_dashboard')).deploymentRecovery);
     });
     await step('B09 Real parsers, exact estimate and repeated import', async () => {
-      write('config/PilotWeave/usage-inbox/vscode-otel.jsonl', server.read('vscode-explicit-zero-cache-write.json'));
+      write('config/CopilotBYOKManager/usage-inbox/vscode-otel.jsonl', server.read('vscode-explicit-zero-cache-write.json'));
       write('home/.copilot/session-state/fixture/events.jsonl', server.read('copilot-session-v1.jsonl'));
       await d.ipc('refresh_price_catalog');
       for (const sourceId of ['vscode-otel', 'copilot-session-events']) await d.ipc('set_usage_source_enabled', { sourceId, enabled: true });
@@ -171,6 +180,7 @@ export async function nativeSuite(options, record) {
       }, query.start, query.end);
       assert.deepEqual(dates, { start: query.start, end: query.end, valid: true });
       await d.click('#usage-filters button[type="submit"]');
+      await d.click('#usage-local-summary > summary');
       await until(async()=>(await d.browser.$('.usage-metrics > div:first-child strong').getText())==='1000','Native Usage metrics did not refresh');
       assert.equal(await d.browser.$('.usage-metrics > div:nth-child(5) strong').getText(),'0');
       assert.match(await d.browser.$('.usage-metrics > div:last-child strong').getText(),/^\$0\.000750*$/);
@@ -184,23 +194,23 @@ export async function nativeSuite(options, record) {
       row._spanContext.spanId = 'abcdef0123456789'; row.attributes['gen_ai.usage.input_tokens'] = 1000000000000;
       delete row.attributes['gen_ai.usage.cache_creation.input_tokens'];
       const text = JSON.stringify(row);
-      fs.appendFileSync(file('config/PilotWeave/usage-inbox/vscode-otel.jsonl'), text.slice(0, -3));
+      fs.appendFileSync(file('config/CopilotBYOKManager/usage-inbox/vscode-otel.jsonl'), text.slice(0, -3));
       await d.ipc('sync_local_usage', { sourceIds: ['vscode-otel'] }); assert.equal((await overview({ sourceId: 'vscode-otel' })).totalRecords, 1);
-      fs.appendFileSync(file('config/PilotWeave/usage-inbox/vscode-otel.jsonl'), text.slice(-3) + '\n');
+      fs.appendFileSync(file('config/CopilotBYOKManager/usage-inbox/vscode-otel.jsonl'), text.slice(-3) + '\n');
       await d.ipc('sync_local_usage', { sourceIds: ['vscode-otel'] });
       const after = await overview({ sourceId: 'vscode-otel' }); assert.equal(after.totalRecords, 2);
       assert.equal(after.records.find(r => r.inputReported === '1000000000000')?.inputReported, '1000000000000');
-      fs.renameSync(file('config/PilotWeave/usage-inbox/vscode-otel.jsonl'), file('config/PilotWeave/usage-inbox/rotated.jsonl'));
-      write('config/PilotWeave/usage-inbox/vscode-otel.jsonl', text + '\n');
+      fs.renameSync(file('config/CopilotBYOKManager/usage-inbox/vscode-otel.jsonl'), file('config/CopilotBYOKManager/usage-inbox/rotated.jsonl'));
+      write('config/CopilotBYOKManager/usage-inbox/vscode-otel.jsonl', text + '\n');
       await d.ipc('sync_local_usage', { sourceIds: ['vscode-otel'] }); assert.equal((await overview({ sourceId: 'vscode-otel' })).totalRecords, 2);
-      write('config/PilotWeave/usage-inbox/vscode-otel.jsonl', ''); await d.ipc('sync_local_usage', { sourceIds: ['vscode-otel'] });
+      write('config/CopilotBYOKManager/usage-inbox/vscode-otel.jsonl', ''); await d.ipc('sync_local_usage', { sourceIds: ['vscode-otel'] });
       assert.equal((await overview({ sourceId: 'vscode-otel' })).totalRecords, 2);
     });
     await step('B11 Price A-B-A and immutable historical bindings', async () => {
       await restart(); server.scenario.multiplier = 2; await d.ipc('refresh_price_catalog');
       const b = (await d.ipc('get_price_catalog')).catalog;
       const row = JSON.parse(server.read('vscode-explicit-zero-cache-write.json')); row._spanContext.spanId = '0123012301230123';
-      write('config/PilotWeave/usage-inbox/vscode-otel.jsonl', JSON.stringify(row) + '\n'); await d.ipc('sync_local_usage', { sourceIds: ['vscode-otel'] });
+      write('config/CopilotBYOKManager/usage-inbox/vscode-otel.jsonl', JSON.stringify(row) + '\n'); await d.ipc('sync_local_usage', { sourceIds: ['vscode-otel'] });
       const before = (await overview({ sourceId: 'vscode-otel' })).records;
       assert.ok(before.some(r => r.priceSnapshotId !== knownPrice && decimal(r.estimateUsd) === '0.0015'));
       await restart(); server.scenario.multiplier = 1; const a = await d.ipc('refresh_price_catalog');
@@ -249,7 +259,7 @@ export async function nativeSuite(options, record) {
       const payload = JSON.stringify([await overview(), await d.ipc('get_dashboard'), await d.ipc('get_usage_runs')]);
       assert.doesNotMatch(payload, /PRIVATE_PROMPT|PRIVATE_TOKEN|PRIVATE_ENV|PRIVATE_TOOL|SENTINEL|ROTATED/);
       await restart(); assert.ok((await d.ipc('get_usage_sources')).find(s => s.id === 'vscode-otel').enabled);
-      const directory = file('config/PilotWeave');
+      const directory = file('config/CopilotBYOKManager');
       for (const name of fs.readdirSync(directory)) if (/state|usage\.sqlite3/.test(name) && fs.statSync(path.join(directory, name)).isFile()) {
         assert.doesNotMatch(fs.readFileSync(path.join(directory, name)).toString('latin1'), /PRIVATE_PROMPT|PRIVATE_TOKEN|PRIVATE_ENV|PRIVATE_TOOL|SENTINEL|ROTATED/);
       }
@@ -257,10 +267,10 @@ export async function nativeSuite(options, record) {
     });
     await step('B16 Clear and delete require explicit operation; source files preserved', async () => {
       await assert.rejects(d.ipc('clear_local_usage', { sourceId: 'vscode-otel', confirmed: false }));
-      const before = fs.readFileSync(file('config/PilotWeave/usage-inbox/vscode-otel.jsonl'));
+      const before = fs.readFileSync(file('config/CopilotBYOKManager/usage-inbox/vscode-otel.jsonl'));
       await d.ipc('clear_local_usage', { sourceId: 'vscode-otel', confirmed: true });
       assert.equal((await overview({ sourceId: 'vscode-otel' })).totalRecords, 0);
-      assert.deepEqual(fs.readFileSync(file('config/PilotWeave/usage-inbox/vscode-otel.jsonl')), before);
+      assert.deepEqual(fs.readFileSync(file('config/CopilotBYOKManager/usage-inbox/vscode-otel.jsonl')), before);
       await d.ipc('delete_connection', { connectionId: connection.id }); assert.equal((await d.ipc('get_dashboard')).connections.length, 0);
     });
     await step('B17 Aggregated counters remain exact above JavaScript safe integer', async () => {
@@ -269,20 +279,20 @@ export async function nativeSuite(options, record) {
       row.attributes['gen_ai.usage.input_tokens'] = 999999999999;
       let rows = '';
       for (let i = 0; i < 9008; i++) { row._spanContext.spanId = (10000 + i).toString(16).padStart(16,'0'); rows += JSON.stringify(row) + '\n'; }
-      write('config/PilotWeave/usage-inbox/vscode-otel.jsonl',rows);
+      write('config/CopilotBYOKManager/usage-inbox/vscode-otel.jsonl',rows);
       await d.ipc('sync_local_usage',{sourceIds:['vscode-otel']});
       const result = await overview({sourceId:'vscode-otel'});
       assert.equal(result.totalRecords,9008); assert.equal(result.totals.inputReported,(9008n * 999999999999n).toString());
     });
     await step('B18 Import interruption retains committed cursor and recovers once', async () => {
       const row = JSON.parse(server.read('vscode-explicit-zero-cache-write.json'));row._spanContext.spanId='ffffffffffffffff';
-      write('config/PilotWeave/usage-inbox/vscode-otel.jsonl',JSON.stringify(row)+'\n');fault('crash:import-commit');
+      write('config/CopilotBYOKManager/usage-inbox/vscode-otel.jsonl',JSON.stringify(row)+'\n');fault('crash:import-commit');
       await assert.rejects(d.ipc('sync_local_usage',{sourceIds:['vscode-otel']}));await restart();
       assert.ok((await d.ipc('get_usage_runs')).some(r=>r.status==='interrupted'));
       await d.ipc('sync_local_usage',{sourceIds:['vscode-otel']});assert.equal((await overview({sourceId:'vscode-otel'})).totalRecords,9009);
     });
     await step('B19 Corrupt and future SQLite are unavailable and never recreated', async () => {
-      await d.stop();const dbfile=file('config/PilotWeave/usage.sqlite3');const original=fs.readFileSync(dbfile);
+      await d.stop();const dbfile=file('config/CopilotBYOKManager/usage.sqlite3');const original=fs.readFileSync(dbfile);
       fs.writeFileSync(dbfile,'corrupt database sentinel');const damaged=hash(fs.readFileSync(dbfile));await restart();
       assert.equal((await d.ipc('get_dashboard')).usageDb.state,'unavailable');assert.equal(hash(fs.readFileSync(dbfile)),damaged);
       await assert.rejects(overview());await d.stop();fs.writeFileSync(dbfile,original);
@@ -291,14 +301,14 @@ export async function nativeSuite(options, record) {
       await d.stop();fs.writeFileSync(dbfile,original);await restart();assert.equal((await d.ipc('get_dashboard')).usageDb.state,'available');
     });
     await step('B20 Primary and last-good recovery forbid native mutations', async () => {
-      await d.stop();const primary=file('config/PilotWeave/state.json'),good=primary+'.last-good';
+      await d.stop();const primary=file('config/CopilotBYOKManager/state.json'),good=primary+'.last-good';
       const before=fs.readFileSync(primary),backup=fs.readFileSync(good);fs.writeFileSync(primary,'{corrupt');await restart();
       assert.ok((await d.ipc('get_dashboard')).stateRecovery);await assert.rejects(put({id:null}));assert.equal(fs.readFileSync(primary,'utf8'),'{corrupt');
       await d.stop();fs.writeFileSync(good,'{corrupt');await restart();assert.ok((await d.ipc('get_dashboard')).stateRecovery);await assert.rejects(put({id:null}));
       await d.stop();fs.writeFileSync(primary,before);fs.writeFileSync(good,backup);await restart();assert.ok(!(await d.ipc('get_dashboard')).stateRecovery);
     });
     await step('B21 Cross-process managed write lease rejects a competing mutation', async () => {
-      const lease=file('config/PilotWeave/managed-writes.lock').replaceAll("'","''");
+      const lease=file('config/CopilotBYOKManager/managed-writes.lock').replaceAll("'","''");
       const ps="$f=[IO.File]::Open('"+lease+"',[IO.FileMode]::Open,[IO.FileAccess]::ReadWrite,[IO.FileShare]::None); [Console]::WriteLine('READY'); [Console]::Out.Flush(); [Console]::ReadLine() | Out-Null; $f.Dispose()";
       const holder=spawn('powershell.exe',['-NoProfile','-NonInteractive','-Command',ps],{windowsHide:true,stdio:['pipe','pipe','pipe']});
       const exited=new Promise(resolve=>holder.once('exit',resolve));let ready=false;holder.stdout.on('data',b=>{if(b.toString().includes('READY'))ready=true;});
@@ -321,7 +331,7 @@ export async function nativeSuite(options, record) {
       assert.equal((await d.ipc('get_setup_status')).alignment,'userConfirmedSameAccount');
       await restart();assert.equal((await d.ipc('get_setup_status')).alignment,'userConfirmedSameAccount');
       await d.stop();
-      const sqlite = new DatabaseSync(file('config/PilotWeave/usage.sqlite3'));
+      const sqlite = new DatabaseSync(file('config/CopilotBYOKManager/usage.sqlite3'));
       try {
         const row=sqlite.prepare('SELECT payload FROM setup_preferences WHERE id=1').get();
         const payload=JSON.parse(row.payload);payload.accountConfirmation.confirmedAt='2000-01-01T00:00:00Z';
@@ -345,7 +355,7 @@ export async function nativeSuite(options, record) {
         assert.equal(result.accepted,false);assert.match(result.error,/Authorization changed/);
         assert.ok(result.runs.some(r=>r.sourceId==='personal-billing'&&r.status==='canceled'));
         assert.ok(result.runs.every(r=>r.status!=='inProgress'));
-        await d.stop();const sqlite=new DatabaseSync(file('config/PilotWeave/usage.sqlite3'),{readOnly:true});
+        await d.stop();const sqlite=new DatabaseSync(file('config/CopilotBYOKManager/usage.sqlite3'),{readOnly:true});
         try {assert.equal(sqlite.prepare("SELECT count(*) AS n FROM github_billing_snapshots WHERE period_start LIKE '2026-08-%'").get().n,0);}finally {sqlite.close();}
       } finally {server.scenario.delay=0;}
     });
@@ -355,7 +365,7 @@ export async function nativeSuite(options, record) {
       const row=JSON.parse(server.read('vscode-explicit-zero-cache-write.json'));
       row._spanContext.spanId='abaaaaaaaaaaaaab';row.attributes['gen_ai.request.model']='~openai/gpt-latest';
       row.attributes['gen_ai.response.model']='~openai/gpt-latest';
-      write('config/PilotWeave/usage-inbox/vscode-otel.jsonl',JSON.stringify(row)+'\n');
+      write('config/CopilotBYOKManager/usage-inbox/vscode-otel.jsonl',JSON.stringify(row)+'\n');
       await d.ipc('sync_local_usage',{sourceIds:['vscode-otel']});
       const selected=await overview({sourceId:'vscode-otel',model:'~openai/gpt-latest'});
       assert.equal(selected.totalRecords,1);assert.equal(selected.records[0].canonicalModel,'~openai/gpt-latest');
@@ -369,7 +379,7 @@ export async function nativeSuite(options, record) {
       assert.equal((await d.browser.$$('[data-model-list] label')).length,2);
       assert.ok(server.modelRequests.some(r=>r.method==='GET'&&r.bearer&&r.path==='/model-discovery/v1/models'));
       await d.click('[data-model-list] input[type="checkbox"]');
-      await d.click('[data-model-add]');
+      assert.equal((await d.browser.$$('[data-model-add]')).length,0);
       assert.equal(await d.browser.$('#models').getValue(),'manual-model | Keep this name\nfixture/chat | fixture/chat');
       if(options.evidenceRoot) await d.browser.saveScreenshot(path.join(options.evidenceRoot,'native-model-discovery.png'));
       await d.click('#save-connection');
@@ -409,7 +419,7 @@ export async function nativeSuite(options, record) {
       await d.click('#primary-nav [data-route="overview"]');
       const before=(await d.ipc('get_dashboard')).deployments.length;
       const savedPreferences=()=>{
-        const sqlite=new DatabaseSync(file('config/PilotWeave/usage.sqlite3'),{readOnly:true});
+        const sqlite=new DatabaseSync(file('config/CopilotBYOKManager/usage.sqlite3'),{readOnly:true});
         try { return sqlite.prepare('SELECT payload FROM setup_preferences WHERE id=1').get()?.payload ?? null; }
         finally { sqlite.close(); }
       };
@@ -492,7 +502,7 @@ export async function nativeSuite(options, record) {
         await d.ipc('apply_resource_plan',{planId:plan.id,confirmed:true});
         await assert.rejects(d.ipc('apply_resource_plan',{planId:plan.id,confirmed:true}),/consumed|expired|unknown/i);
         assert.ok((await d.ipc('get_resources')).bindings.some(b=>b.resourceId===resource.id));
-        if(kind==='skill') assert.ok(fs.existsSync(file(`home/.copilot/skills/pilotweave-${resource.id}/SKILL.md`)));
+        if(kind==='skill') assert.ok(fs.existsSync(file(`home/.copilot/skills/copilot-byok-manager-${resource.id}/SKILL.md`)));
         const revoke=await d.ipc('preview_resource_sync',{resourceId:resource.id,revokeAndDelete:true});
         await d.ipc('apply_resource_plan',{planId:revoke.id,confirmed:true});
         assert.ok(!(await d.ipc('get_resources')).resources.some(r=>r.id===resource.id));
@@ -539,7 +549,7 @@ export async function nativeSuite(options, record) {
       assert.equal((await d.ipc('verify_login_run',{runId:manualRun.run.id})).run.status,'cancelled');
       await restart();
       assert.ok((await d.ipc('get_account_status')).loginRuns.some(r=>r.id===manualRun.run.id&&r.status==='cancelled'));
-      assert.doesNotMatch(fs.readFileSync(file('config/PilotWeave/login-runs.json'),'utf8'),/PRIVATE_TOKEN|SENTINEL/);
+      assert.doesNotMatch(fs.readFileSync(file('config/CopilotBYOKManager/login-runs.json'),'utf8'),/PRIVATE_TOKEN|SENTINEL/);
     });
     await step('B32 Owned VS Code connection revoke deletes only proven projection', async () => {
       const fresh = await put({id:null,name:'Reviewed revoke fixture'});

@@ -277,7 +277,7 @@ pub fn fetch_personal_billing(
         .timeout_global(Some(Duration::from_secs(REQUEST_TIMEOUT_SECONDS)))
         .http_status_as_error(false)
         .max_redirects(0)
-        .user_agent("PilotWeave/0.1")
+        .user_agent("CopilotBYOKManager/0.1")
         .build()
         .into();
     let authorization = format!("Bearer {token}");
@@ -306,7 +306,7 @@ fn fetch_family(
                 fetched_at,
                 GithubBillingSnapshotStatus::SchemaError,
                 GithubBillingCoverage::Unknown,
-                "PilotWeave could not construct the fixed GitHub Billing endpoint",
+                "CopilotBYOKManager could not construct the fixed GitHub Billing endpoint",
             )
         }
     };
@@ -395,7 +395,7 @@ fn status_snapshot(
             fetched_at,
             GithubBillingSnapshotStatus::Unauthorized,
             GithubBillingCoverage::Unknown,
-            "GitHub rejected the stored PilotWeave authorization",
+            "GitHub rejected the stored CopilotBYOKManager authorization",
         ),
         403 if is_rate_limited(headers) => error_snapshot(
             identity,

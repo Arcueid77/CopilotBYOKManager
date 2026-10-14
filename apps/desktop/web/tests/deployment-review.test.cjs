@@ -1,5 +1,6 @@
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
+require("../i18n.js").setLocale("en", { persist: false });
 const { createSession } = require("../deployment-review.js");
 
 test("apply submits only the exact reviewed ID and confirmation, then discards it", async () => {

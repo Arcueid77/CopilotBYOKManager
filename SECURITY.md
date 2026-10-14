@@ -2,7 +2,7 @@
 
 CopilotBYOKManager manages developer-tool configuration, may launch allowlisted application installers, orchestrates official GitHub sign-in flows, stores a separate GitHub personal-usage authorization, and reads local usage metadata. Treat reports and diagnostic files as potentially sensitive.
 
-The public project was renamed from PilotWeave. Existing storage directories, credential services, ownership markers, build identifiers and validation paths still use compatibility names. Renaming the repository does not migrate secrets or grant access to client authentication material.
+The product has not had a public release. Its dedicated configuration directory and credential namespace are not permission to adopt other applications' secrets or client authentication material.
 
 ## Do not publish secrets or private workspace content
 

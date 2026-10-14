@@ -38,11 +38,13 @@ Windows API support is enabled through the existing `windows-sys` dependency to 
 
 ## Security and regression coverage
 
+The 2026-10-13 audit fixes use the production deployment planner/transaction in temporary Windows junction fixtures: linked parents are refused before canonicalization, and parent substitution after preview/journal cannot write outside the original target. VS Code JSON5 parse errors no longer contain raw parser excerpts, including unfamiliar foreign credential fields. CLI environment projection follows the explicitly selected protocol; the provider label cannot silently force Messages. Protocol behavior was rechecked against [GitHub's CLI BYOK reference](https://docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/use-byok-models) and [the official provider wire-format reference](https://docs.github.com/en/copilot/how-tos/copilot-sdk/auth/byok) on 2026-10-13.
+
 Temporary-directory tests cover owner/projection tampering, semantic no-op preservation, native one-shot/revision checks, stale apply, prepare-all behavior, compensation, refusal to overwrite external changes, state reopen, resource tombstones, typed status aggregation, cancellation before spawn/while waiting for capture, invalid publisher rejection, unsupported version output, and login history compare-before-replace.
 
 The isolated native suite additionally checks actual WebView2-to-Tauri IPC for resource publication/revoke, persisted installation history, CLI identity follow-up, cancellation persistence, and reviewed Connection revocation. It uses inert executables, fake credential/registry/signature/process adapters, sanitized usage data, and loopback HTTP fixtures. It never installs a real application or opens real credential/usage stores.
 
-On Windows without symlink privileges, the sensitive-source symlink regression reports an explicit local skip for error 1314/permission denial. CI sets `PILOTWEAVE_TEST_REQUIRE_LINKS=1` so inability to exercise that case fails CI instead of silently reducing coverage.
+On Windows without symlink privileges, the sensitive-source symlink regression reports an explicit local skip for error 1314/permission denial. CI sets `COPILOT_BYOK_MANAGER_TEST_REQUIRE_LINKS=1` so inability to exercise that case fails CI instead of silently reducing coverage.
 
 ## Required-scope acceptance boundaries
 

@@ -42,7 +42,7 @@ impl StateStore {
     pub fn open() -> AppResult<Self> {
         let config_dir = crate::platform::config_dir()
             .ok_or_else(|| AppError::Config("Cannot resolve the user config directory".into()))?
-            .join("PilotWeave");
+            .join("CopilotBYOKManager");
         // Loading remains pure, including recovery. Dashboard observations report
         // credential availability separately, without changing persisted intent.
         Ok(Self::open_at(config_dir.join("state.json")))
@@ -99,12 +99,12 @@ impl StateStore {
     pub(crate) fn ensure_writable(&self) -> AppResult<()> {
         if let Some(reason) = &self.recovery {
             return Err(AppError::Unsupported(format!(
-                "PilotWeave state is in read-only recovery ({reason}); review recovery before resuming managed writes"
+                "CopilotBYOKManager state is in read-only recovery ({reason}); review recovery before resuming managed writes"
             )));
         }
         if crate::safe_file::read_optional(&self.path, MAX_STATE_BYTES)? != self.loaded_bytes {
             return Err(AppError::InvalidInput(
-                "Application state changed outside PilotWeave; reopen and review before writing"
+                "Application state changed outside CopilotBYOKManager; reopen and review before writing"
                     .into(),
             ));
         }
@@ -290,7 +290,7 @@ impl StateStore {
         }
         if existing.is_none() && self.state.connections.len() >= validation::MAX_CONNECTIONS {
             return Err(AppError::InvalidInput(format!(
-                "PilotWeave supports at most {} connections",
+                "CopilotBYOKManager supports at most {} connections",
                 validation::MAX_CONNECTIONS
             )));
         }
@@ -508,7 +508,7 @@ fn parse_state(path: &Path, bytes: Option<&[u8]>) -> AppResult<Option<Persistent
         serde_json::from_slice(bytes).map_err(|error| AppError::json(path, error))?;
     if state.version > STATE_VERSION {
         return Err(AppError::Config(format!(
-            "State version {} is newer than this PilotWeave build supports ({STATE_VERSION})",
+            "State version {} is newer than this CopilotBYOKManager build supports ({STATE_VERSION})",
             state.version
         )));
     }

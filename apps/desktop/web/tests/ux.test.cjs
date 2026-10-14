@@ -1,5 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+require('../i18n.js').setLocale('zh-CN', { persist: false });
 const ui = require('../ui-lifecycle.js');
 const usage = require('../usage-ui.js');
 const manager = require('../manager-ui.js');

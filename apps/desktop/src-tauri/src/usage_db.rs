@@ -315,7 +315,7 @@ impl UsageDb {
     pub fn open() -> AppResult<Self> {
         let config_dir = crate::platform::config_dir()
             .ok_or_else(|| AppError::Config("Cannot resolve the user config directory".into()))?;
-        Self::open_at(&config_dir.join("PilotWeave").join("usage.sqlite3"))
+        Self::open_at(&config_dir.join("CopilotBYOKManager").join("usage.sqlite3"))
     }
 
     pub fn open_at(path: &Path) -> AppResult<Self> {

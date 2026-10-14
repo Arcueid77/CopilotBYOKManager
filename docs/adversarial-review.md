@@ -101,10 +101,13 @@ An attacker may redirect a managed path to another file between inspection and w
 Required mitigation:
 
 - reject symlinks and unsupported reparse points for sensitive sources/targets;
-- use canonical parent handling without accepting path traversal;
+- inspect all existing ancestors before canonicalization; a user-controlled parent link must not become a trusted canonical destination;
+- use canonical parent handling without accepting path traversal, with only exact supported macOS system aliases;
 - open/write through platform APIs that minimize path re-resolution;
 - recheck file identity immediately before replacement;
 - bound file size before parsing or snapshotting.
+
+Malformed JSON5 configuration can contain foreign or manager-owned keys on a parser's quoted source line. Parser diagnostics must never cross the command boundary, even after marker-based redaction. Return fixed repair/fresh-preview guidance and a safe file location. Regression fixtures include camelCase keys, unfamiliar credential fields, multiline values and arbitrary private text through the production planner.
 
 ### Forged ownership markers
 
@@ -550,6 +553,12 @@ Required mitigation:
 
 ## UI and reporting threats
 
+### Hidden-window lifetime and tray availability
+
+Close-to-tray must not trap a hidden app. Only intercept the main close with a readable Tray preference, native tray creation and successful hide; otherwise retain normal close. Corrupt/newer/unreadable window preferences use Exit and must not be overwritten. Window preference writes are bounded, private, atomic, cross-process excluded and bound to prior bytes. Save failure keeps the live choice unchanged. Native restore/Exit never touches providers or credentials. The only locale command accepts two enum values and replaces fixed menu text in memory; it cannot remove actions or change their meaning. Do not grant unrestricted WebView menu/tray mutation permissions. Unknown observations remain unknown, not a normal-exit claim.
+
+Register the official single-instance plugin before store recovery: a duplicate launch must not recover another running process's jobs. Ignore secondary argument/cwd payloads, including apparent deployment commands and URLs; restore only. Production and isolated roots must have distinct instance identifiers. Tests cover absent tray, explicit exit, hide/save failure, strict preference parsing and reopen, external changes, native write exclusion, bounded locale/identifiers, DTO serialization and restricted capabilities. Actual close/restore/Exit and repeated-launch behavior still need Windows interaction verification.
+
 ### Lost edits, focus escape and misleading completion
 
 A replaced dialog can discard unsaved input, leave keyboard focus on a background action or allow duplicate submission. A short-lived success count can hide which client still requires manual work.
@@ -560,6 +569,9 @@ Required mitigation:
 - Escape/backdrop close uses the same dirty-editor guard; a competing dialog cannot replace unsaved edits silently;
 - record control identity and a dirty Boolean, never password/input values in a serialized draft;
 - freeze a pending save, keep failed input with a persistent error, and restore focus to a surviving control or safe fallback;
+- hold the actual dialog instance for async callbacks; resource preview/apply is busy until settled, and old responses cannot close a newly opened editor;
+- block navigation, refresh, edits and dismissal during publication, retain failure/uncertainty feedback, and require a fresh one-shot preview after failure;
+- put catalog selections into the same saved draft; unchecking or endpoint invalidation may remove only unchanged checkbox-added lines, never original/manual models;
 - retain escaped per-target results and client-specific next steps beyond transient notifications;
 - require explicit selection of the legacy exclusive CLI route by default;
 - keep official quota/Billing outside local-usage filter state, preserving unknown/partial values and exact decimals.

@@ -8,7 +8,7 @@ import { Report, digest, redact } from './validation-report.mjs';
 
 const [mode, runRoot, toolRoot, liveTarget, resume, completedAction] = process.argv.slice(2);
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const release = process.env.PILOTWEAVE_VALIDATION_RELEASE;
+const release = process.env.COPILOT_BYOK_MANAGER_VALIDATION_RELEASE;
 if (release) { const end = Date.now() + 10000; while (!fs.existsSync(release) && Date.now() < end) await delay(25); if (!fs.existsSync(release)) throw new Error('Parent job assignment failed'); }
 if (!['Regression','NativeIsolated','PrepareLive','LiveAcceptance'].includes(mode) || !path.isAbsolute(runRoot) || !path.isAbsolute(toolRoot)) throw new Error('Invalid validation invocation');
 fs.mkdirSync(runRoot, { recursive: true });
@@ -64,7 +64,7 @@ const cargo = (name, args) => command(name, 'cargo.exe', args);
 async function buildNative() {
   await tauri('Build isolated native executable', ['--no-bundle','--features','local-e2e','--config','apps/desktop/src-tauri/tauri.local-e2e.conf.json']);
   const dest = path.join(runRoot,'artifacts','isolated'); fs.mkdirSync(dest,{recursive:true});
-  const application = path.join(dest,'pilotweave.exe'); fs.copyFileSync(path.join(repo,'target/release/pilotweave.exe'),application);
+  const application = path.join(dest,'copilot-byok-manager.exe'); fs.copyFileSync(path.join(repo,'target/release/copilot-byok-manager.exe'),application);
   record('Isolated artifact identity','PASS',{ features: ['local-e2e'], sha256: digest(fs.readFileSync(application)) }); return application;
 }
 async function isolatedGuards(application) {
@@ -85,7 +85,7 @@ async function isolatedGuards(application) {
 async function defaultBuild(packageBuild = false) {
   await tauri(packageBuild ? 'Default NSIS package build' : 'Default release build', packageBuild ? ['--config','apps/desktop/src-tauri/tauri.package.conf.json','--bundles','nsis'] : ['--no-bundle']);
   const dest = path.join(runRoot,'artifacts','default'); fs.mkdirSync(dest,{recursive:true});
-  const application = path.join(dest,'pilotweave.exe'); fs.copyFileSync(path.join(repo,'target/release/pilotweave.exe'),application);
+  const application = path.join(dest,'copilot-byok-manager.exe'); fs.copyFileSync(path.join(repo,'target/release/copilot-byok-manager.exe'),application);
   const artifact = { application, sha256: digest(fs.readFileSync(application)), features: 'default', ...provenance };
   if (packageBuild) {
     const directory = path.join(repo,'target/release/bundle/nsis'); const packages = fs.readdirSync(directory).filter(n => n.endsWith('.exe'));
@@ -131,9 +131,9 @@ async function regression() {
   await cargo('Rust clippy default',['clippy','--workspace','--all-targets','--','-D','warnings']);
   await cargo('Rust clippy isolated',['clippy','--workspace','--all-targets','--features','local-e2e','--','-D','warnings']);
   await node('Validation tooling tests','--test',['tests/native-e2e/tests/*.test.mjs']);
-  const playwright=process.env.PILOTWEAVE_PLAYWRIGHT ?? path.join(process.env.USERPROFILE,'.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
-  if(!fs.existsSync(playwright)) throw new Error('Browser fixture runner requires PILOTWEAVE_PLAYWRIGHT');
-  await node('Browser mocked contract suite','apps/desktop/web/tests/browser-smoke.cjs',[],{env:{PILOTWEAVE_PLAYWRIGHT:playwright,PILOTWEAVE_BROWSER:path.join(process.env['ProgramFiles(x86)'],'Microsoft/Edge/Application/msedge.exe')}});
+  const playwright=process.env.COPILOT_BYOK_MANAGER_PLAYWRIGHT ?? path.join(process.env.USERPROFILE,'.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
+  if(!fs.existsSync(playwright)) throw new Error('Browser fixture runner requires COPILOT_BYOK_MANAGER_PLAYWRIGHT');
+  await node('Browser mocked contract suite','apps/desktop/web/tests/browser-smoke.cjs',[],{env:{COPILOT_BYOK_MANAGER_PLAYWRIGHT:playwright,COPILOT_BYOK_MANAGER_BROWSER:path.join(process.env['ProgramFiles(x86)'],'Microsoft/Edge/Application/msedge.exe')}});
   await defaultBuild();
   await command('Git diff whitespace','git.exe',['diff','--check']);
   const tracked=git('ls-files').split('\n');

@@ -84,14 +84,14 @@ pub fn initialize() -> AppResult<()> {
     ] {
         let path = checked(&format!("bin/{name}"))?;
         if !path.exists() {
-            safe_io::write_private(&path, b"PilotWeave inert local fixture executable")?;
+            safe_io::write_private(&path, b"CopilotBYOKManager inert local fixture executable")?;
         }
     }
     for name in ["bin/vscode/bin", "bin/vscode/resources/app/out"] {
         std::fs::create_dir_all(checked(name)?).map_err(|_| invalid())?;
     }
     for (name, bytes) in [
-        ("bin/vscode/Code.exe", "PilotWeave inert VS Code fixture"),
+        ("bin/vscode/Code.exe", "CopilotBYOKManager inert VS Code fixture"),
         ("bin/vscode/resources/app/out/cli.js", "// Inert fixture, never executed"),
         ("bin/vscode/bin/code.cmd", "@echo off\nsetlocal\nset VSCODE_DEV=\nset ELECTRON_RUN_AS_NODE=1\n\"%~dp0..\\Code.exe\" \"%~dp0..\\resources\\app\\out\\cli.js\" %*\nIF %ERRORLEVEL% NEQ 0 EXIT /b %ERRORLEVEL%\nendlocal\n"),
         ("bin/vscode/resources/app/product.json", r#"{"applicationName":"code","version":"1.137.0","commit":"645f29cc3176500b4b5762ba887cf2a7f0ffdf2c"}"#),
@@ -189,7 +189,7 @@ pub fn registry(name: &str, change: Option<Option<&[u8]>>) -> AppResult<Option<V
     if (!name.starts_with("COPILOT_")
         && !matches!(
             name,
-            "PILOTWEAVE_COPILOT_OWNER_ID" | "PILOTWEAVE_COPILOT_CONNECTION_ID"
+            "COPILOT_BYOK_MANAGER_COPILOT_OWNER_ID" | "COPILOT_BYOK_MANAGER_COPILOT_CONNECTION_ID"
         ))
         || !name.bytes().all(|c| c.is_ascii_uppercase() || c == b'_')
     {

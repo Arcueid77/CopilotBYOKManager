@@ -188,7 +188,7 @@ pub fn drift(
         (
             Drift::Manual,
             if target.kind == crate::domain::ClientKind::JetBrainsCopilot {
-                "Configure BYOK in this IDE's Copilot Chat > Manage Models; not verified by PilotWeave"
+                "Configure BYOK in this IDE's Copilot Chat > Manage Models; not verified by CopilotBYOKManager"
             } else {
                 "Complete the provider setup in the app"
             },
@@ -417,7 +417,7 @@ fn resolve_public_identity(login: &str) -> AppResult<GithubIdentity> {
     let agent: ureq::Agent = crate::platform::http_config()
         .timeout_global(Some(std::time::Duration::from_secs(15)))
         .max_redirects(0)
-        .user_agent("PilotWeave/0.1")
+        .user_agent("CopilotBYOKManager/0.1")
         .build()
         .into();
     let mut response = agent

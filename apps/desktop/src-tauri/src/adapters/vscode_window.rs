@@ -2,7 +2,7 @@
 //! backups. Account orchestration may focus an existing window, never start it.
 use std::path::Path;
 
-pub const MANUAL: &str = "Open VS Code yourself, then use Accounts to sign in to GitHub. PilotWeave did not start VS Code because a cold start can restore many saved windows.";
+pub const MANUAL: &str = "Open VS Code yourself, then use Accounts to sign in to GitHub. CopilotBYOKManager did not start VS Code because a cold start can restore many saved windows.";
 pub const SWITCH: &str = "Switch to your existing VS Code window and use Accounts to verify or sign in to GitHub. No new VS Code process was started.";
 #[cfg(any(windows, test, feature = "local-e2e"))]
 pub const FOCUSED: &str = "Your existing VS Code window was brought forward. Use Accounts to verify or sign in to GitHub. No new VS Code process was started.";

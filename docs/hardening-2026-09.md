@@ -1,6 +1,6 @@
 # September 2026 hardening slice
 
-> Historical record for the project now named CopilotBYOKManager. Preserve this slice's original behavior and evidence. Its remaining-work list predates the connected Usage, Resources, installation/account lifecycle and JetBrains implementations; use [current implementation status](implementation-status.md) before planning further work.
+> Historical development record, not a release record. Preserve this slice's original behavior and evidence. Its remaining-work list predates the connected Usage, Resources, installation/account lifecycle and JetBrains implementations; use [current implementation status](implementation-status.md) before planning further work.
 
 This describes the code in this slice, not a claim that the complete MVP is finished.
 
@@ -8,7 +8,7 @@ This describes the code in this slice, not a claim that the complete MVP is fini
 
 - Shared bounded file reads and safe replacement. Windows uses replace-existing/write-through, never unlink-before-rename. Unix sensitive files are created with mode 0600. Managed writes take an OS-held lease; crashes release the lease without deleting the lock file.
 - A validated last-known-good application-state snapshot is available read-only when the primary is invalid. External state edits are rejected; aggregate serialized size is checked before keyring changes.
-- Provider credential references are derived from the connection ID. They cannot name PilotWeave's GitHub authorization entry. Credential-store unavailability is distinct from Missing. Deletion reports credential cleanup warnings separately.
+- Provider credential references are derived from the connection ID. They cannot name CopilotBYOKManager's GitHub authorization entry. Credential-store unavailability is distinct from Missing. Deletion reports credential cleanup warnings separately.
 - The frontend submits only the exact reviewed deployment plan ID and explicit confirmation. Selection changes and late preview responses invalidate the plan. Native plans have 15-minute TTLs and bounded pending counts.
 - Deployment snapshots contain the actual configuration resources: VS Code files, Unix CLI environment/shell files, or typed Windows environment values. Shared profile paths are deduplicated. Preparation parses every target before any target mutation; semantic no-op preserves JSON5 bytes.
 - A private version-2 journal persists expected before/after data before writes. Later write or final audit failure triggers independent reverse compensation. External edits are not overwritten. Recovery previews are one-shot and restrict journal resources to locally discovered supported paths/variables.

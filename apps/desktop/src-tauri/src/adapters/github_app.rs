@@ -26,7 +26,7 @@ pub fn discover_target() -> ClientTarget {
             ClientStatus::NotInstalled
         },
         diagnostic: detected.then(|| {
-            "PilotWeave will not write private app state or credential storage without a stable external interface"
+            "CopilotBYOKManager will not write private app state or credential storage without a stable external interface"
                 .to_string()
         }),
     }

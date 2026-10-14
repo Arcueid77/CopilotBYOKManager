@@ -15,7 +15,7 @@ pub fn recovery_resources() -> AppResult<Vec<transaction::Resource>> {
             if let Some(path) = target.path {
                 let path = safe_io::resource_path(Path::new(&path))?;
                 resources.push(transaction::Resource::File(safe_io::resource_path(
-                    &path.with_extension("json.pilotweave.bak"),
+                    &path.with_extension("json.copilot-byok-manager.bak"),
                 )?));
                 resources.push(transaction::Resource::File(path));
             }
@@ -306,6 +306,143 @@ mod tests {
             reviewed.id
         );
         assert!(store.consume(&reviewed.id).is_err());
+    }
+
+    #[test]
+    fn json5_preview_errors_never_echo_own_or_foreign_config_secrets() {
+        let root = tempfile::tempdir().unwrap();
+        let path = root.path().join("models.json");
+        let connection = connection();
+        let target = target(&path);
+        for source in [
+            "[{apiKey:'SYNTHETIC-OWN-SECRET',broken:}]",
+            "[{unusualCredential:'SYNTHETIC-FOREIGN-SECRET',broken:}]",
+            "[{apiKey:'SYNTHETIC-MULTILINE-\\\nSECRET',broken:}]",
+            "[{name:'SYNTHETIC-PRIVATE-TEXT',broken:}]",
+        ] {
+            fs::write(&path, source).unwrap();
+            let error = PlanStore::default()
+                .insert(
+                    &connection,
+                    Some("SYNTHETIC-OWN-SECRET"),
+                    plan(&connection, &target),
+                    std::slice::from_ref(&target),
+                    PlanContext::new("test-owner", "state".into(), Some("SYNTHETIC-OWN-SECRET")),
+                )
+                .unwrap_err();
+            let frontend_error = crate::redact::redact_text(&error.to_string());
+            assert!(!frontend_error.contains("SYNTHETIC"), "{frontend_error}");
+            assert!(frontend_error.contains("preview again"));
+            assert_eq!(fs::read_to_string(&path).unwrap(), source);
+        }
+    }
+
+    #[cfg(any(windows, unix))]
+    fn directory_alias(destination: &Path, alias: &Path) {
+        #[cfg(unix)]
+        std::os::unix::fs::symlink(destination, alias).unwrap();
+        #[cfg(windows)]
+        {
+            // A test-only junction needs no symlink privilege. Arguments are
+            // separate, bounded temporary paths; no real profile is involved.
+            assert!(std::process::Command::new("cmd.exe")
+                .args(["/C", "mklink", "/J"])
+                .arg(alias)
+                .arg(destination)
+                .output()
+                .unwrap()
+                .status
+                .success());
+        }
+    }
+
+    #[cfg(any(windows, unix))]
+    fn unlink_directory_alias(alias: &Path) {
+        #[cfg(windows)]
+        fs::remove_dir(alias).unwrap();
+        #[cfg(unix)]
+        fs::remove_file(alias).unwrap();
+    }
+
+    #[cfg(any(windows, unix))]
+    #[test]
+    fn production_preview_rejects_linked_parents_before_canonicalization() {
+        let root = tempfile::tempdir().unwrap();
+        let outside = root.path().join("outside");
+        fs::create_dir(&outside).unwrap();
+        let alias = root.path().join("alias");
+        directory_alias(&outside, &alias);
+        let path = alias.join("models.json");
+        let connection = connection();
+        let target = target(&path);
+        let preview = PlanStore::default().insert(
+            &connection,
+            None,
+            plan(&connection, &target),
+            std::slice::from_ref(&target),
+            PlanContext::new("test-owner", "state".into(), None),
+        );
+        let read = safe_io::read_optional(&path, 1024);
+        let write = safe_io::write_private(&path, b"must not escape");
+        let lease = safe_io::Lease::acquire(&alias.join("write.lock"));
+        unlink_directory_alias(&alias);
+        assert!(preview.is_err());
+        assert!(read.is_err());
+        assert!(write.is_err());
+        assert!(lease.is_err());
+        assert_eq!(fs::read_dir(outside).unwrap().count(), 0);
+    }
+
+    #[cfg(any(windows, unix))]
+    #[test]
+    fn production_apply_rejects_parent_substitution_after_preview_and_journal() {
+        let root = tempfile::tempdir().unwrap();
+        let managed = root.path().join("managed");
+        let outside = root.path().join("outside");
+        fs::create_dir(&managed).unwrap();
+        fs::create_dir(&outside).unwrap();
+        let path = managed.join("models.json");
+        fs::write(&path, b"[]").unwrap();
+        fs::write(outside.join("models.json"), b"[]").unwrap();
+        let connection = connection();
+        let target = target(&path);
+        let mut plans = PlanStore::default();
+        let context = PlanContext::new("test-owner", "state".into(), None);
+        let reviewed = plans
+            .insert(
+                &connection,
+                None,
+                plan(&connection, &target),
+                std::slice::from_ref(&target),
+                context.clone(),
+            )
+            .unwrap();
+        let stored = plans.consume(&reviewed.id).unwrap();
+        let mut transaction = transaction::Transaction::begin(
+            root.path().join("journal.json"),
+            &reviewed.id,
+            stored.writes.clone(),
+        )
+        .unwrap();
+        fs::rename(&managed, root.path().join("original")).unwrap();
+        directory_alias(&outside, &managed);
+        let validate = validate_plan(&stored, &connection, &[target], &context);
+        let begin = transaction::Transaction::begin(
+            root.path().join("other-journal.json"),
+            &reviewed.id,
+            stored.writes,
+        );
+        let apply = transaction.apply();
+        unlink_directory_alias(&managed);
+        assert!(validate.is_err());
+        assert!(begin.is_err());
+        assert!(apply.is_err());
+        assert_eq!(fs::read(outside.join("models.json")).unwrap(), b"[]");
+        assert_eq!(fs::read_dir(outside).unwrap().count(), 1);
+        assert_eq!(
+            fs::read(root.path().join("original/models.json")).unwrap(),
+            b"[]"
+        );
     }
 
     #[test]

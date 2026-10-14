@@ -1,5 +1,7 @@
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
+const i18n = require("../i18n.js");
+test.beforeEach(() => i18n.setLocale("zh-CN", { persist: false }));
 const { guide } = require("../jetbrains-ui.js");
 const setup = require("../setup-ui.js");
 const usage = require("../usage-ui.js");
@@ -36,6 +38,7 @@ test("writable JetBrains review exposes real automatic fields without showing se
   assert.equal(state.deployed, false);
 });
 test("app manual confirmation never covers JetBrains, which is optional for core deployment", () => {
+  i18n.setLocale("en", { persist: false });
   const clients = [{ id: "vs", kind: "vs-code-copilot", name: "VS", detected: true, supportsWrite: true }, { id: "app", kind: "github-copilot-app", name: "App", detected: true, supportsWrite: false }, target];
   const data = { components: [1, 2, 3, 4].map(id => ({ id, status: "ready" })), errors: {}, setup: { scannedAt: new Date().toISOString(), alignment: "userConfirmedSameAccount", manualConfirmed: true, preferences: { connectionId: "c" }, targets: [{ targetId: "vs", state: "inSync" }, { targetId: "jb-idea", state: "manual", detail: "JetBrains not verified" }] } };
   const state = setup.derive({ clients, connections: [connection] }, data);

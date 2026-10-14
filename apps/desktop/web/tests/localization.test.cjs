@@ -3,6 +3,8 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
+const i18n = require("../i18n.js");
+i18n.setLocale("zh-CN", { persist: false });
 const usage = require("../usage-ui.js");
 
 // Render the real secondary panels without a browser, IPC, timers or user data.
@@ -14,7 +16,7 @@ function panelModule(file, apiName, panelId) {
     querySelector: (selector) => selector === "#content" ? content : {},
     addEventListener() {},
   };
-  vm.runInNewContext(fs.readFileSync(path.join(__dirname, "..", file), "utf8"), { window, document, structuredClone, console }, { filename: file });
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname, "..", file), "utf8"), { window, document, structuredClone, console, CopilotBYOKManagerI18n: i18n }, { filename: file });
   return { panel, api: window[apiName] };
 }
 
@@ -35,7 +37,7 @@ test("Chinese status labels preserve unknown, unavailable, partial, stale and ex
 });
 
 test("account copy distinguishes inferred identity and manual action without changing official-login controls", () => {
-  const { panel, api } = panelModule("account-ui.js", "PilotWeaveAccount", "#account-panel");
+  const { panel, api } = panelModule("account-ui.js", "CopilotBYOKManagerAccount", "#account-panel");
   const state = api.previewStatus();
   state.anchor.detail = "<script>remote</script>";
   api.hydrate(state); api.mount();
@@ -49,7 +51,7 @@ test("account copy distinguishes inferred identity and manual action without cha
 });
 
 test("installation copy keeps unknown detection non-installable and result verification explicit", () => {
-  const { panel, api } = panelModule("installer-ui.js", "PilotWeaveInstaller", "#installation-panel");
+  const { panel, api } = panelModule("installer-ui.js", "CopilotBYOKManagerInstaller", "#installation-panel");
   api.hydrate([{ id: "vscode", name: "<img src=x>", status: "unknown", detail: "<script>remote</script>", version: null }], []);
   api.mount();
   assert.match(panel.innerHTML, /先核对安装计划，再确认执行/);
@@ -60,7 +62,7 @@ test("installation copy keeps unknown detection non-installable and result verif
 });
 
 test("separate GitHub authorization and source-clear copy retain their credential and deletion boundaries", () => {
-  const { panel, api } = panelModule("github-auth-ui.js", "PilotWeaveGithubAuth", "#github-authorization-panel");
+  const { panel, api } = panelModule("github-auth-ui.js", "CopilotBYOKManagerGithubAuth", "#github-authorization-panel");
   const state = api.previewStatus();
   state.detail = "<script>remote</script>";
   api.hydrate(state); api.mount();

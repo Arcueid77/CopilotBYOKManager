@@ -24,10 +24,10 @@ export function enrollDedicatedProfile({ profile, appData, runId, readSid = () =
   let sid;
   try { sid = readSid().match(/^"(?:[^"\r\n]|"")*","(S-1-5-\d+(?:-\d+)*)"\s*$/m)?.[1]; } catch {}
   if (!sid) return blocked('Could not determine the current user SID. Retry after the official Windows identity command is available.');
-  const marker=path.join(profile,'.pilotweave-validation-user.json');
+  const marker=path.join(profile,'.copilot-byok-manager-validation-user.json');
   try {
     if (!fs.existsSync(marker)) {
-      const existing=[path.join(profile,'.copilot'),path.join(appData,'Code'),path.join(appData,'PilotWeave')].some(p=>fs.existsSync(p));
+      const existing=[path.join(profile,'.copilot'),path.join(appData,'Code'),path.join(appData,'CopilotBYOKManager')].some(p=>fs.existsSync(p));
       if (existing) return blocked('Profile already contains client/application data. This mode cannot enroll the existing host profile.');
       fs.writeFileSync(marker,JSON.stringify({version:1,sid,runId}),{flag:'wx'});
     }
@@ -80,7 +80,7 @@ export async function liveAcceptance({ runRoot, manifest, completedAction }, rec
       const runtime=await driver.ipc('refresh_official_runtime_usage');
       record('C1 Official read-only runtime RPC',runtime.latest?.status==='available'&&runtime.latest?.modelStatus==='available'?'PASS':'BLOCKED',{capability:runtime.latest?.status,modelStatus:runtime.latest?.modelStatus,detail:runtime.latest?.detail});
       const authorization=await driver.ipc('get_github_authorization_status');
-      record('C1 Separate personal Billing capability',authorization.state==='verified'?'PASS':'BLOCKED',{capability:authorization.state,detail:'Separate PilotWeave authorization only; no client token copied'});
+      record('C1 Separate personal Billing capability',authorization.state==='verified'?'PASS':'BLOCKED',{capability:authorization.state,detail:'Separate CopilotBYOKManager authorization only; no client token copied'});
       const after=await driver.ipc('get_dashboard');
       assert.deepEqual(after.connections,before.connections); assert.deepEqual(after.deployments,before.deployments);
       assert.deepEqual((await driver.ipc('get_usage_sources')).map(s=>[s.id,s.enabled]),sources.map(s=>[s.id,s.enabled]));
@@ -98,7 +98,7 @@ export async function liveAcceptance({ runRoot, manifest, completedAction }, rec
     // genuinely empty profile can be enrolled; directories are checked, not read.
     if (!enrollDedicatedProfile({profile:process.env.USERPROFILE,appData:process.env.APPDATA,runId:manifest.runId},record)) return;
     if(!gate('InstallPackage',{package:path.basename(manifest.artifact.package),sha256:manifest.artifact.packageSha256,action:'Install the prepared current-user NSIS package in this dedicated profile'}))return;
-    const installed=path.join(process.env.LOCALAPPDATA,'PilotWeave','pilotweave.exe');
+    const installed=path.join(process.env.LOCALAPPDATA,'CopilotBYOKManager','copilot-byok-manager.exe');
     if(!manifest.packageInstalled) {
       if(digest(fs.readFileSync(manifest.artifact.package))!==manifest.artifact.packageSha256)throw new Error('Package digest changed');
       const p=spawn(manifest.artifact.package,['/S'],{windowsHide:true,stdio:'ignore'});
@@ -129,19 +129,19 @@ export async function liveAcceptance({ runRoot, manifest, completedAction }, rec
       const plan=await driver.ipc('preview_login',{surfaces:[],targetAccount:null});
       await driver.ipc('apply_login_plan',{planId:plan.id,confirmed:true});manifest.signInLaunched=true;save();
     }
-    if(!gate('AccountConfirmation','Complete official sign-in and verify or confirm matching accounts in the PilotWeave Home UI; then resume.'))return;
+    if(!gate('AccountConfirmation','Complete official sign-in and verify or confirm matching accounts in the CopilotBYOKManager Home UI; then resume.'))return;
     const account=await driver.ipc('get_setup_status');
     record('C2 Account evidence','PASS',{alignment:account.alignment,states:account.accounts.surfaces.map(s=>({surface:s.surface,state:s.state}))});
     if(!['verifiedSameAccount','userConfirmedSameAccount'].includes(account.alignment)) { record('C2 Account completion','BLOCKED','Official account evidence is not aligned; review in the app');return; }
-    if(!gate('ProviderSetup','Create the test Connection in PilotWeave, review/apply supported targets, and complete the Copilot app manual provider step in its own UI. This gate never creates a real model request.'))return;
+    if(!gate('ProviderSetup','Create the test Connection in CopilotBYOKManager, review/apply supported targets, and complete the Copilot app manual provider step in its own UI. This gate never creates a real model request.'))return;
     const setup=await driver.ipc('get_setup_status');
     if(!setup.preferences.connectionId||setup.targets.some(t=>!['inSync','manual','notInstalled'].includes(t.state))||(setup.targets.some(t=>t.state==='manual')&&!setup.manualConfirmed)) {record('C2 Provider verification','BLOCKED','Review the actual deployment statuses in Home');return;}
-    if(!gate('GitHubAuthorization','Enter a separate least-privilege GitHub authorization in PilotWeave UI. Do not send the token to the runner.'))return;
+    if(!gate('GitHubAuthorization','Enter a separate least-privilege GitHub authorization in CopilotBYOKManager UI. Do not send the token to the runner.'))return;
     const auth=await driver.ipc('get_github_authorization_status');
     if(auth.state!=='verified'){record('C2 Personal Billing','BLOCKED',{capability:auth.state});return;}
     const now=new Date();const billing=await driver.ipc('refresh_personal_github_usage',{year:now.getUTCFullYear(),month:now.getUTCMonth()+1});
     record('C2 Billing endpoint coverage','PASS',{families:billing.families.map(f=>({family:f.family,capability:f.latest?.status}))});
-    if(!gate('UsageSources','In this enrolled fresh profile only, create bounded test activity in a test workspace. Configure VS Code metadata export with captureContent=false and close the CLI session normally. Enable only supported sources in PilotWeave.'))return;
+    if(!gate('UsageSources','In this enrolled fresh profile only, create bounded test activity in a test workspace. Configure VS Code metadata export with captureContent=false and close the CLI session normally. Enable only supported sources in CopilotBYOKManager.'))return;
     const sources=await driver.ipc('get_usage_sources');
     if(!sources.some(s=>s.enabled)){record('C2 Usage source opt-in','BLOCKED','No source explicitly enabled');return;}
     await driver.ipc('sync_local_usage',{sourceIds:[]});const one=await driver.ipc('get_usage_overview');

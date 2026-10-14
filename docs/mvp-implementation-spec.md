@@ -4,9 +4,11 @@
 
 This document is the normative implementation contract for CopilotBYOKManager's required pre-release milestone. Everything described as **must**, **required**, or **shall** is required scope. This document intentionally contains no post-MVP roadmap.
 
+The maintainer's 2026-10-14 interface decision selects a **core configuration edition**: Overview / Providers / Apps / About. Usage, personal Billing/authorization and shared Resources remain implemented but are not offered through this interface. This staging decision does not mark the complete milestone accepted or remove security/persistence requirements. See [feature availability](feature-availability.md). Hidden UI sections below describe the retained extended milestone, not controls available in the core edition.
+
 Where an upstream GitHub, VS Code, package-manager, model-price, or client-log interface changes, the implementation must prefer a safe explicit Unsupported/SchemaError state over undocumented credential extraction, brittle private-state mutation, fabricated data, or silent fallback.
 
-The checked-in code contains connected native deployment/recovery, installation, account, Resources and Usage slices. The [implementation status](implementation-status.md) records their actual coverage and dated validation. The complete milestone is still unaccepted: clean-machine and real-client checks remain open, and unsupported upstream capabilities remain explicit. The public project name is CopilotBYOKManager; legacy PilotWeave storage and credential/build identifiers remain unchanged for compatibility.
+The checked-in code contains connected native deployment/recovery, installation, account, Resources and Usage slices. The [implementation status](implementation-status.md) records their actual coverage and dated validation. The complete milestone is still unaccepted: clean-machine and real-client checks remain open, and unsupported upstream capabilities remain explicit. CopilotBYOKManager is an unreleased product with its own storage, credential and build identifiers; historical-brand compatibility is not required.
 
 ## 2. Product goal
 
@@ -829,14 +831,9 @@ Primary navigation follows the approved lightweight manager layout:
 
 ```text
 Overview
-Connections
-Clients
-Usage
-More
-  Resources
-  Activity
-  Settings
-  About
+Providers
+Apps
+About
 ```
 
 ### 17.1 Overview
@@ -845,10 +842,12 @@ Show real native data in this order:
 
 - pending actions only when needed, with a concrete route to installation, accounts or recovery;
 - one row per client/profile with owned published-source chips and observed model counts;
-- enabled Connection cards with Add/Edit and Publish actions;
+- a concise provider summary and links to provider editing/publication;
 - the latest per-target publication result with persistent client-specific next steps.
 
-Detailed component/account state belongs on Clients, usage coverage on Usage, and operation history on Activity. A published source is evidence of owned configuration, never proof of the client's currently selected model, authentication or a successful request. Disabling a Connection hides its Home card and blocks new publication without silently revoking the existing source.
+Provider editing belongs on Providers; component/account state and per-app provider selection belong on Apps. Overview summarizes providers instead of duplicating editable cards. Publication/revocation history is expandable within Providers and Apps. Recovery is visible on every core page; required next steps must not target hidden Settings or Activity. A published source is evidence of owned configuration, never proof of selected models, authentication or a successful request. Disabling a Connection blocks new publication without silently revoking existing sources.
+
+Core refresh must not query hidden Usage/Billing/pricing/Resources or separate authorization modules, or mount their UI. Preserve native implementation/data and regressions. Light/Dark/System is a bounded saved presentation preference; changing it does not redraw an editor or consume a plan. Windows close-to-tray follows the reviewed CC Switch interaction: default close-to-tray, a saved Tray/Exit preference on About, left-click restore, right-click fixed menu and existing-instance wakeup on a repeated launch. Hide only with a readable Tray preference, available tray and successful hide; otherwise allow normal close. Damaged preference files must remain intact. Ordinary minimize remains taskbar minimization. Tray text follows the interface locale through a typed presentation-only command with no persistent write or client operation. Browser/unsupported platforms never claim tray availability. Secondary launch payloads must not become deployment, URL-opening or account commands.
 
 No static success rate, resource count, or token value.
 
@@ -919,7 +918,7 @@ Filters:
 
 The UI must explain cache-hit formula and price source/snapshot. Unknown values render as unavailable, not `0`.
 
-Place the tab navigation before detailed metrics and filters. Keep official quota/Billing independent of local filters. In model/session views, show date/client/route fields directly and retain Connection/model/attribution/source/status fields in an advanced section. Provide model suggestions, filter reset and focus preservation after redraw; resetting local filters must not reset the Billing month. Preserve the full metric set, readable table contrast and horizontal comparison through a fixed model column.
+Place the tab navigation before detailed metrics and filters. Keep official quota/Billing independent of local filters. In model/session views, compact filters precede results; the complete local Token totals and coverage are collapsed below those results, not a mandatory eight-card preamble. Show date/client/route fields directly and retain Connection/model/attribution/source/status fields in an advanced section. Provide model suggestions, filter reset and focus preservation after redraw; resetting local filters must not reset the Billing month. Preserve the full metric set, readable table contrast and horizontal comparison through a fixed identity column containing model, route/confidence and origin. Session details lead with labeled allowlisted metadata and expose full metadata JSON only on expansion.
 
 ### 17.5 Activity
 
@@ -934,6 +933,8 @@ Browser-only mode must display a prominent Demo/Preview badge, use disposable da
 Dialogs must move focus inside, contain keyboard navigation, isolate the background, support Escape where the operation can be dismissed, and restore focus after closure. Connection/resource editors confirm before discarding unsaved changes; dirty tracking must not serialize passwords or other input values into draft storage. Saving prevents duplicate submission or misleading cancellation, and errors persist with retained input and a focused field/summary.
 
 Keep common Connection fields visible and provider/protocol/header details under advanced options. Do not infer or rewrite the selected protocol from a display label. Publishing retains per-target results beyond a toast: VS Code requires model selection, JetBrains requires IDE restart and model selection, CLI requires a new terminal/session, and Copilot app setup remains manual. The legacy exclusive CLI route is not preselected by default; its scope is explained before review.
+
+Catalog checkboxes join the same editable Connection draft and are included by Save connection, without a separate add confirmation or automatic full-catalog selection. Endpoint/credential changes invalidate pending catalog selections while preserving original/manual model lines. Make the first-Connection action directly visible ahead of optional environment reminders; recovery takes precedence. A client Review action locates that exact target, and a skipped App result links to the manual guide for that publication's Connection. Active publication prevents navigation, refresh or misleading cancellation; failures remain visible, consume the previous preview and require fresh review. Closing an idle inline preview restores its opener; completion focuses the persistent per-target result.
 
 ## 18. Implementation sequence
 

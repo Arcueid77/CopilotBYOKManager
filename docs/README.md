@@ -10,8 +10,12 @@ Start with the user manual in [English](../README.md) or [简体中文](../READM
 | [Architecture](architecture.md) | Current modules, trust boundaries, storage and required invariants |
 | [Adversarial review](adversarial-review.md) | Failure cases and required mitigations |
 | [Security policy](../SECURITY.md) | Private reporting and sensitive-data rules |
-| [Agent entry point](../AGENTS.md) | Development workflow, compatibility and required checks |
+| [Agent entry point](../AGENTS.md) | Development workflow, product identities and required checks |
 | [Local validation](local-validation-plan.md) | Browser, isolated native, host-observation and clean-Windows procedures |
+| [Release criteria](release-criteria.md) | First-release gates, evidence, decision record and incident handling |
+| [Promotion plan](promotion-plan.md) | Audience, positioning, staged outreach and opt-in feedback |
+| [Interface localization](localization.md) | English/Chinese behavior and contributor checks |
+| [Feature availability](feature-availability.md) | Four-page core edition, hidden capabilities and unfinished delivery work |
 
 ## Client and source contracts
 
@@ -32,7 +36,3 @@ Upstream review dates and fixed versions in these documents are provenance, not 
 - [P0/P1 handoff](p0-p1-handoff.md): historical 2026-09-10 evidence; earlier navigation, default target selection, and Resources status have been superseded.
 
 Use the [current status](implementation-status.md) before continuing work from an older handoff. Keep original test counts, dates and evidence limits attached to their original run.
-
-## Naming
-
-Public documentation and the repository use **CopilotBYOKManager**. Internal PilotWeave identifiers, storage paths, credentials, package names and validation options remain unchanged for compatibility; see [the naming notes](../README.md#naming-and-compatibility).

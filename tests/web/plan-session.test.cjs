@@ -1,5 +1,6 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
+require("../../apps/desktop/web/i18n.js").setLocale("en", { persist: false });
 const PlanSession = require("../../apps/desktop/web/plan-session.js");
 const plan = (id) => ({ id, operations: [], createdAt: "2026-09-01T00:00:00Z" });
 const now = Date.parse("2026-09-01T00:01:00Z");

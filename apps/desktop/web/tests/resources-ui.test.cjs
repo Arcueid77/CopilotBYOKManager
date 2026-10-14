@@ -1,5 +1,6 @@
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
+require("../i18n.js").setLocale("zh-CN", { persist: false });
 const { render, renderPlan } = require("../resources-ui.js");
 test("resource data is escaped and publication is not represented as verified client consumption", () => {
   const html = render({ resources: [{ id: '" onclick="attack()', name: "<img src=x onerror=attack()>", kind: "instructions", updatedAt: "2026-10-02T00:00:00Z" }],

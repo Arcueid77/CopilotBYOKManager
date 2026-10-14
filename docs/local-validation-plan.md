@@ -2,7 +2,9 @@
 
 本机入口已实现。A 是代码/浏览器回归，B 是隔离的真实 Windows WebView/IPC 集成测试，C1 使用现有环境观察真实能力，C2 为专用空白用户保留可接续验收入口。维护者本轮选择现有环境，未创建用户或 VM，未执行 C2 安装验收。各次实际结果以仓库外的报告为准；本文不把未执行的项目算作通过。
 
-当前状态更新于 2026-10-13，见 [实现与验收状态](implementation-status.md)。下文注明日期的 HostObserve、NativeIsolated 与 Rider 记录属于各自源码和环境，不能自动沿用到新提交。仓库和公开名称已改为 CopilotBYOKManager；`PilotWeave-validation`、内部构建/存储标识和脚本参数保留兼容。
+当前状态更新于 2026-10-13，见 [实现与验收状态](implementation-status.md)。下文注明日期的 HostObserve、NativeIsolated 与 Rider 记录属于各自源码和环境，不能自动沿用到新提交。当前程序和验证工具统一使用 CopilotBYOKManager 标识；下列命令与路径用于新执行，历史报告仍以各次运行的原始 manifest 为准。
+
+2026-10-14 核心配置版只开放总览、供应商、应用、关于。当前隔离浏览器入口针对四页、双语、双主题、表单/发布/恢复、关闭选项成功/失败/损坏、菜单语言合并更新及隐藏模块不加载进行回归，保留扩展模块的单元和原生后端测试。下方 B00–B32 的旧 UI 套件含已隐藏页面导航；重新执行前须适配，不能把工具语法检查或旧版本结果算作本版全量原生通过。Windows 关闭至托盘/直接退出选项及重启保存、左键恢复、右键菜单及退出、菜单语言、重复启动唤回和退出后进程/托盘清理，另需隔离的真实系统交互检查。
 
 完成这些验证不等于完整 MVP 达标；仍按 [实现规范 §21](mvp-implementation-spec.md#21-final-acceptance) 判定。Resources 的受支持公共路径发布与撤销已纳入 B；真实客户端消费、手动边界和干净机器验收仍须单独核对，见 [加固交接](hardening-handoff.md)。
 
@@ -25,11 +27,11 @@ pwsh -NoProfile -File .\scripts\verify-local.ps1 -Mode PrepareLive -LiveTarget H
 pwsh -NoProfile -File .\scripts\verify-local.ps1 -Mode LiveAcceptance -LiveTarget HostObserve -RunId <上一步ID> -Resume
 ```
 
-A 的既有浏览器套件使用现有 Playwright。自动查找 Codex 的捆绑运行库；其他环境须把 `PILOTWEAVE_PLAYWRIGHT` 设为已安装 Playwright 模块的绝对路径。不会把浏览器 mock 结果当作原生结果。
+A 的既有浏览器套件使用现有 Playwright。自动查找 Codex 的捆绑运行库；其他环境须把 `COPILOT_BYOK_MANAGER_PLAYWRIGHT` 设为已安装 Playwright 模块的绝对路径。不会把浏览器 mock 结果当作原生结果。
 
 `PrepareLive` 构建默认 feature 的 current-user NSIS 包，复制 EXE/安装包，记录源码指纹和 SHA-256，准备范围清单，**不安装**。`scripts/package-local.ps1` 是这一打包入口的快捷方式。
 
-报告目录为 `%LOCALAPPDATA%\PilotWeave-validation\runs\<RunId>`。`-ToolRoot` 可指定非链接的独立工具目录。退出码：0 通过、1 失败、2 阻塞。每步结束写入 HTML、JSON 和 JUnit；未结束显示 RUNNING。隐藏子进程使用独立输出管道并同时读取输出与错误；脱敏的 `runner.log` 保留异常终止诊断。重跑同一 ID 会保留以前的报告到 `attempts/`，不覆盖失败历史。执行中修改源码会使“Source tree remained unchanged”失败，防止把混合源码验证当作同一版本。
+报告目录为 `%LOCALAPPDATA%\CopilotBYOKManager-validation\runs\<RunId>`。`-ToolRoot` 可指定非链接的独立工具目录。退出码：0 通过、1 失败、2 阻塞。每步结束写入 HTML、JSON 和 JUnit；未结束显示 RUNNING。隐藏子进程使用独立输出管道并同时读取输出与错误；脱敏的 `runner.log` 保留异常终止诊断。重跑同一 ID 会保留以前的报告到 `attempts/`，不覆盖失败历史。执行中修改源码会使“Source tree remained unchanged”失败，防止把混合源码验证当作同一版本。
 
 ## 分层与边界
 

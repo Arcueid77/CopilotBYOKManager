@@ -191,7 +191,7 @@ fn resource_plans_are_bound_expiring_one_shot_and_external_changes_are_stale() {
         .content_preview
         .as_ref()
         .unwrap()
-        .starts_with("---\nname: pilotweave-"));
+        .starts_with("---\nname: copilot-byok-manager-"));
     let stored = plans.consume(&plan.id).unwrap();
     assert!(plans.consume(&plan.id).is_err());
     stored
@@ -334,7 +334,7 @@ fn shared_skill_is_one_physical_projection_and_custom_home_remains_manual() {
             .all(|t| !t.supported)
     );
     let rendered = String::from_utf8(markdown("owner", &record).unwrap()).unwrap();
-    assert!(rendered.starts_with("---\nname: pilotweave-"));
+    assert!(rendered.starts_with("---\nname: copilot-byok-manager-"));
 }
 
 #[test]

@@ -11,14 +11,16 @@
 //! These tests touch no real profile, registry, environment, or shell file.
 
 use chrono::Utc;
-use pilotweave_lib::adapters::{self, copilot_cli};
-use pilotweave_lib::deployment::{self, ownership::TargetOwnership, PlanContext, PlanStore};
-use pilotweave_lib::domain::{
+use copilot_byok_manager_lib::adapters::{self, copilot_cli};
+use copilot_byok_manager_lib::deployment::{
+    self, ownership::TargetOwnership, PlanContext, PlanStore,
+};
+use copilot_byok_manager_lib::domain::{
     ApiProtocol, ClientKind, ClientStatus, ClientTarget, Connection, ModelCapabilities, ModelSpec,
     ProviderKind,
 };
-use pilotweave_lib::error::AppError;
-use pilotweave_lib::transaction::Transaction;
+use copilot_byok_manager_lib::error::AppError;
+use copilot_byok_manager_lib::transaction::Transaction;
 use serde_json::Value;
 use std::collections::BTreeMap;
 use std::fs;
@@ -137,9 +139,9 @@ fn switching_models_projects_every_supported_client() {
     // The user's own group survives every switch.
     assert!(rendered.contains("Personal"));
 
-    // The rollback backup preserved the pre-PilotWeave configuration.
-    let backup =
-        fs::read_to_string(config.with_extension("json.pilotweave.bak")).expect("rollback backup");
+    // The rollback backup preserved the pre-CopilotBYOKManager configuration.
+    let backup = fs::read_to_string(config.with_extension("json.copilot-byok-manager.bak"))
+        .expect("rollback backup");
     assert!(backup.contains("Personal"));
     assert!(!backup.contains("upstream/model-b"));
 
@@ -158,7 +160,7 @@ fn switching_models_projects_every_supported_client() {
     }
 
     // The GitHub Copilot app refuses automated writes by design.
-    let app_target = pilotweave_lib::adapters::github_app::discover_target();
+    let app_target = copilot_byok_manager_lib::adapters::github_app::discover_target();
     let error = adapters::github_app::apply(&connection, Some("pw-key"), &app_target)
         .expect_err("GitHub Copilot app must stay read-only");
     assert!(matches!(error, AppError::Unsupported(_)));

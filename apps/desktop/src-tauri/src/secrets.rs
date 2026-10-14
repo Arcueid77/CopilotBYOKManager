@@ -1,7 +1,7 @@
 use crate::error::{AppError, AppResult};
 use keyring::{Entry, Error as KeyringError};
 
-const SERVICE: &str = "dev.pilotweave.connections";
+const SERVICE: &str = "io.github.avalonero.copilotbyokmanager.connections";
 
 fn entry(secret_ref: &str) -> AppResult<Entry> {
     Entry::new(SERVICE, secret_ref).map_err(|error| AppError::Secret(error.to_string()))

@@ -3,12 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="color-scheme" content="light" />
+    <meta name="color-scheme" content="light dark" />
     <title>CopilotBYOKManager</title>
+    <script src="appearance.js"></script>
     <link rel="stylesheet" href="styles.css" />
     <link rel="stylesheet" href="installer.css" />
     <link rel="stylesheet" href="account.css" />
-    <link rel="stylesheet" href="github-auth.css" />
     <link rel="stylesheet" href="setup-usage.css" />
     <link rel="stylesheet" href="manager.css" />
   </head>
@@ -21,36 +21,26 @@
           </div>
           <div>
             <strong>CopilotBYOKManager</strong>
-            <small>本地 Copilot 配置管理</small>
+            <small data-i18n="本地 Copilot 配置管理">本地 Copilot 配置管理</small>
           </div>
         </div>
 
-        <nav id="primary-nav" aria-label="主导航">
+        <nav id="primary-nav" aria-label="主导航" data-i18n-aria-label="主导航">
           <button class="nav-item active" data-route="overview" aria-current="page">
-            <span>总览</span>
+            <span data-i18n="总览">总览</span>
           </button>
           <button class="nav-item" data-route="connections">
-            <span>连接</span>
+            <span data-i18n="供应商">供应商</span>
           </button>
-          <button class="nav-item" data-route="clients"><span>客户端</span></button>
-          <button class="nav-item" data-route="usage"><span>用量</span></button>
-          <details class="more-nav"><summary class="nav-item"><span>更多</span></summary><div class="more-menu">
-          <button class="nav-item" data-route="resources"><span>资源</span></button>
-          <button class="nav-item" data-route="activity">
-            <span>活动记录</span>
-          </button>
-          <button class="nav-item" data-route="settings">
-            <span>设置</span>
-          </button>
-          <button class="nav-item" data-route="about"><span>关于</span></button>
-          </div></details>
+          <button class="nav-item" data-route="clients"><span data-i18n="应用">应用</span></button>
+          <button class="nav-item" data-route="about"><span data-i18n="关于">关于</span></button>
         </nav>
 
         <div class="sidebar-footer">
           <div class="runtime-dot"></div>
           <div>
-            <strong id="runtime-label">读取状态中</strong>
-            <small id="runtime-detail">检查本地后端</small>
+            <strong id="runtime-label" data-i18n="读取状态中">读取状态中</strong>
+            <small id="runtime-detail" data-i18n="检查本地后端">检查本地后端</small>
           </div>
         </div>
       </aside>
@@ -58,13 +48,15 @@
       <main class="main-panel">
         <header class="topbar">
           <div>
-            <p class="eyebrow">PILOTWEAVE</p>
-            <h1 id="page-title">总览</h1>
-            <p id="page-subtitle">管理连接，预览后发布。</p>
+            <p class="eyebrow">CopilotBYOKManager</p>
+            <h1 id="page-title" data-i18n="总览">总览</h1>
+            <p id="page-subtitle" data-i18n="管理连接，预览后发布。">管理连接，预览后发布。</p>
           </div>
           <div class="topbar-actions">
-            <button id="refresh-button" class="button ghost">刷新</button>
-            <button id="add-connection-button" class="button primary">添加连接</button>
+            <label class="appearance-picker"><span data-i18n="外观">外观</span><select id="interface-theme" data-appearance-select aria-label="外观" data-i18n-aria-label="外观"><option value="system" data-i18n="跟随系统">跟随系统</option><option value="light" data-i18n="浅色">浅色</option><option value="dark" data-i18n="深色">深色</option></select></label>
+            <label class="language-picker"><span data-i18n="界面语言">界面语言</span><select id="interface-language" aria-label="界面语言" data-i18n-aria-label="界面语言"><option value="en" lang="en">English</option><option value="zh-CN" lang="zh-CN">简体中文</option></select></label>
+            <button id="refresh-button" class="button ghost" data-i18n="刷新">刷新</button>
+            <button id="add-connection-button" class="button primary" data-i18n="添加连接">添加连接</button>
           </div>
         </header>
         <section id="content" class="content" aria-live="polite"></section>
@@ -73,16 +65,16 @@
 
     <div id="modal-root"></div>
     <div id="toast-root" aria-live="assertive"></div>
+    <script src="i18n-messages.js"></script>
+    <script src="i18n.js"></script>
     <script src="ui-lifecycle.js"></script>
     <script src="deployment-review.js"></script>
     <script src="installer-ui.js"></script>
     <script src="account-ui.js"></script>
-    <script src="github-auth-ui.js"></script>
     <script src="setup-ui.js"></script>
     <script src="jetbrains-ui.js"></script>
-    <script src="usage-ui.js"></script>
     <script src="plan-session.js"></script>
-    <script src="resources-ui.js"></script>
+    <script src="core-ui.js"></script>
     <script src="model-discovery.js"></script>
     <script src="manager-ui.js"></script>
     <script src="inline-deployment.js"></script>

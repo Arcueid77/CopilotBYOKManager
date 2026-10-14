@@ -8,34 +8,9 @@ use std::path::{Path, PathBuf};
 use uuid::Uuid;
 
 pub fn ensure_regular_or_missing(path: &Path) -> AppResult<()> {
-    #[cfg(feature = "local-e2e")]
-    if crate::test_support::active() {
-        crate::test_support::constrain(path)?;
-    }
-
-    match fs::symlink_metadata(path) {
-        Ok(metadata) => {
-            #[cfg(windows)]
-            {
-                use std::os::windows::fs::MetadataExt;
-                if metadata.file_attributes() & 0x400 != 0 {
-                    return Err(AppError::InvalidInput(format!(
-                        "Refusing a reparse-point target: {}",
-                        path.display()
-                    )));
-                }
-            }
-            if metadata.file_type().is_symlink() || !metadata.is_file() {
-                return Err(AppError::InvalidInput(format!(
-                    "Expected a regular file: {}",
-                    path.display()
-                )));
-            }
-            Ok(())
-        }
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
-        Err(error) => Err(AppError::io(path, error)),
-    }
+    // Use the same pre-canonicalization ancestor checks as private state IO.
+    // Checking only the leaf would turn a parent junction into write authority.
+    crate::safe_file::ensure_regular_or_missing(path)
 }
 
 pub fn read_optional(path: &Path, limit: u64) -> AppResult<Option<Vec<u8>>> {
@@ -94,7 +69,7 @@ pub fn read_optional(path: &Path, limit: u64) -> AppResult<Option<Vec<u8>>> {
     Ok(Some(bytes))
 }
 
-/// Resolve parent aliases once and preserve the leaf's no-symlink boundary.
+/// Resolve only verified system aliases; never conceal a user-controlled link.
 pub fn resource_path(path: &Path) -> AppResult<PathBuf> {
     ensure_regular_or_missing(path)?;
     let mut parent = path
@@ -119,6 +94,7 @@ pub fn resource_path(path: &Path) -> AppResult<PathBuf> {
     for part in suffix.iter().rev() {
         resolved.push(part);
     }
+    ensure_regular_or_missing(path)?;
     ensure_regular_or_missing(&resolved)?;
     Ok(resolved)
 }
@@ -146,11 +122,13 @@ fn write_using(
         .parent()
         .ok_or_else(|| AppError::Config("Missing parent".into()))?;
     fs::create_dir_all(parent).map_err(|error| AppError::io(parent, error))?;
-    let temp = parent.join(format!(".pilotweave-{}.tmp", Uuid::new_v4()));
+    ensure_regular_or_missing(&path)?;
+    let temp = parent.join(format!(".copilot-byok-manager-{}.tmp", Uuid::new_v4()));
     let result = (|| -> AppResult<()> {
         // Transaction targets/journals can materialize provider keys. Reuse the
         // protected Windows DACL (owner + LocalSystem), not inherited ACLs;
         // Unix keeps the existing 0600 behavior and optional preserved modes.
+        ensure_regular_or_missing(&temp)?;
         let mut file =
             crate::safe_file::create_private(&temp).map_err(|error| AppError::io(&temp, error))?;
         if let Some(mode) = mode {
@@ -162,6 +140,7 @@ fn write_using(
         file.sync_all()
             .map_err(|error| AppError::io(&temp, error))?;
         drop(file);
+        ensure_regular_or_missing(&temp)?;
         ensure_regular_or_missing(&path)?;
         replace_file(&temp, &path).map_err(|error| AppError::io(&path, error))?;
         // Replacement has committed at this point. Do not report an ordinary

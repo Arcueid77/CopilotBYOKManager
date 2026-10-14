@@ -1,5 +1,5 @@
 {
-  "name": "pilotweave-native-validation",
+  "name": "copilot-byok-manager-native-validation",
   "private": true,
   "type": "module",
   "scripts": { "test": "node --test tests/*.test.mjs" },

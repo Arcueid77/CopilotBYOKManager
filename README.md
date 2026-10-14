@@ -8,21 +8,35 @@ Save your AI provider's endpoint, API key, and models in one place, then apply t
 
 You do not need to maintain a separate provider configuration for every client. When you change an endpoint or key, or add or remove models, edit the connection, preview the changes, and publish them to the clients you want to update.
 
-[Get started](#getting-started) · [Supported clients](#supported-clients) · [First connection](#first-connection) · [Everyday use](#everyday-use) · [Usage and costs](#usage) · [FAQ](#faq)
+[Get started](#getting-started) · [Supported clients](#supported-clients) · [First connection](#first-connection) · [Everyday use](#everyday-use) · [Planned features](#usage) · [FAQ](#faq)
 
 > This is a pre-release application with no published GitHub Releases installers yet. You can try the browser interface or run the desktop app from source. Clean-Windows installation, real-account access, and actual client requests still require acceptance testing; see [implementation and validation status](docs/implementation-status.md).
 
-The app's current interface is in Chinese. This manual provides English instructions and includes the Chinese labels for key controls; it does not imply that the app has an English-language interface.
+The interface supports **English and Simplified Chinese**. It follows your system language on first launch; choose **Interface language** at the top to switch and save your preference. Other system languages fall back to English. Finish or close an open form or deployment preview before switching. Connection names, model IDs, endpoints and original diagnostic messages are not translated.
+
+## Current pages
+
+| Page | What to do here |
+| --- | --- |
+| Overview | Check configuration status, next actions and the latest publication result |
+| Providers | Manage endpoint, key and models; preview publication or revoke owned configuration |
+| Apps | Choose a provider per app; review detection, installation, official sign-in and publication history |
+| About | Appearance, help, offline planned-feature record and local storage/recovery information |
+
+Use **Appearance** at the top or in About to choose **System, Light or Dark**. The preference is saved independently of language. Switching appearance keeps open drafts and reviewed previews intact.
+
+On Windows, closing the window hides it to the tray by default. In **About → When closing the window**, choose **Hide to system tray** or **Exit the app**; the choice is saved. Left-click the tray icon or choose **Open main window** to restore it; right-click **Exit CopilotBYOKManager** to quit. Ordinary minimize stays on the taskbar. Opening the app again restores the existing window instead of starting another instance. The tray menu follows the interface language.
+
+If the tray cannot be created, hiding fails, or window preferences cannot be read, closing exits normally. Damaged preferences are retained instead of overwritten. See About for the observed behavior. Browser preview has no system tray.
 
 ## What you can do
 
 - **Manage providers centrally:** save multiple connections, fetch or manually enter models, and choose a preferred model.
 - **Apply configuration to multiple clients:** select targets, review changes, confirm publication, and check each target's result and next steps.
 - **Set up clients:** check installation status, install supported Windows components through reviewed plans, and complete official sign-in and account checks for each client.
-- **Inspect usage:** view official quota, personal GitHub Billing, local token records, and API-equivalent estimates separately.
-- **Reuse resources:** manage MCP, Skills, and Instructions, then preview and publish them to supported public configuration locations.
+- **Keep the core workflow focused:** Overview, Providers, Apps and About. Usage, Billing and resource entry points are temporarily hidden; existing data is retained.
 
-A **connection** is a reusable provider configuration. **Publishing** writes it to the selected clients. **Saving is not publishing, and publishing does not mean a client has selected the model.**
+A **provider entry** is a reusable endpoint/key/model configuration. **Publishing** writes it to the selected clients. **Saving is not publishing, and publishing does not mean a client has selected the model.**
 
 <a id="supported-clients"></a>
 
@@ -49,7 +63,7 @@ Accepted protocols, endpoints, and model capabilities can differ between clients
 2. Open the local [apps/desktop/web/index.html](apps/desktop/web/index.html) file in your browser.
 3. Try adding a connection, selecting clients, and reviewing a publication preview.
 
-The page displays **Browser preview (浏览器试用)**. This mode uses simulated data: it does not write to real clients, run installers, sign you in, or send requests to providers. Use sample data, not real API keys. Resource management and real usage imports require the desktop app.
+The page displays **Browser preview (浏览器试用)**. This mode uses simulated data: it does not write to real clients, run installers, sign you in, or send requests to providers. Use sample data, not real API keys. Usage, Billing and resource management are not offered in this core edition.
 
 The [interactive design prototype](prototype/copilot-byok-manager.html) is retained separately as a design reference. Use the frontend entry point above to try the current interface.
 
@@ -66,7 +80,7 @@ npm ci
 npm run dev
 ```
 
-The active development branch is `main`. The first launch downloads dependencies and compiles the app; a successful launch opens a desktop window. Its title may still show the former name, PilotWeave; see [naming and compatibility](#naming-and-compatibility).
+The active development branch is `main`. The first launch downloads dependencies and compiles the app; a successful launch opens the CopilotBYOKManager desktop window.
 
 To build the desktop executable without an installer, run `npm run build -- --no-bundle`. See [local validation](docs/local-validation-plan.md) for packaging details. A successful build is not proof of clean-machine installation acceptance.
 
@@ -76,17 +90,17 @@ To build the desktop executable without an installer, run `npm run build -- --no
 
 ### 1. Check the clients you want to use
 
-Open **Clients (客户端)** and review the detected apps and profiles. You only need the clients you intend to use, not every supported app.
+Open **Apps (应用)** and review the detected apps and profiles. You only need the clients you intend to use, not every supported app.
 
 - If an installed component's status is outdated, open **Installation and updates (安装与更新)** and click **Refresh status (刷新状态)**.
 - For a missing supported Windows component, click its **Install (安装)** button, review the plan, and confirm. Install clients without an automatic installation path yourself.
 - Expand **Official sign-in and account checks (官方登录与账号核对)** and follow the official sign-in steps in each client. The manager never copies one client's sign-in credentials to another.
 
-Use **Check the same GitHub account in each client (逐个核对同一 GitHub 账号)** to record your own confirmation. Manual confirmation and software-verified identity are shown separately. **Provider setup does not require granting this manager access to personal Billing.** Billing authorization is a separate, optional step.
+Use **Check the same GitHub account in each client (逐个核对同一 GitHub 账号)** to record your own confirmation. Manual confirmation and software-verified identity are shown separately. **Provider setup does not require granting this manager access to personal Billing.** Billing authorization is separate and is not offered in this core edition.
 
-### 2. Add a connection
+### 2. Add a provider
 
-Go to **Connections (连接) → Add connection (添加连接)** and fill in:
+Go to **Providers (供应商) → Add provider (添加供应商)** and fill in:
 
 | Field | What to enter |
 | --- | --- |
@@ -107,7 +121,7 @@ The manager stores API keys in the operating-system credential store and does no
 
 ### 3. Add models and save
 
-Start with **Fetch models (获取模型)**. Filter by name or ID, select the models you want, then click **Add selected (添加已选)**. The manager does not automatically select the entire catalog or overwrite existing manual entries.
+Start with **Fetch models (获取模型)**. Filter by name or ID and check the models you want: they immediately join the same editable draft. **Save provider (保存供应商)** saves checked and manually entered models together; there is no separate Add selected step. Nothing is selected automatically, and existing manual names and disabled-model settings are preserved. Unchecking removes an unchanged catalog-added draft line. Changing endpoint or credential settings clears uncommitted catalog selections, not existing or manually edited models.
 
 If the provider has no model catalog endpoint, enter one model per line in **Models (模型)**:
 
@@ -118,16 +132,16 @@ another-model-id | Backup model
 
 Replace these example IDs with the actual IDs supplied by your provider. The display name after the vertical bar is optional. For Azure connections, manually enter the actual deployment name, not the underlying model name.
 
-Choose a **Preferred model (首选模型)**, then click **Save connection (保存连接)**:
+Choose a **Preferred model (首选模型)**, then click **Save provider (保存供应商)**:
 
 - Copilot CLI uses the preferred model for `COPILOT_MODEL`.
 - Clients with model pickers, such as VS Code and JetBrains, still require you to select the model inside the client. This preference does not force an open session to switch models.
 
-**You have only saved the connection; no client configuration has changed yet.** Both Fetch models and the connection card's **Test connection (测试连接)** check catalog access only. They do not verify chat, tool calling, or vision support.
+**You have only saved the connection; no client configuration has changed yet.** Both Fetch models and the connection card's **Test model catalog (测试模型目录)** check catalog access only. They do not verify chat, tool calling, or vision support.
 
 ### 4. Preview and publish
 
-1. On the connection card, click **Publish to clients (发布到客户端)**.
+1. On the connection card, click **Publish to apps (发布到应用)**.
 2. Review each target and uncheck any clients or profiles you do not want to update. **Copilot CLI is unchecked by default**; select it explicitly if you want its single-route environment configuration.
 3. If JetBrains is included, close the relevant IDEs using that shared configuration first.
 4. Click **Generate preview (生成预览)** and check how each target will be handled. Expand **Write details (写入明细)** when needed. Targets marked **Manual action required (需手动处理)** will not be configured automatically.
@@ -135,7 +149,9 @@ Choose a **Preferred model (首选模型)**, then click **Save connection (保�
 
 Generate a new preview after changing the connection or targets, after the preview expires, or if another program changes the target configuration. Previews are valid for 15 minutes and can be used only once.
 
-Afterward, check each target's result under **Overview (总览) → Latest publication (最近一次发布)** or **Connections (连接) → Recent configuration operations (最近配置操作)**. Restart instructions, manual steps, and model-selection guidance remain visible after the notification disappears.
+Afterward, check each target's result under **Overview (总览) → Latest publication (最近一次发布)** or **Providers (供应商) → Recent configuration operations (最近配置操作)**. Restart instructions, manual steps, and model-selection guidance remain visible after the notification disappears.
+
+Overview puts **Add your first provider** above environment reminders when no provider exists. **Choose a provider to publish** opens Providers. A row's **Review** focuses that exact app. Apps also lets you select a provider on each card and preview that target directly. Changing the selection invalidates an idle preview; language changes preserve it. During publication, navigation, refresh and dismissal are blocked. On failure or uncertainty, check publication/recovery and generate a fresh preview.
 
 ### 5. Select and verify the model in each client
 
@@ -153,7 +169,9 @@ Reopen the relevant IDE, complete official GitHub Copilot sign-in, and select th
 
 **Copilot App**
 
-Go to **Clients (客户端) → Copilot App providers (Copilot App 供应商) → View manual setup steps (查看手动配置步骤)**. In the app's **Model providers**, add the provider using the displayed endpoint and model, and enter the required key inside the app. You can then click **I have completed manual setup (我已完成手动配置)** to record your confirmation. This is not an automatic verification result.
+Go to **Apps (应用) → Copilot App providers (Copilot App 供应商) → View manual setup steps (查看手动配置步骤)**. In the app's **Model providers**, add the provider using the displayed endpoint and model, and enter the required key inside the app. You can then click **I have completed manual setup (我已完成手动配置)** to record your confirmation. This is not an automatic verification result.
+
+If App was included in a publication, use its result's **Manual setup for [connection]** button to open instructions for that specific connection, even when another connection is selected elsewhere.
 
 Finally, send a short request containing no sensitive project content from the client you intend to use, and confirm that the model responds. Real requests may incur provider charges. **Configuration written, account signed in, model selected, and request successful are four different states.**
 
@@ -163,10 +181,10 @@ Finally, send a short request containing no sensitive project content from the c
 
 ### Change an endpoint, key, or model list
 
-Find the provider under **Connections (连接)** and click **Edit (编辑)**:
+Find the provider under **Providers (供应商)** and click **Edit (编辑)**:
 
 1. Update the relevant fields. Leave an existing key blank to keep it, enter a new key to replace it, or check **Remove saved key (移除已保存的密钥)** to remove it.
-2. Click **Save connection (保存连接)**.
+2. Click **Save provider (保存供应商)**.
 3. Use **Publish to clients → Generate preview → Confirm publication** again to update the intended targets.
 4. Reopen clients or create new sessions as instructed by the publication results.
 
@@ -174,7 +192,7 @@ Editing a connection does not automatically synchronize it to all clients in the
 
 ### Add or switch providers
 
-Add another connection under **Connections (连接)**, then publish it to the clients you want:
+Add another connection under **Providers (供应商)**, then publish it to the clients you want:
 
 - **VS Code / JetBrains:** multiple provider groups can coexist. Switch using the client's model picker.
 - **Copilot CLI:** this environment-variable method uses one route at a time. Check the current ownership first; conflicting configuration from another connection or an external source is not overwritten directly. If necessary, revoke the old connection's managed configuration as described below before publishing the new connection.
@@ -192,57 +210,15 @@ This is not automatic failover or load balancing. Changing a preferred model als
 
 **To remove this configuration from clients, choose revocation and deletion rather than simply disabling the connection.** Review every target in the preview: revocation covers this connection's published managed configuration, not just one client.
 
-If a target has been changed externally, revocation or rollback refuses to overwrite it, and the connection may remain so you can resolve the issue. Check **More (更多) → Activity (活动记录)** and the recovery status under **More → Settings (设置)** first. Do not delete configuration files or backups directly.
+If a target has been changed externally, revocation or rollback refuses to overwrite it, and the connection may remain so you can resolve the issue. Check **Apps (应用) → Publication and revocation history (发布与撤销记录)** and the recovery status under **About → Local storage and security (本地存储与安全)** first. Do not delete configuration files or backups directly.
 
 <a id="usage"></a>
 
-## View usage and costs
+## Planned features not offered in this edition
 
-Open **Usage (用量)** and choose a view:
+Official quota, personal Billing and its separate authorization, local model/session usage, estimates, and MCP/Skills/Instructions are temporarily hidden. Existing implementation and data are retained, but the four-page interface does not load these modules or run their actions.
 
-| View | What it shows | Data requirements |
-| --- | --- | --- |
-| Official subscription / usage (官方订阅 / 用量) | Official runtime quota and personal monthly GitHub Billing | A readable runtime; personal Billing also requires separate authorization for this manager |
-| Model statistics (模型统计) | Tokens, cache data, estimates, and coverage by model | Supported local records must be imported; filter by date, client, and route |
-| Sessions / details (会话 / 详情) | Individual imported usage metadata records | No conversation text; additional conditions are under Advanced filters (高级筛选) |
-| Data sources / prices (数据来源 / 价格) | Import sources and the price catalog | Enable sources explicitly; prices are fetched through a separate refresh action |
-
-### Enable local usage imports
-
-1. Open **Usage (用量) → Data sources / prices (数据来源 / 价格)**.
-2. On the source card, click **Setup and privacy (配置与隐私)** and read the scope and setup requirements.
-3. Click **Enable import (启用导入…)**, confirm, then click **Import enabled sources (导入已启用来源)**.
-4. Return to **Model statistics** or **Sessions / details** to inspect the results.
-
-The VS Code source also requires you to configure OTel file export manually according to the displayed instructions and restart VS Code. Only observations generated after enabling export are available. CLI / App shared-runtime records are counted once, not once for each client. Standalone JetBrains usage is not currently covered, and Copilot App has no separately reviewed usage source.
-
-**Disable import (停用导入)** stops reading while keeping imported records. **Clear imported metadata (清除已导入元数据…)** removes that source's records from this manager and disables its import; it does not delete the original logs. To stop VS Code itself from exporting, also turn off OTel as instructed.
-
-### View personal GitHub Billing
-
-In **Official subscription / usage**, click **Manage authorization (管理授权)**, or go to **More → Settings → GitHub personal Billing authorization (GitHub 个人账单授权)**. Follow the instructions to authorize this manager, then return to Usage, select a month, and refresh Billing.
-
-This authorization is separate from VS Code, CLI, or IDE sign-in. Being signed into a client does not grant the manager Billing access. Missing permissions, organization-paid coverage, or unavailable endpoints do not mean your cost is zero.
-
-### Understand amounts and missing values
-
-- **Official Billing** is personal Billing data returned by GitHub. It does not include third-party provider invoices or actual charges.
-- **API-equivalent estimates** are reference values calculated from a price catalog, not actual bills or claims about money saved.
-- Under **Data sources / prices**, click **Refresh official OpenRouter catalog (刷新官方 OpenRouter 目录)** to update prices. Historical estimates retain their original price snapshots.
-- Missing tokens, prices, or attribution evidence remain unknown, partially covered, or unavailable rather than becoming 0. The current CLI source also lacks some input-token semantics, so a complete cost estimate is not guaranteed.
-
-See [usage sources](docs/usage-sources.md) for detailed coverage.
-
-## Manage MCP, Skills, and Instructions
-
-Go to **More (更多) → Resources (资源)**:
-
-1. Click **Add resource (添加资源)** and enter its name, type, and content.
-2. Click **Save locally (保存到本地)**. This does not change clients yet.
-3. On the resource card, choose **Preview publication (预览发布) → Generate preview (生成预览)**, review each target and its content, then **Confirm publication (确认发布)**.
-4. When the resource is no longer needed, choose **Revoke and delete (撤销并删除…)**, review the preview, and confirm removal of the managed content.
-
-Currently supported resources are credential-free HTTPS MCP URLs and Markdown-only Skills and Instructions. Manage MCP headers, keys, local commands, skill scripts, and supporting assets manually. Unsupported targets such as the app, named profiles, and custom paths are not reported as successfully published.
+See the [feature availability record](docs/feature-availability.md) for implemented-but-hidden capabilities, genuinely unimplemented work and acceptance gaps. A short offline record is also available from **About → Planned feature status**. There are no promised dates.
 
 <a id="faq"></a>
 
@@ -250,7 +226,7 @@ Currently supported resources are credential-free HTTPS MCP URLs and Markdown-on
 
 ### I saved a connection. Why has nothing changed in my client?
 
-Saving only updates the manager. You must also click **Publish to clients**, generate a preview, and confirm it. Then select the model, restart the IDE, or open a new terminal as required by that client. The same process applies when updating an existing connection.
+Saving only updates the manager. You must also click **Publish to apps**, generate a preview, and confirm it. Then select the model, restart the IDE, or open a new terminal as required by that client. The same process applies when updating an existing connection.
 
 ### Test connection succeeded. Why does chat still fail?
 
@@ -270,7 +246,7 @@ Start with the per-target results under **Overview → Latest publication**, the
 4. Whether the client and plugin version are supported; JetBrains requires the exact reviewed versions.
 5. Whether you completed official sign-in and explicitly selected the model in the client.
 
-**Client model sources (客户端模型来源)** only checks configuration published by this manager. It does not read the client's currently selected model.
+**App configuration status (应用配置状态)** only checks configuration published by this manager. It does not read the client's currently selected model.
 
 ### What if the CLI reports a configuration conflict, or I want to return to the official route?
 
@@ -284,29 +260,17 @@ Automatic writes are enabled only for exact reviewed plugin distributions. Newer
 
 ### Why is publishing disabled, or why must I generate another preview?
 
-Check whether the connection is enabled and whether a read-only recovery notice is displayed. A changed target, changed configuration, used preview, or preview older than 15 minutes requires a new review. If the app reports an interrupted operation, follow **Review safe recovery (核对安全恢复)** first. Details are under **More → Settings** and **Activity**.
+Check whether the provider is enabled and whether a read-only recovery notice is displayed. A changed target, changed configuration, used preview, or preview older than 15 minutes requires a new review. For interrupted operations, use **Review safe recovery (核对安全恢复)**. Details remain in **About → Local storage and security** and **Apps → Publication and revocation history**.
 
-### Why is usage empty, unknown, or only partially covered?
+### Why are Usage and Resources missing?
 
-Check that the source is enabled and imported, the date filters are correct, and VS Code has generated supported export records. An active CLI session may not have written its importable shutdown statistics yet. Unsupported sources, missing fields, and inaccessible Billing retain their actual states. An empty view does not mean no usage or no charges.
+This core edition focuses on provider configuration and publication. Those entries are temporarily hidden; existing records are not deleted. See [planned features](docs/feature-availability.md).
 
 ### Where are keys and data stored? Can I share configuration files for troubleshooting?
 
-Check **More → Settings** for the actual state-file and usage-database locations. The manager's API keys and separate GitHub authorization are stored in the operating-system credential store. Published client configuration and private rollback data may contain keys.
+Check **About → Local storage and security** for the actual state-file location. The manager's API keys and separate GitHub authorization are stored in the operating-system credential store. Published client configuration and private rollback data may contain keys.
 
 Do not share complete configuration files, databases, environment variables, rollback files, or raw session logs. Reports should contain versions, reproduction steps, and redacted errors and statuses only. See the [security policy](SECURITY.md) for complete guidance.
-
-<a id="naming-and-compatibility"></a>
-
-### Why do some places still say PilotWeave?
-
-The project has been renamed to CopilotBYOKManager, but existing configuration directories, credential services, ownership markers, `dev.pilotweave.desktop`, `pilotweave` executable/package names, and `PILOTWEAVE_*` options retain their compatibility identifiers. Window titles or locally built artifacts may also use the former name. **Do not rename these data directories or credential identifiers manually.**
-
-Existing clones can update their remote URL without rebuilding user configuration:
-
-```bash
-git remote set-url origin https://github.com/AvaloNero/CopilotBYOKManager.git
-```
 
 ## Privacy and current limits
 
@@ -320,7 +284,7 @@ git remote set-url origin https://github.com/AvaloNero/CopilotBYOKManager.git
 
 Report usage problems through [GitHub Issues](https://github.com/AvaloNero/CopilotBYOKManager/issues). Include your operating system, application commit, relevant client and plugin versions, reproduction steps, expected and actual behavior, and redacted status information. Report security issues privately as described in [SECURITY.md](SECURITY.md).
 
-Further reading: [Documentation index](docs/README.md) · [Model catalog compatibility](docs/provider-model-discovery.md) · [JetBrains support](docs/jetbrains-support.md) · [Usage sources](docs/usage-sources.md).
+Further reading: [Documentation index](docs/README.md) · [Model catalog compatibility](docs/provider-model-discovery.md) · [JetBrains support](docs/jetbrains-support.md) · [Usage sources](docs/usage-sources.md) · [Release criteria](docs/release-criteria.md) · [Launch plan](docs/promotion-plan.md).
 
 <details>
 <summary>Development, builds, and checks</summary>
@@ -339,7 +303,7 @@ git diff --check
 
 `npm run check` includes the web and Rust checks; run the whitespace check separately. CI checks Ubuntu, Windows, and macOS, and builds the native app on Windows.
 
-The optional browser regression entry point is `node apps/desktop/web/tests/browser-smoke.cjs`. If needed, set `PILOTWEAVE_PLAYWRIGHT` to an installed Playwright module path and `PILOTWEAVE_BROWSER` to the browser executable. These tests use isolated profiles, simulated data, and temporary screenshots. They are not real-client acceptance.
+The optional browser regression entry point is `node apps/desktop/web/tests/browser-smoke.cjs`. If needed, set `COPILOT_BYOK_MANAGER_PLAYWRIGHT` to an installed Playwright module path and `COPILOT_BYOK_MANAGER_BROWSER` to the browser executable. These tests use isolated profiles, simulated data, and temporary screenshots. They are not real-client acceptance.
 
 Source locations:
 

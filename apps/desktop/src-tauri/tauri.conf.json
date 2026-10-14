@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "PilotWeave",
+  "productName": "CopilotBYOKManager",
   "version": "0.1.0",
-  "identifier": "dev.pilotweave.desktop",
+  "identifier": "io.github.avalonero.copilotbyokmanager",
   "build": {
     "frontendDist": "../web"
   },
@@ -11,7 +11,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "PilotWeave",
+        "title": "CopilotBYOKManager",
         "width": 1180,
         "height": 760,
         "minWidth": 960,
@@ -25,6 +25,7 @@
     }
   },
   "bundle": {
+    "icon": ["icons/icon.ico", "icons/icon.png"],
     "active": false
   }
 }

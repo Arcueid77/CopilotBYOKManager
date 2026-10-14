@@ -13,10 +13,10 @@ use std::path::{Path, PathBuf};
 
 const MAX_BYTES: u64 = 4 * 1024 * 1024;
 const MAX_KEYS: usize = 2048;
-const OWNER: &str = "pilotWeaveInstallationOwnerId";
-const CONNECTION: &str = "pilotWeaveConnectionId";
-const MANAGED: &str = "pilotWeaveManaged";
-const SCHEMA: &str = "pilotWeaveSchemaVersion";
+const OWNER: &str = "copilotByokManagerInstallationOwnerId";
+const CONNECTION: &str = "copilotByokManagerConnectionId";
+const MANAGED: &str = "copilotByokManagerManaged";
+const SCHEMA: &str = "copilotByokManagerSchemaVersion";
 pub const SCHEMA_VERSION: &str = "jetbrains-byok-1.19-v1";
 
 /// Exact reviewed distribution versions, not a semver guess about future schemas.
@@ -130,7 +130,7 @@ pub fn effective_endpoint(connection: &Connection) -> AppResult<String> {
 
 fn provider_name(owner: &str, connection: &str) -> AppResult<String> {
     Ok(format!(
-        "PilotWeave-{}",
+        "CopilotBYOKManager-{}",
         &fingerprint::json("jetbrains-provider-v1", &(owner, connection))?[..32]
     ))
 }

@@ -6,13 +6,13 @@ import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { setTimeout as delay } from 'node:timers/promises';
 
-const pwsh = process.env.PILOTWEAVE_PWSH ?? path.join(process.env.USERPROFILE,
+const pwsh = process.env.COPILOT_BYOK_MANAGER_PWSH ?? path.join(process.env.USERPROFILE,
   '.cache/codex-runtimes/codex-primary-runtime/dependencies/native/powershell/pwsh.exe');
 const quote = value => "'" + value.replaceAll("'", "''") + "'";
 const exited = child => child.exitCode !== null || child.signalCode !== null;
 
 for (const abrupt of [false, true]) test(`Windows job closes descendants after ${abrupt ? 'parent termination' : 'failure/timeout cleanup'}`, { timeout: 20000, skip: process.platform !== 'win32' }, async () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pilotweave-job-'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'copilot-byok-manager-job-'));
   const childFile = path.join(root, 'child.mjs');
   const marker = path.join(root, 'ready.json');
   const script = path.join(root, 'parent.ps1');
@@ -23,8 +23,8 @@ for (const abrupt of [false, true]) test(`Windows job closes descendants after $
     '$s=[Diagnostics.ProcessStartInfo]::new(' + quote(process.execPath) + ')',
     '$s.UseShellExecute=$false; $s.CreateNoWindow=$true',
     '$s.ArgumentList.Add(' + quote(childFile) + '); $s.ArgumentList.Add(' + quote(marker) + ')',
-    '$p=[Diagnostics.Process]::Start($s); $job=[PilotWeaveValidationJob]::Attach($p.Handle)',
-    "try { [Console]::WriteLine('ATTACHED'); [Console]::Out.Flush(); [Console]::ReadLine() | Out-Null } finally { [PilotWeaveValidationJob]::CloseHandle($job) | Out-Null }",
+    '$p=[Diagnostics.Process]::Start($s); $job=[CopilotBYOKManagerValidationJob]::Attach($p.Handle)',
+    "try { [Console]::WriteLine('ATTACHED'); [Console]::Out.Flush(); [Console]::ReadLine() | Out-Null } finally { [CopilotBYOKManagerValidationJob]::CloseHandle($job) | Out-Null }",
   ].join('\n'));
   const parent = spawn(fs.existsSync(pwsh) ? pwsh : 'pwsh.exe', ['-NoProfile', '-File', script], { windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'] });
   let output = '', startupError;

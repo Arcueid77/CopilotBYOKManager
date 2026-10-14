@@ -1,5 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+require('../i18n.js').setLocale('zh-CN', { persist: false });
 const { parseHeaders, mergeModels, session } = require('../model-discovery.js');
 
 test('selection preserves manual text and names, deduplicates ignoring case, and enforces the connection limit', () => {

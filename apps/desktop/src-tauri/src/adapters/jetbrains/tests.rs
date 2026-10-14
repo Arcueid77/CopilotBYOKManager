@@ -582,7 +582,9 @@ fn jetbrains_prepare_failure_leaves_an_earlier_vscode_target_untouched() {
                 .is_err());
             assert_eq!(fs::read(&vscode).unwrap(), vscode_seed);
             assert_eq!(fs::read(&path).unwrap(), malformed);
-            assert!(!vscode.with_extension("json.pilotweave.bak").exists());
+            assert!(!vscode
+                .with_extension("json.copilot-byok-manager.bak")
+                .exists());
         })
     });
 }

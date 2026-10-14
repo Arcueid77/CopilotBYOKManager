@@ -187,7 +187,7 @@ impl GithubAuthorizationStore {
         };
         Self::open_at_with_backend(
             config_dir
-                .join("PilotWeave")
+                .join("CopilotBYOKManager")
                 .join("github-authorization.json"),
             Box::new(NativeSecretBackend),
         )
@@ -279,7 +279,7 @@ impl GithubAuthorizationStore {
                 scopes: record.scopes.clone(),
                 billing_capability: record.billing_capability,
                 billing_detail: record.billing_detail.clone(),
-                detail: "PilotWeave has a separate GitHub authorization validated through the official REST API"
+                detail: "CopilotBYOKManager has a separate GitHub authorization validated through the official REST API"
                     .to_string(),
                 validated_at: Some(record.validated_at),
                 recovery: None,
@@ -306,7 +306,7 @@ impl GithubAuthorizationStore {
                 billing_capability: GithubBillingCapability::Unknown,
                 billing_detail: "Billing capability cannot be attributed without metadata"
                     .to_string(),
-                detail: "An orphan PilotWeave GitHub credential exists without validated metadata; clear or re-authorize it"
+                detail: "An orphan CopilotBYOKManager GitHub credential exists without validated metadata; clear or re-authorize it"
                     .to_string(),
                 validated_at: None,
                 recovery: None,
@@ -488,7 +488,7 @@ pub fn validate_token_native(token: &str) -> AppResult<GithubValidationOutcome> 
     let agent: ureq::Agent = crate::platform::http_config()
         .timeout_global(Some(Duration::from_secs(REQUEST_TIMEOUT_SECONDS)))
         .max_redirects(0)
-        .user_agent("PilotWeave/0.1")
+        .user_agent("CopilotBYOKManager/0.1")
         .build()
         .into();
     let authorization = format!("Bearer {token}");
@@ -774,8 +774,9 @@ fn missing_status() -> GithubAuthorizationStatus {
         has_secret: false,
         scopes: Vec::new(),
         billing_capability: GithubBillingCapability::Unknown,
-        billing_detail: "Authorize PilotWeave before requesting personal Billing data".to_string(),
-        detail: "PilotWeave has no separate GitHub authorization".to_string(),
+        billing_detail: "Authorize CopilotBYOKManager before requesting personal Billing data"
+            .to_string(),
+        detail: "CopilotBYOKManager has no separate GitHub authorization".to_string(),
         validated_at: None,
         recovery: None,
         cleanup_warning: None,

@@ -5,7 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
-public static class PilotWeaveWindowInventory {
+public static class CopilotBYOKManagerWindowInventory {
   delegate bool Callback(IntPtr window, IntPtr parameter);
   [DllImport("user32.dll")] static extern bool EnumWindows(Callback callback, IntPtr parameter);
   [DllImport("user32.dll")] static extern bool IsWindowVisible(IntPtr window);
@@ -18,7 +18,7 @@ public static class PilotWeaveWindowInventory {
       try {
         using (var process = Process.GetProcessById((int)pid)) {
           var name = process.ProcessName.ToLowerInvariant();
-          if (name == "code" || name == "code - insiders" || name == "pilotweave")
+          if (name == "code" || name == "code - insiders" || name == "copilot-byok-manager")
             found.Add(name + ":" + pid + ":" + window.ToInt64());
         }
       } catch (ArgumentException) {} catch (InvalidOperationException) {}
@@ -31,7 +31,7 @@ public static class PilotWeaveWindowInventory {
 $deadline = [DateTime]::UtcNow.AddMinutes(15)
 $previous = $null
 while ([DateTime]::UtcNow -lt $deadline) {
-  $current = ConvertTo-Json -Compress -InputObject @([PilotWeaveWindowInventory]::Read())
+  $current = ConvertTo-Json -Compress -InputObject @([CopilotBYOKManagerWindowInventory]::Read())
   if ($current -ne $previous) {
     [Console]::Out.WriteLine($current)
     [Console]::Out.Flush()

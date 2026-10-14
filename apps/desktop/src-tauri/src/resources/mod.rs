@@ -222,11 +222,11 @@ fn targets_at(
     let vscode = clients
         .iter()
         .any(|t| t.kind == ClientKind::VsCodeCopilot && t.detected);
-    let file = format!("pilotweave-{}.instructions.md", record.id);
+    let file = format!("copilot-byok-manager-{}.instructions.md", record.id);
     let mut result = Vec::new();
     if record.kind == ResourceKind::Skill {
         result.push(Target { id: "copilot-shared:skills".into(), label: "Shared personal Skills (VS Code / Copilot CLI)".into(),
-            path: Some(copilot.join("skills").join(format!("pilotweave-{}", record.id)).join("SKILL.md")), mcp_key: None,
+            path: Some(copilot.join("skills").join(format!("copilot-byok-manager-{}", record.id)).join("SKILL.md")), mcp_key: None,
             supported: (cli || vscode) && !custom_home,
             detail: "Public personal skill root. Repository skills and client settings may override discovery; no asset/script directory is copied".into() });
     } else {
@@ -268,10 +268,10 @@ fn targets(record: &SharedResource, clients: &[ClientTarget]) -> AppResult<Vec<T
 }
 
 fn key(owner: &str, record: &SharedResource) -> String {
-    format!("pilotweave-{owner}-{}", record.id)
+    format!("copilot-byok-manager-{owner}-{}", record.id)
 }
 fn markdown(owner: &str, record: &SharedResource) -> AppResult<Vec<u8>> {
-    let name = format!("pilotweave-{}", record.id);
+    let name = format!("copilot-byok-manager-{}", record.id);
     let description = serde_json::to_string(&record.name)
         .map_err(|_| AppError::Config("Cannot render resource name".into()))?;
     let front = if record.kind == ResourceKind::Skill {
@@ -280,7 +280,7 @@ fn markdown(owner: &str, record: &SharedResource) -> AppResult<Vec<u8>> {
         "---\napplyTo: \"**\"\n---\n".into()
     };
     Ok(format!(
-        "{front}\n<!-- PilotWeave owner={owner} resource={} -->\n\n{}\n",
+        "{front}\n<!-- CopilotBYOKManager owner={owner} resource={} -->\n\n{}\n",
         record.id,
         record.body.trim_end()
     )

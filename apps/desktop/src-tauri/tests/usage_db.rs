@@ -4,8 +4,8 @@
 //! modes that never recreate data. All files live in temporary directories.
 
 use chrono::Utc;
-use pilotweave_lib::decimal::ExactDecimal;
-use pilotweave_lib::usage_db::{
+use copilot_byok_manager_lib::decimal::ExactDecimal;
+use copilot_byok_manager_lib::usage_db::{
     InputSemantics, NewPriceRow, NewPriceSnapshot, NewUsageSource, SourceCursor, UsageDb,
     UsageRecordUpsert, UsageSourceKind, MAX_BATCH_RECORDS, USAGE_SCHEMA_VERSION,
 };

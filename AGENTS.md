@@ -2,7 +2,7 @@
 
 This file is the entry point for a coding agent continuing the repository on `main`.
 
-The public repository is `AvaloNero/CopilotBYOKManager`. Legacy PilotWeave storage paths, credential references, ownership markers, binary/package names and environment flags remain compatibility identifiers; do not rename them as a cosmetic cleanup.
+The public repository is `AvaloNero/CopilotBYOKManager`. This is an unreleased product. Use `CopilotBYOKManager` for the product and configuration directory, `copilot-byok-manager` for packages/binaries, and `COPILOT_BYOK_MANAGER_*` for app-specific environment options. Do not add historical-brand aliases, automatic credential adoption or old-directory migration.
 
 ## Read first
 
@@ -17,6 +17,8 @@ Read these files before changing code:
 Do not substitute an earlier conversation, mockup, local patch, or stale design note for the checked-in requirements.
 
 Read `docs/implementation-status.md` for the current implementation/evidence baseline and `docs/README.md` for the document index. Dated handoffs retain historical results, not the current backlog.
+
+The 2026-10-14 core configuration edition exposes only Overview / Providers / Apps / About. Preserve hidden Usage/Billing/authorization/Resources implementations and data without mounting or querying them from the core shell. Keep recovery, publication results and revocation accessible within the four pages. Read `docs/feature-availability.md` before re-exposing staged capabilities; this does not authorize excluded features or complete-MVP claims. Theme is presentation-only. Windows close-to-tray requires a working native tray, explicit restore/Quit and normal-close fallback when unavailable.
 
 ## Branch policy
 
@@ -145,6 +147,8 @@ The deployment/persistence foundation and connected feature slices above already
 Use the remaining-work and validation sections in `docs/implementation-status.md` to choose the next required slice. Preserve `state.json` and Usage DB migrations, native plan/ownership/recovery invariants, exact decimals, unknown/partial states and existing regression coverage. Tests must remain isolated. Real client/account/installation acceptance must use the documented dedicated environment and the maintainer's current scope; deferred Rider work is not an automatic next action.
 
 ## Coding conventions
+
+- User-facing copy belongs in `apps/desktop/web/i18n-messages.js` with both Simplified Chinese and English. Use explicit `tr` calls, preserve parameter escaping, and never translate user data or diagnostic payloads by matching their contents. Run `npm run check:i18n`; use the active UI locale for dates. Language changes must not persist native data, trigger client/account actions or discard an active form or deployment review. The bounded tray-locale command may update fixed native menu labels in memory only.
 
 - Prefer small modules with one responsibility over expanding `commands.rs` or `domain.rs` indefinitely.
 - Keep client-specific paths, schemas, commands, login probes, and usage parsing in adapters.

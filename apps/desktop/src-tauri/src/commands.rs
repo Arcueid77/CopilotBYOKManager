@@ -243,15 +243,15 @@ pub async fn apply_install_plan(
             .and_then(|mut plans| plans.consume(&plan_id))
             .map_err(command_error)?;
         let (ticket, started) = state.install_jobs.begin(&plan).map_err(command_error)?;
-        let _ = app.emit("pilotweave:install-progress", &started);
+        let _ = app.emit("copilot-byok-manager:install-progress", &started);
         let result = installer::execute_plan(plan, ticket.cancel.clone(), &mut |component, result| {
             let progress = state.install_jobs.progress(&ticket.id, component, result)?;
-            let _ = app.emit("pilotweave:install-progress", &progress);
+            let _ = app.emit("copilot-byok-manager:install-progress", &progress);
             Ok(())
         });
         let finished = state.install_jobs.finish(&ticket.id, &result, ticket.cancel.load(std::sync::atomic::Ordering::Acquire))
             .map_err(|_| "Installation may have changed components, but the final summary could not be saved. Rediscover and inspect interrupted history before retrying".to_string())?;
-        let _ = app.emit("pilotweave:install-progress", &finished);
+        let _ = app.emit("copilot-byok-manager:install-progress", &finished);
         result.map_err(command_error)
     })
     .await

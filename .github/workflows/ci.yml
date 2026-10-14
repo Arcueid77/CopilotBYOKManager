@@ -24,11 +24,11 @@ jobs:
           persist-credentials: false
       - name: Archive the exact commit being checked
         shell: bash
-        run: git archive --format=tar HEAD > "$RUNNER_TEMP/pilotweave-source.tar"
+        run: git archive --format=tar HEAD > "$RUNNER_TEMP/copilot-byok-manager-source.tar"
       - uses: actions/upload-artifact@v4
         with:
           name: source-${{ github.sha }}
-          path: ${{ runner.temp }}/pilotweave-source.tar
+          path: ${{ runner.temp }}/copilot-byok-manager-source.tar
           retention-days: 7
           if-no-files-found: error
 
@@ -72,7 +72,7 @@ jobs:
         id: tests
         continue-on-error: true
         env:
-          PILOTWEAVE_TEST_REQUIRE_LINKS: "1"
+          COPILOT_BYOK_MANAGER_TEST_REQUIRE_LINKS: "1"
         run: cargo test --workspace --locked
       - name: Run Clippy
         id: clippy

@@ -132,7 +132,7 @@ pub(crate) fn cancel(mut run: LoginRunRecord, now: DateTime<Utc>) -> LoginRunRec
                 | LoginStepStatus::Failed
         ) {
             step.status = LoginStepStatus::Cancelled;
-            step.detail = "PilotWeave stopped following this run. Any already-open official sign-in window remains under your control".into();
+            step.detail = "CopilotBYOKManager stopped following this run. Any already-open official sign-in window remains under your control".into();
         }
     }
     run.status = LoginRunStatus::Cancelled;

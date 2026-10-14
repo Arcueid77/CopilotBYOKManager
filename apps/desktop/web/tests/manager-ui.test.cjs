@@ -1,5 +1,6 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
+require("../i18n.js").setLocale("zh-CN", { persist: false });
 const manager = require("../manager-ui.js");
 const setup = require("../setup-ui.js");
 const discovery = require("../model-discovery.js");
@@ -10,8 +11,8 @@ const data = { setup: { alignment: "verifiedSameAccount" }, components: [{ statu
 test("Home uses approved section order, hides disabled cards but retains published sources", () => {
   const snapshot = fixture();
   const html = manager.renderHome(snapshot, data, true);
-  assert.ok(html.indexOf("客户端模型来源") < html.indexOf('<h2>连接</h2>'));
-  assert.ok(html.indexOf('<h2>连接</h2>') < html.indexOf("最近一次发布"));
+  assert.ok(html.indexOf("应用配置状态") < html.indexOf('<h2>供应商概况</h2>'));
+  assert.ok(html.indexOf('<h2>供应商概况</h2>') < html.indexOf("最近一次发布"));
   assert.match(html, /供应商 A · 3 个模型/); // Observed count, not newly edited 1-model catalog.
   assert.match(html, /供应商 B · 2 个模型 · 已停用，配置保留/);
   assert.doesNotMatch(html, /data-connection-id="b"/);
@@ -52,7 +53,7 @@ test("untrusted strings are escaped and no credential value is requested or rend
   snapshot.connections[0].baseUrl = '<script>bad</script>';
   const html = manager.renderHome(snapshot, data, true);
   assert.doesNotMatch(html, /<script>|<img/); assert.match(html, /&lt;img/);
-  assert.match(html, /••••••/);
+  assert.match(manager.connectionCard(snapshot.connections[0], snapshot, true), /••••••/);
 });
 test("legacy setup selection ignores disabled connections", () => {
   const snapshot = fixture();
@@ -75,4 +76,21 @@ test("connection probe uses bound model-list input, returns no models and never 
   assert.match(result.detail, /不代表已验证推理能力/);
   assert.doesNotMatch(JSON.stringify(result), /PRIVATE_MODEL|UNTRUSTED DETAIL/);
   assert.equal((await discovery.testConnection(async () => { throw Error("PRIVATE_SECRET"); }, snapshot.connections[0])).status, "networkError");
+});
+
+test("first connection and publication actions are discoverable without removing recovery precedence", () => {
+  const empty = { ...fixture(), connections: [] };
+  const html = manager.renderHome(empty, { ...data, setup: { alignment: "partiallyVerified" } }, true);
+  assert.ok(html.indexOf('添加第一个供应商') < html.indexOf('待处理'));
+  assert.doesNotMatch(manager.renderHome({ ...empty, stateRecovery: 'Read only' }, data, true), /manager-start|添加第一个供应商/);
+  assert.ok(manager.renderHome(fixture(), data, true).indexOf('data-action="jump-connections"') < manager.renderHome(fixture(), data, true).indexOf('应用配置状态'));
+});
+
+test("client review and manual publication follow-ups carry the exact client and connection", () => {
+  const snapshot = fixture();
+  assert.match(manager.sourceRows(snapshot), /data-action="route" data-route="clients" data-client-id="vs"/);
+  snapshot.deployments.push({ planId: 'p', targetId: 'app', targetKind: 'github-copilot-app', connectionId: 'b', status: 'skipped', createdAt: '2026-10-13T00:00:00Z' });
+  assert.match(manager.lastResult(snapshot, true), /data-action="setup-manual" data-id="b"/);
+  snapshot.connections = [];
+  assert.doesNotMatch(manager.lastResult(snapshot, true), /data-action="setup-manual"/);
 });

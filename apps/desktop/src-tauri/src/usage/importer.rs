@@ -34,7 +34,7 @@ impl UsageRoots {
             .ok_or_else(|| invalid("Cannot locate local application storage"))?;
         Ok(Self {
             sessions: home.join(".copilot/session-state"),
-            vscode_otel: config.join("PilotWeave/usage-inbox/vscode-otel.jsonl"),
+            vscode_otel: config.join("CopilotBYOKManager/usage-inbox/vscode-otel.jsonl"),
         })
     }
 }
@@ -51,7 +51,7 @@ pub fn initialize(db: &UsageDb) -> AppResult<()> {
             SOURCE_IDS[1],
             "vscode",
             "vscode-otel-span-v1",
-            "PilotWeave/usage-inbox/vscode-otel.jsonl",
+            "CopilotBYOKManager/usage-inbox/vscode-otel.jsonl",
         ),
         (
             SOURCE_IDS[2],
@@ -168,7 +168,7 @@ fn candidates(roots: &UsageRoots, source: &str) -> AppResult<(Vec<PathBuf>, bool
     }
     // Check every ancestor before reading directory entries. Only one fixed
     // directory level and one fixed filename are accepted.
-    source_safety(&roots.sessions.join(".pilotweave-probe"))?;
+    source_safety(&roots.sessions.join(".copilot-byok-manager-probe"))?;
     let mut paths = vec![];
     let entries = fs::read_dir(&roots.sessions)
         .map_err(|_| invalid("Supported session directory is missing or inaccessible"))?;

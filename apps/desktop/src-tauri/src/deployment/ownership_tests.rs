@@ -96,10 +96,10 @@ fn forged_legacy_foreign_modified_and_copied_groups_never_gain_ownership() {
                 hostile[0]
                     .as_object_mut()
                     .unwrap()
-                    .remove("pilotWeaveInstallationOwnerId");
+                    .remove("copilotByokManagerInstallationOwnerId");
             }
             "foreign" => {
-                hostile[0]["pilotWeaveInstallationOwnerId"] =
+                hostile[0]["copilotByokManagerInstallationOwnerId"] =
                     serde_json::json!(Uuid::new_v4().to_string())
             }
             _ => hostile[0]["models"][0]["id"] = serde_json::json!("external/model"),

@@ -56,14 +56,14 @@ const MANAGED_VARIABLES: &[&str] = &[
     "COPILOT_PROVIDER_MODEL_ID",
     "COPILOT_PROVIDER_WIRE_MODEL",
     "COPILOT_PROVIDER_MAX_OUTPUT_TOKENS",
-    "PILOTWEAVE_COPILOT_OWNER_ID",
-    "PILOTWEAVE_COPILOT_CONNECTION_ID",
+    "COPILOT_BYOK_MANAGER_COPILOT_OWNER_ID",
+    "COPILOT_BYOK_MANAGER_COPILOT_CONNECTION_ID",
 ];
 
 #[cfg(unix)]
-const BLOCK_START: &str = "# >>> PilotWeave Copilot CLI >>>";
+const BLOCK_START: &str = "# >>> CopilotBYOKManager Copilot CLI >>>";
 #[cfg(unix)]
-const BLOCK_END: &str = "# <<< PilotWeave Copilot CLI <<<";
+const BLOCK_END: &str = "# <<< CopilotBYOKManager Copilot CLI <<<";
 
 pub fn discover_target() -> ClientTarget {
     let executable = find_executable("copilot");
@@ -140,13 +140,15 @@ pub fn desired_environment(
     connection: &Connection,
     secret: Option<&str>,
 ) -> AppResult<BTreeMap<String, Option<String>>> {
+    crate::validation::validate_connection(connection)?;
     let model = connection.default_model().ok_or_else(|| {
         AppError::InvalidInput("Copilot CLI requires at least one enabled model".to_string())
     })?;
-    let provider_type = match connection.provider_kind {
-        ProviderKind::Azure => "azure",
-        ProviderKind::Anthropic => "anthropic",
-        _ if connection.protocol == ApiProtocol::Messages => "anthropic",
+    // The provider label is not wire authority. Anthropic's runtime type always
+    // uses Messages, so OpenAI-compatible protocols must use the openai type.
+    let provider_type = match (connection.protocol, connection.provider_kind) {
+        (ApiProtocol::Messages, _) => "anthropic",
+        (_, ProviderKind::Azure) => "azure",
         _ => "openai",
     };
     let wire_api = if provider_type == "anthropic" {
@@ -351,8 +353,8 @@ pub(crate) fn prepare_owned(
             continue;
         };
         let value = match name.as_str() {
-            "PILOTWEAVE_COPILOT_OWNER_ID" => Some(owner_id),
-            "PILOTWEAVE_COPILOT_CONNECTION_ID" => Some(connection.id.as_str()),
+            "COPILOT_BYOK_MANAGER_COPILOT_OWNER_ID" => Some(owner_id),
+            "COPILOT_BYOK_MANAGER_COPILOT_CONNECTION_ID" => Some(connection.id.as_str()),
             _ => None,
         };
         if let Some(value) = value {
@@ -365,7 +367,7 @@ pub(crate) fn prepare_owned(
     #[cfg(unix)]
     {
         let marker = format!(
-            "# PilotWeave owner={owner_id} connection={}",
+            "# CopilotBYOKManager owner={owner_id} connection={}",
             crate::fingerprint::bytes("cli-connection-marker-v1", Some(connection.id.as_bytes()))
         );
         for (index, write) in writes.iter_mut().enumerate() {
@@ -416,12 +418,12 @@ pub(crate) fn notify_environment() -> Option<String> {
 #[cfg(unix)]
 fn unix_paths(home: &Path) -> Vec<PathBuf> {
     vec![
-        home.join(".pilotweave/copilot-cli-env.sh"),
-        home.join(".pilotweave/copilot-cli-env.fish"),
+        home.join(".copilot-byok-manager/copilot-cli-env.sh"),
+        home.join(".copilot-byok-manager/copilot-cli-env.fish"),
         home.join(".profile"),
         home.join(".bashrc"),
         home.join(".zshrc"),
-        home.join(".config/fish/conf.d/pilotweave-copilot.fish"),
+        home.join(".config/fish/conf.d/copilot-byok-manager-copilot.fish"),
     ]
 }
 
@@ -660,7 +662,7 @@ fn apply_unix(values: &BTreeMap<String, Option<String>>) -> AppResult<()> {
 #[cfg(all(unix, test))]
 fn apply_unix_at(home: &Path, values: &BTreeMap<String, Option<String>>) -> AppResult<()> {
     let writes = prepare_unix_at(home, values)?;
-    let path = home.join(".pilotweave/cli-adapter-journal.json");
+    let path = home.join(".copilot-byok-manager/cli-adapter-journal.json");
     let mut transaction =
         crate::transaction::Transaction::begin(path, &Uuid::new_v4().to_string(), writes)?;
     if let Err(error) = transaction.apply() {
@@ -674,7 +676,7 @@ fn apply_unix_at(home: &Path, values: &BTreeMap<String, Option<String>>) -> AppR
 #[cfg(unix)]
 fn render_posix_env(values: &BTreeMap<String, Option<String>>) -> String {
     let mut output =
-        String::from("# Managed by PilotWeave. Do not edit while management is enabled.\n");
+        String::from("# Managed by CopilotBYOKManager. Do not edit while management is enabled.\n");
     for name in MANAGED_VARIABLES {
         if let Some(value) = values.get(*name).and_then(Option::as_deref) {
             output.push_str(&format!("export {name}={}\n", shell_quote(value)));
@@ -688,7 +690,7 @@ fn render_posix_env(values: &BTreeMap<String, Option<String>>) -> String {
 #[cfg(unix)]
 fn render_fish_env(values: &BTreeMap<String, Option<String>>) -> String {
     let mut output =
-        String::from("# Managed by PilotWeave. Do not edit while management is enabled.\n");
+        String::from("# Managed by CopilotBYOKManager. Do not edit while management is enabled.\n");
     for name in MANAGED_VARIABLES {
         if let Some(value) = values.get(*name).and_then(Option::as_deref) {
             output.push_str(&format!("set -gx {name} {}\n", fish_quote(value)));
@@ -738,7 +740,7 @@ fn replace_bounded_block(existing: &str, block: &str) -> AppResult<String> {
             Ok(output)
         }
         _ => Err(AppError::Config(
-            "Shell profile contains an incomplete PilotWeave block".into(),
+            "Shell profile contains an incomplete CopilotBYOKManager block".into(),
         )),
     }
 }
@@ -821,18 +823,40 @@ mod tests {
     }
 
     #[test]
-    fn anthropic_provider_kind_forces_anthropic_type() {
-        let connection = connection_with(
+    fn explicit_protocol_wins_over_provider_label() {
+        for provider in [
+            ProviderKind::Openai,
             ProviderKind::Anthropic,
-            ApiProtocol::ChatCompletions,
-            vec![model("m", true)],
-        );
-        let values = desired_environment(&connection, Some("secret")).expect("environment");
-        assert_eq!(
-            values["COPILOT_PROVIDER_TYPE"].as_deref(),
-            Some("anthropic")
-        );
-        assert_eq!(values["COPILOT_PROVIDER_WIRE_API"], None);
+            ProviderKind::Azure,
+            ProviderKind::Custom,
+            ProviderKind::Local,
+        ] {
+            for (protocol, wire) in [
+                (ApiProtocol::ChatCompletions, Some("completions")),
+                (ApiProtocol::Responses, Some("responses")),
+                (ApiProtocol::Messages, None),
+            ] {
+                let connection = connection_with(provider, protocol, vec![model("m", true)]);
+                let result = desired_environment(&connection, Some("secret"));
+                if provider == ProviderKind::Azure && protocol == ApiProtocol::Messages {
+                    assert!(result.is_err());
+                    continue;
+                }
+                let values = result.expect("projection");
+                let expected_type = if protocol == ApiProtocol::Messages {
+                    "anthropic"
+                } else if provider == ProviderKind::Azure {
+                    "azure"
+                } else {
+                    "openai"
+                };
+                assert_eq!(
+                    values["COPILOT_PROVIDER_TYPE"].as_deref(),
+                    Some(expected_type)
+                );
+                assert_eq!(values["COPILOT_PROVIDER_WIRE_API"].as_deref(), wire);
+            }
+        }
     }
 
     #[test]
@@ -1025,7 +1049,7 @@ mod tests {
         assert!(!store
             .values
             .contains_key("COPILOT_PROVIDER_MAX_OUTPUT_TOKENS"));
-        // Variables PilotWeave does not manage are never touched.
+        // Variables CopilotBYOKManager does not manage are never touched.
         assert_eq!(store.values["UNRELATED_VARIABLE"], "must survive");
     }
 
@@ -1086,14 +1110,16 @@ mod tests {
         // Re-applying must be idempotent for both env files and profile blocks.
         apply_unix_at(home.path(), &values).expect("second apply");
 
-        let env_file = home.path().join(".pilotweave/copilot-cli-env.sh");
+        let env_file = home.path().join(".copilot-byok-manager/copilot-cli-env.sh");
         let env_text = std::fs::read_to_string(&env_file).expect("env file");
         assert!(env_text.contains("export COPILOT_PROVIDER_TYPE='openai'"));
         assert!(env_text.contains("export COPILOT_MODEL='gpt-example'"));
         assert!(env_text.contains("export COPILOT_PROVIDER_API_KEY='secret'"));
         assert!(env_text.contains("unset COPILOT_PROVIDER_HEADERS"));
 
-        let fish_file = home.path().join(".pilotweave/copilot-cli-env.fish");
+        let fish_file = home
+            .path()
+            .join(".copilot-byok-manager/copilot-cli-env.fish");
         let fish_text = std::fs::read_to_string(&fish_file).expect("fish env file");
         assert!(fish_text.contains("set -gx COPILOT_MODEL 'gpt-example'"));
 
@@ -1104,7 +1130,7 @@ mod tests {
         }
         let fish_hook = home
             .path()
-            .join(".config/fish/conf.d/pilotweave-copilot.fish");
+            .join(".config/fish/conf.d/copilot-byok-manager-copilot.fish");
         assert!(fish_hook.is_file());
     }
 

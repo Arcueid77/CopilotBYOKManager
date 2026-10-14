@@ -2,6 +2,7 @@ const SENSITIVE_MARKERS: &[&str] = &[
     "authorization",
     "api-key",
     "api_key",
+    "apikey",
     "x-api-key",
     "anthropic-api-key",
     "copilot_provider_api_key",
