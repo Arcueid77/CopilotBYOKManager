@@ -20,7 +20,7 @@ Stable identities are unchanged: product `CopilotBYOKManager`, executable/packag
 
 Windows uses the official current-user NSIS template, start menu and uninstall registration, with no custom uninstall hook. Uninstall must not remove client configuration; verify this on a clean user. The WebView2 strategy downloads Microsoft's bootstrapper when required: missing network, denied permission or bootstrapper failure must be tested, not disguised as offline support. NSIS's bootstrap executable may be x86; the packaged application must be PE x64.
 
-Mac uses the standard Tauri `.app`/DMG layout and generated Info.plist. Minimum macOS is conservatively **15.0**, aligned with the selected official `macos-15` runner; this is a candidate floor, not proof of macOS 15 or both CPU families being accepted. Lowering it requires separate dependency and real-machine evidence. The existing 128px logo was used to generate ICNS with the locked official CLI; it is resampled, not a new high-resolution design. See [icon provenance](../apps/desktop/src-tauri/icons/README.md).
+Mac uses the standard Tauri `.app`/DMG layout and generated Info.plist. Minimum macOS is conservatively **15.0**, aligned with the selected official `macos-15` runner; this is a candidate floor, not proof of macOS 15 or both CPU families being accepted. Lowering it requires separate dependency and real-machine evidence. The replacement app icon is generated from the checked-in high-resolution transparent source with the locked official Tauri CLI, including a 1024px ICNS representation. See [icon provenance and generation prompt](../apps/desktop/src-tauri/icons/README.md).
 
 ## Version and dependency contract
 
@@ -47,7 +47,7 @@ The jobs are validate → Windows/macOS tests → platform builds → assembly �
 
 Formal build failure, missing Apple secrets, changed tag, missing/extra/empty attachments, dirty CI source, mismatched version/SHA, incorrect architecture/signing metadata or any hash mismatch stops the process. Public-release promotion downloads all Draft attachments and checks their complete set, digest list, provenance and notes again. Recovery is an explicit rerun against the same tag, not forcing a moved tag or deleting unexpected attachments automatically.
 
-Both Mac signing and the final Release job use the `release` environment. Configure reviewers before formal use. Mac dry-run uses the same environment approval but receives **no Apple secrets**. The workflow cannot replace maintainer approval of real-machine/client gates; never approve public promotion solely because automated checks are green.
+Both formal Mac signing and the final Release job use the `release` environment. Configure reviewers before formal use. Mac dry-run runs in a separate `build-macos-testing` job with **no environment and no Apple secrets**; it can produce preview packages before Apple setup without creating or modifying an environment. The workflow cannot replace maintainer approval of real-machine/client gates; never approve public promotion solely because automated checks are green.
 
 ## Local verification and packages
 
@@ -100,6 +100,9 @@ These actions need explicit maintainer authorization and a pushed, reviewed sour
 ```bash
 # After independently reviewing and authorizing the source push:
 gh workflow run release.yml --ref main -f ref=main -f platform=all -f mode=dry-run
+
+# Mac-only preview, no Apple account, certificate, environment or Release needed:
+gh workflow run release.yml --ref main -f ref=<FULL_REVIEWED_SHA> -f platform=macos -f mode=dry-run
 
 # Only after version alignment and approval to create/push the actual tag:
 git tag -a v0.1.0 <FULL_REVIEWED_SHA> -m "CopilotBYOKManager v0.1.0 core candidate"

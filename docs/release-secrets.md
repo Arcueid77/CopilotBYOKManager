@@ -34,7 +34,7 @@ There is **no `KEYCHAIN_PASSWORD` secret**: the build generates a fresh random p
 
 Only the formal Mac build step receives the six Apple values. The script validates all of them before building, strips unrelated Apple/updater environment variables from the child build, creates a temporary Keychain, preserves/restores the user's Keychain search list and deletes private files/keychain on completion or failure. Secret-bearing subprocess arguments and signing identities are not echoed by its error handler. Hosted runner disposal is the additional cleanup boundary on cancellation/host loss; do not reuse a failed signing runner as a general workstation.
 
-The `release` environment also guards the final Draft/public Release job. Mac dry-run shares its approval gate but **does not map its secrets into the step**. No pull-request event is configured; fork repository and non-main dispatch execution are rejected before signing. These controls still require maintainers to review the committed workflow/scripts.
+The `release` environment also guards the final Draft/public Release job. Mac dry-run is a separate `build-macos-testing` job with **no environment and no secret mappings**. It does not require or create `release`, so maintainers can inspect a test DMG before setting up Apple credentials. No pull-request event is configured; fork repository and non-main dispatch execution are rejected before signing. These controls still require maintainers to review the committed workflow/scripts.
 
 ## 3. Prove the build before public promotion
 
@@ -68,4 +68,4 @@ Real provider requests require a separately approved provider/model/cost boundar
 
 ## 5. Not yet fulfilled by this document
 
-Apple membership, certificate/API key creation, GitHub Secrets/environment settings, actual macOS build/notarization, clean Windows and both real Macs, live client/provider requests and a functioning private security-report channel remain maintainer verification items. High-resolution original logo, final screenshot review and any sponsor/contact/payment details also need explicit maintainer input. No sponsor contact or payment link is invented here.
+Apple membership, certificate/API key creation, GitHub Secrets/environment settings, formal macOS signing/notarization, clean Windows and both real Macs, live client/provider requests and a functioning private security-report channel remain maintainer verification items. The maintainer-requested replacement icon now has a checked-in high-resolution source and official Tauri exports; it does not change package acceptance. Final screenshot review and any sponsor/contact/payment details still need explicit maintainer input. No sponsor contact or payment link is invented here.

@@ -86,6 +86,27 @@ test('formal Apple signing requires every secret and a Developer ID Application 
   assert.throws(() => requireAppleCredentials({ ...env, APPLE_SIGNING_IDENTITY: '-' }));
 });
 
+test('Mac previews have no environment or secrets and cannot enter formal publication', () => {
+  const workflow = readFileSync(path.join(ROOT, '.github/workflows/release.yml'), 'utf8');
+  const job = name => {
+    const match = workflow.match(new RegExp(`^  ${name}:\\r?\\n([\\s\\S]*?)(?=^  [a-z][a-z-]+:|(?![\\s\\S]))`, 'm'));
+    assert.ok(match, `Missing job: ${name}`);
+    return match[1];
+  };
+  const testing = job('build-macos-testing'), formal = job('build-macos');
+  assert.match(testing, /if: needs\.validate\.outputs\.platform != 'windows' && needs\.validate\.outputs\.mode == 'dry-run'/);
+  assert.match(testing, /RELEASE_MODE: dry-run/);
+  assert.match(testing, /name: macos-testing-adhoc-/);
+  assert.doesNotMatch(testing, /^\s+environment:|secrets\.|contents: write/m);
+  assert.match(formal, /needs\.validate\.outputs\.mode != 'dry-run'/);
+  assert.match(formal, /environment: release/);
+  for (const name of APPLE_SECRET_NAMES) assert.ok(formal.includes(`secrets.${name}`));
+  assert.match(job('publish-release'), /if: needs\.validate\.outputs\.mode != 'dry-run'/);
+  const assembly = job('assemble-release');
+  assert.match(assembly, /needs: \[validate, test, build-windows, build-macos-testing, build-macos\]/);
+  assert.match(assembly, /needs\.build-macos-testing\.result == 'success' \|\| needs\.build-macos-testing\.result == 'skipped'/);
+});
+
 test('bundle uses standard NSIS/DMG, stable identity, current-user installation and no updater', () => {
   const config = JSON.parse(readFileSync(path.join(ROOT, 'apps/desktop/src-tauri/tauri.conf.json'), 'utf8'));
   const mac = JSON.parse(readFileSync(path.join(ROOT, 'apps/desktop/src-tauri/tauri.macos.conf.json'), 'utf8'));
@@ -114,6 +135,45 @@ test('bundle uses standard NSIS/DMG, stable identity, current-user installation 
   assert.equal(config.bundle.macOS.minimumSystemVersion, '15.0');
   assert.equal(config.bundle.macOS.infoPlist, undefined);
   for (const icon of config.bundle.icon) assert.ok(readFileSync(path.join(ROOT, 'apps/desktop/src-tauri', icon)).length > 0);
+});
+
+test('new icon source and platform exports retain high-resolution and small-size representations', () => {
+  const directory = path.join(ROOT, 'apps/desktop/src-tauri/icons');
+  const png = file => {
+    const bytes = readFileSync(file);
+    assert.equal(bytes.subarray(0, 8).toString('hex'), '89504e470d0a1a0a');
+    assert.equal(bytes.toString('ascii', 12, 16), 'IHDR');
+    assert.equal(bytes[25], 6, 'Icons must preserve RGBA transparency');
+    const width = bytes.readUInt32BE(16), height = bytes.readUInt32BE(20);
+    assert.equal(width, height);
+    return width;
+  };
+  assert.ok(png(path.join(directory, 'icon-source.png')) >= 1024);
+  assert.equal(png(path.join(directory, 'icon.png')), 512);
+  assert.equal(png(path.join(ROOT, 'apps/desktop/web/assets/app-icon.png')), 256);
+  const ico = readFileSync(path.join(directory, 'icon.ico'));
+  assert.equal(ico.readUInt32LE(0), 0x10000);
+  const sizes = [];
+  for (let index = 0; index < ico.readUInt16LE(4); index++) {
+    const offset = 6 + index * 16;
+    sizes.push(ico[offset] || 256);
+    assert.equal(ico[offset], ico[offset + 1]);
+    assert.ok(ico.readUInt32LE(offset + 8) > 0);
+    assert.ok(ico.readUInt32LE(offset + 12) + ico.readUInt32LE(offset + 8) <= ico.length);
+  }
+  for (const size of [16, 32, 256]) assert.ok(sizes.includes(size), `Missing ICO size ${size}`);
+  const icns = readFileSync(path.join(directory, 'icon.icns')), types = [];
+  assert.equal(icns.toString('ascii', 0, 4), 'icns');
+  assert.equal(icns.readUInt32BE(4), icns.length);
+  let offset = 8;
+  while (offset < icns.length) {
+    types.push(icns.toString('ascii', offset, offset + 4));
+    const length = icns.readUInt32BE(offset + 4);
+    assert.ok(length > 8 && offset + length <= icns.length);
+    offset += length;
+  }
+  assert.equal(offset, icns.length);
+  assert.ok(types.includes('ic10'), 'Mac icon must contain the 1024px representation');
 });
 
 test('PE inspection distinguishes the x64 payload from a normal x86 NSIS bootstrapper', t => {

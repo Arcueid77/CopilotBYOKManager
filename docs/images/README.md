@@ -1,6 +1,6 @@
 # Current-interface screenshot provenance
 
-Captured 2026-10-15 from `apps/desktop/web/`, based on application source `83a82db3555eb0defa278bd6e042b7c55a76088f` plus the release/documentation changes in this candidate. These are **browser fallback previews with simulated data**, not native client or provider-request acceptance.
+Captured 2026-10-15 from `apps/desktop/web/`, based on `fbd8f532f988533d306c9842d21f74393516b3ea` plus the maintainer-requested new icon/header in this candidate. These are **browser fallback previews with simulated data**, not native client or provider-request acceptance.
 
 | Files | View |
 | --- | --- |
@@ -18,4 +18,4 @@ $env:COPILOT_BYOK_MANAGER_BROWSER = '<absolute path to a supported Chromium brow
 node scripts/capture-readme.cjs
 ```
 
-The script serves only the current frontend on an ephemeral localhost port, uses fresh isolated browser contexts, blocks non-local requests and records three views in each language. It does not install a browser or access a normal browser profile. Inspect all six images for layout/privacy after changes. Keep the preview disclosure in README; replace them with native screenshots only after separately authorized, sanitized native acceptance.
+The script serves only the current frontend on an ephemeral localhost port, uses fresh isolated browser contexts, blocks non-local requests and records three views in each language. It also checks the locally packaged icon and header bounds in 18 combinations: English/Chinese, Light/Dark/System and 960/1180/1440px widths. It does not install a browser or access a normal browser profile. Inspect all six images for layout/privacy after changes. Keep the preview disclosure in README; replace them with native screenshots only after separately authorized, sanitized native acceptance.

@@ -127,14 +127,13 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-  build-macos:
+  build-macos-testing:
     needs: [validate, test]
-    if: needs.validate.outputs.platform != 'windows'
+    if: needs.validate.outputs.platform != 'windows' && needs.validate.outputs.mode == 'dry-run'
     runs-on: macos-15
     timeout-minutes: 120
-    # Only this job receives Apple secrets. Configure required reviewers on release.
-    # Dry-run also respects that environment's approval, but receives no secrets.
-    environment: release
+    # Deliberately no environment or secrets: a preview must not create or
+    # require the protected release environment before Apple setup is ready.
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
@@ -148,14 +147,39 @@ jobs:
           rustup default 1.88.0
       - run: npm ci
       - name: Build ad-hoc testing DMG (no Apple secrets)
-        if: needs.validate.outputs.mode == 'dry-run'
         env:
           RELEASE_MODE: dry-run
           RELEASE_SHA: ${{ needs.validate.outputs.sha }}
           RELEASE_TAG: ${{ needs.validate.outputs.tag }}
         run: node scripts/package-macos.mjs
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: macos-testing-adhoc-${{ needs.validate.outputs.sha }}
+          path: target/platform-assets/macos/*
+          if-no-files-found: error
+          retention-days: 14
+
+  build-macos:
+    needs: [validate, test]
+    if: needs.validate.outputs.platform != 'windows' && needs.validate.outputs.mode != 'dry-run'
+    runs-on: macos-15
+    timeout-minutes: 120
+    # Only this protected job receives Apple secrets. Formal signing never
+    # falls back to the independent, secrets-free testing job.
+    environment: release
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ needs.validate.outputs.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '22'
+      - run: |
+          rustup toolchain install 1.88.0 --profile minimal --target x86_64-apple-darwin --target aarch64-apple-darwin
+          rustup default 1.88.0
+      - run: npm ci
       - name: Build Developer ID signed and notarized DMG (missing secrets fail)
-        if: needs.validate.outputs.mode != 'dry-run'
         env:
           RELEASE_MODE: ${{ needs.validate.outputs.mode }}
           RELEASE_SHA: ${{ needs.validate.outputs.sha }}
@@ -169,17 +193,18 @@ jobs:
         run: node scripts/package-macos.mjs
       - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
-          name: macos-${{ needs.validate.outputs.mode == 'dry-run' && 'testing-adhoc' || 'notarized' }}-${{ needs.validate.outputs.sha }}
+          name: macos-notarized-${{ needs.validate.outputs.sha }}
           path: target/platform-assets/macos/*
           if-no-files-found: error
           retention-days: 14
 
   assemble-release:
-    needs: [validate, test, build-windows, build-macos]
+    needs: [validate, test, build-windows, build-macos-testing, build-macos]
     if: >-
       always() && !cancelled() && needs.validate.result == 'success' && needs.test.result == 'success' &&
       (needs.build-windows.result == 'success' || needs.build-windows.result == 'skipped') &&
-      (needs.build-macos.result == 'success' || needs.build-macos.result == 'skipped')
+      (needs.build-macos.result == 'success' || needs.build-macos.result == 'skipped') &&
+      (needs.build-macos-testing.result == 'success' || needs.build-macos-testing.result == 'skipped')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -196,7 +221,7 @@ jobs:
           name: windows-${{ needs.validate.outputs.sha }}
           path: target/platform-assets/windows
       - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
-        if: needs.build-macos.result == 'success'
+        if: needs.build-macos.result == 'success' || needs.build-macos-testing.result == 'success'
         with:
           name: macos-${{ needs.validate.outputs.mode == 'dry-run' && 'testing-adhoc' || 'notarized' }}-${{ needs.validate.outputs.sha }}
           path: target/platform-assets/macos

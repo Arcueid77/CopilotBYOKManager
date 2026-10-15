@@ -78,7 +78,7 @@ input, textarea { caret-color: var(--accent); }
 .sidebar { height: 62px; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 26px; padding: 0 max(20px, calc((100vw - 1080px) / 2)); border-right: 0; border-bottom: 1px solid var(--border); background: var(--sidebar-bg); z-index: 10; }
 .brand { padding: 0; gap: 8px; white-space: nowrap; }
 .brand strong { font-size: 14px; letter-spacing: -.02em; }
-.brand small, .brand-mark, .nav-icon { display: none; }
+.brand small, .nav-icon { display: none; }
 #primary-nav { display: flex; align-items: stretch; justify-content: center; gap: 8px; }
 .nav-item { width: auto; justify-content: center; padding: 9px 14px; border: 0; border-radius: 7px; font-size: 13px; white-space: nowrap; }
 .nav-item.active { color: var(--accent); background: var(--accent-soft); border: 0; }
