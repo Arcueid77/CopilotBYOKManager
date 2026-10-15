@@ -1,0 +1,14 @@
+CopilotBYOKManager - Windows x64 standalone build
+
+Unsigned community build. This is NOT a fully portable application.
+WebView2 must already be installed. Extract before opening the executable.
+Application state, OS Credential Store secrets and published client configuration
+still use the current user's directories and credentials. Moving this folder does
+not move or delete them. Use reviewed revocation before removing the manager if
+you want its owned configuration removed from supported clients.
+
+Saving a provider, publishing configuration, selecting a model and completing a
+request are different states. A successful publication is not request validation.
+
+Documentation: https://github.com/AvaloNero/CopilotBYOKManager
+Security: https://github.com/AvaloNero/CopilotBYOKManager/security

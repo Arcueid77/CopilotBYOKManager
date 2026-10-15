@@ -25,7 +25,27 @@
     }
   },
   "bundle": {
-    "icon": ["icons/icon.ico", "icons/icon.png"],
-    "active": false
+    "active": true,
+    "targets": ["nsis"],
+    "createUpdaterArtifacts": false,
+    "publisher": "AvaloNero",
+    "homepage": "https://github.com/AvaloNero/CopilotBYOKManager",
+    "category": "DeveloperTool",
+    "shortDescription": "Configure one provider. Publish it safely across your Copilot clients.",
+    "icon": ["icons/icon.ico", "icons/icon.png", "icons/icon.icns"],
+    "windows": {
+      "allowDowngrades": false,
+      "webviewInstallMode": { "type": "downloadBootstrapper", "silent": true },
+      "nsis": {
+        "installMode": "currentUser",
+        "languages": ["English", "SimpChinese"],
+        "displayLanguageSelector": true,
+        "startMenuFolder": "CopilotBYOKManager"
+      }
+    },
+    "macOS": {
+      "minimumSystemVersion": "15.0",
+      "hardenedRuntime": true
+    }
   }
 }

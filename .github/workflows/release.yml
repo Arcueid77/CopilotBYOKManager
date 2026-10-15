@@ -1,0 +1,246 @@
+name: Release candidate
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'main or full SHA for dry-run; existing vX.Y.Z tag for draft/publish'
+        required: true
+        default: main
+        type: string
+      platform:
+        description: 'Single-platform builds are dry-run only'
+        required: true
+        default: all
+        type: choice
+        options: [all, windows, macos]
+      mode:
+        description: 'publish makes a verified Draft public as a pre-release candidate'
+        required: true
+        default: dry-run
+        type: choice
+        options: [dry-run, draft, publish]
+
+permissions:
+  contents: read
+
+# Serialize even different refs: a slow signing job must not be cancelled halfway.
+concurrency:
+  group: copilot-byok-manager-release
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      sha: ${{ steps.resolve.outputs.sha }}
+      tag: ${{ steps.resolve.outputs.tag }}
+      mode: ${{ steps.resolve.outputs.mode }}
+      platform: ${{ steps.resolve.outputs.platform }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '22'
+      - name: Resolve and freeze allowed source
+        id: resolve
+        env:
+          INPUT_REF: ${{ inputs.ref }}
+          INPUT_MODE: ${{ inputs.mode }}
+          INPUT_PLATFORM: ${{ inputs.platform }}
+        run: node scripts/resolve-release.mjs
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ steps.resolve.outputs.sha }}
+          persist-credentials: false
+      - run: npm ci
+      - name: Validate versions, locks, bundle policy and negative release cases
+        env:
+          RELEASE_TAG: ${{ steps.resolve.outputs.tag }}
+        run: |
+          node scripts/check-release-version.mjs --tag "$RELEASE_TAG"
+          npm run test:release
+
+  test:
+    needs: validate
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-15]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ needs.validate.outputs.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '22'
+      - name: Install the supported Rust toolchain
+        run: |
+          rustup toolchain install 1.88.0 --profile minimal --component rustfmt --component clippy
+          rustup default 1.88.0
+      - run: npm ci
+      - name: Web, release-policy, formatting, locked Rust tests and strict Clippy
+        env:
+          COPILOT_BYOK_MANAGER_TEST_REQUIRE_LINKS: '1'
+        run: npm run check
+      - name: Commit whitespace and unchanged tracked inputs
+        run: |
+          git show --format= --check HEAD
+          git diff --exit-code
+
+  build-windows:
+    needs: [validate, test]
+    if: needs.validate.outputs.platform != 'macos'
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ needs.validate.outputs.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '22'
+      - run: |
+          rustup toolchain install 1.88.0 --profile minimal --target x86_64-pc-windows-msvc
+          rustup default 1.88.0
+      - run: npm ci
+      - name: Build and verify unsigned current-user NSIS and standalone packages
+        shell: pwsh
+        env:
+          RELEASE_SHA: ${{ needs.validate.outputs.sha }}
+          RELEASE_MODE: ${{ needs.validate.outputs.mode }}
+        run: ./scripts/package-windows.ps1 -Mode $env:RELEASE_MODE
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: windows-${{ needs.validate.outputs.sha }}
+          path: target/platform-assets/windows/*
+          if-no-files-found: error
+          retention-days: 14
+
+  build-macos:
+    needs: [validate, test]
+    if: needs.validate.outputs.platform != 'windows'
+    runs-on: macos-15
+    timeout-minutes: 120
+    # Only this job receives Apple secrets. Configure required reviewers on release.
+    # Dry-run also respects that environment's approval, but receives no secrets.
+    environment: release
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ needs.validate.outputs.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '22'
+      - run: |
+          rustup toolchain install 1.88.0 --profile minimal --target x86_64-apple-darwin --target aarch64-apple-darwin
+          rustup default 1.88.0
+      - run: npm ci
+      - name: Build ad-hoc testing DMG (no Apple secrets)
+        if: needs.validate.outputs.mode == 'dry-run'
+        env:
+          RELEASE_MODE: dry-run
+          RELEASE_SHA: ${{ needs.validate.outputs.sha }}
+          RELEASE_TAG: ${{ needs.validate.outputs.tag }}
+        run: node scripts/package-macos.mjs
+      - name: Build Developer ID signed and notarized DMG (missing secrets fail)
+        if: needs.validate.outputs.mode != 'dry-run'
+        env:
+          RELEASE_MODE: ${{ needs.validate.outputs.mode }}
+          RELEASE_SHA: ${{ needs.validate.outputs.sha }}
+          RELEASE_TAG: ${{ needs.validate.outputs.tag }}
+          APPLE_CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
+          APPLE_API_PRIVATE_KEY_BASE64: ${{ secrets.APPLE_API_PRIVATE_KEY_BASE64 }}
+        run: node scripts/package-macos.mjs
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: macos-${{ needs.validate.outputs.mode == 'dry-run' && 'testing-adhoc' || 'notarized' }}-${{ needs.validate.outputs.sha }}
+          path: target/platform-assets/macos/*
+          if-no-files-found: error
+          retention-days: 14
+
+  assemble-release:
+    needs: [validate, test, build-windows, build-macos]
+    if: >-
+      always() && !cancelled() && needs.validate.result == 'success' && needs.test.result == 'success' &&
+      (needs.build-windows.result == 'success' || needs.build-windows.result == 'skipped') &&
+      (needs.build-macos.result == 'success' || needs.build-macos.result == 'skipped')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ needs.validate.outputs.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '22'
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        if: needs.build-windows.result == 'success'
+        with:
+          name: windows-${{ needs.validate.outputs.sha }}
+          path: target/platform-assets/windows
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        if: needs.build-macos.result == 'success'
+        with:
+          name: macos-${{ needs.validate.outputs.mode == 'dry-run' && 'testing-adhoc' || 'notarized' }}-${{ needs.validate.outputs.sha }}
+          path: target/platform-assets/macos
+      - name: Assemble exact asset set, provenance, notes and SHA256SUMS
+        env:
+          RELEASE_SHA: ${{ needs.validate.outputs.sha }}
+          RELEASE_TAG: ${{ needs.validate.outputs.tag }}
+          RELEASE_MODE: ${{ needs.validate.outputs.mode }}
+          RELEASE_PLATFORM: ${{ needs.validate.outputs.platform }}
+        run: node scripts/assemble-release.mjs
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: release-${{ needs.validate.outputs.mode }}-${{ needs.validate.outputs.sha }}
+          path: target/release-assets/*
+          if-no-files-found: error
+          retention-days: 14
+
+  publish-release:
+    needs: [validate, assemble-release]
+    if: needs.validate.outputs.mode != 'dry-run'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: release
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ needs.validate.outputs.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '22'
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        if: needs.validate.outputs.mode == 'draft'
+        with:
+          name: release-${{ needs.validate.outputs.mode }}-${{ needs.validate.outputs.sha }}
+          path: target/release-assets
+      # publish tests/builds the same SHA again but promotes the existing Draft's
+      # reviewed bytes, never replacing them with a timestamp/signature rebuild.
+      - name: Verify Draft uploads or promote the unchanged reviewed Draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_SHA: ${{ needs.validate.outputs.sha }}
+          RELEASE_TAG: ${{ needs.validate.outputs.tag }}
+          RELEASE_MODE: ${{ needs.validate.outputs.mode }}
+        run: node scripts/publish-release.mjs

@@ -6,15 +6,19 @@
   "scripts": {
     "dev": "tauri dev --config apps/desktop/src-tauri/tauri.conf.json",
     "build": "tauri build --config apps/desktop/src-tauri/tauri.conf.json",
-    "test": "npm run check:web && cargo test --workspace",
+    "test": "npm run check:web && cargo test --workspace --locked",
     "check:web": "npm run check:i18n && node --check apps/desktop/web/ui-lifecycle.js && node --check apps/desktop/web/app.js && node --check apps/desktop/web/manager-ui.js && node --check apps/desktop/web/inline-deployment.js && node --check apps/desktop/web/model-discovery.js && node --check apps/desktop/web/installer-ui.js && node --check apps/desktop/web/account-ui.js && node --check apps/desktop/web/github-auth-ui.js && node --check apps/desktop/web/deployment-review.js && node --check apps/desktop/web/setup-ui.js && node --check apps/desktop/web/jetbrains-ui.js && node --check apps/desktop/web/usage-ui.js && node --check apps/desktop/web/resources-ui.js && node --check apps/desktop/web/plan-session.js && node --test apps/desktop/web/tests/*.test.cjs && npm run test:web",
     "check:i18n": "node scripts/check-i18n.cjs",
-    "check:rust": "cargo fmt --all -- --check && cargo test --workspace && cargo clippy --workspace --all-targets -- -D warnings",
-    "check": "npm run check:web && npm run check:rust",
+    "check:rust": "cargo fmt --all -- --check && cargo test --workspace --locked && cargo clippy --workspace --all-targets --locked -- -D warnings",
+    "check:version": "node scripts/check-release-version.mjs",
+    "check:docs": "node scripts/check-doc-links.mjs",
+    "test:release": "node --test tests/release/*.test.mjs",
+    "check": "npm run check:version && npm run test:release && npm run check:docs && npm run check:web && npm run check:rust",
     "test:web": "node --test tests/web/*.test.cjs"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.8.0",
-    "acorn": "^8.19.0"
+    "acorn": "^8.19.0",
+    "ajv": "8.20.0"
   }
 }
