@@ -65,11 +65,15 @@ try {
       env.APPLE_API_ISSUER = process.env.APPLE_API_ISSUER_ID;
       env.APPLE_API_KEY_PATH = privateKey;
     }
-    run(process.execPath, ['node_modules/@tauri-apps/cli/tauri.js', 'build', '--config', 'apps/desktop/src-tauri/tauri.conf.json', '--ci', '--target', 'universal-apple-darwin', '--bundles', 'dmg', '--', '--locked'], 'Tauri universal DMG build', { env, stdio: 'inherit' });
+    // Tauri 2.11.4 removes the intermediate .app for a DMG-only build. Request
+    // both official bundles so verification below can inspect the signed .app
+    // before checking its copy in the final DMG. Only the DMG is distributed.
+    run(process.execPath, ['node_modules/@tauri-apps/cli/tauri.js', 'build', '--config', 'apps/desktop/src-tauri/tauri.conf.json', '--ci', '--target', 'universal-apple-darwin', '--bundles', 'app,dmg', '--', '--locked'], 'Tauri universal DMG build', { env, stdio: 'inherit' });
     const bundleRoot = path.join(ROOT, 'target/universal-apple-darwin/release/bundle');
     const appName = 'CopilotBYOKManager.app';
     const verifyApp = app => {
       const plist = path.join(app, 'Contents/Info.plist');
+      assert.ok(existsSync(plist), 'Expected app bundle is missing; retain both app and dmg outputs for verification');
       const value = key => run('/usr/libexec/PlistBuddy', ['-c', `Print :${key}`, plist], 'Bundle identity verification');
       assert.equal(value('CFBundleIdentifier'), 'io.github.avalonero.copilotbyokmanager');
       assert.equal(value('CFBundleShortVersionString'), version);
@@ -93,6 +97,7 @@ try {
       } else assert.ok(report.includes('Signature=adhoc'), 'Dry-run must use ad-hoc signing');
     };
     verifyApp(path.join(bundleRoot, 'macos', appName));
+    console.log('Verified retained app: identity, version, both architectures and code signature.');
     const dmgs = readdirSync(path.join(bundleRoot, 'dmg')).filter(name => name.endsWith('.dmg'));
     assert.equal(dmgs.length, 1, 'Expected exactly one fresh DMG');
     const dmg = path.join(bundleRoot, 'dmg', dmgs[0]);
@@ -111,6 +116,7 @@ try {
       run('hdiutil', ['attach', '-readonly', '-nobrowse', '-noautoopen', '-mountpoint', mount, dmg], 'Mount final DMG for verification');
       mounted = true;
       verifyApp(path.join(mount, appName));
+      console.log('Verified the app inside the final read-only mounted DMG.');
     } finally {
       if (mounted) {
         run('hdiutil', ['detach', mount], 'Unmount verified DMG');

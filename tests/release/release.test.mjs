@@ -176,6 +176,18 @@ test('new icon source and platform exports retain high-resolution and small-size
   assert.ok(types.includes('ic10'), 'Mac icon must contain the 1024px representation');
 });
 
+test('Mac packaging retains the official app bundle before verifying both app and DMG payload', () => {
+  const script = readFileSync(path.join(ROOT, 'scripts/package-macos.mjs'), 'utf8');
+  // Regression: locked Tauri cleans the intermediate .app when only DMG is
+  // requested. A DMG build can succeed while the subsequent plist check fails.
+  assert.match(script, /'--bundles', 'app,dmg'/);
+  assert.doesNotMatch(script, /'--bundles', 'dmg'/);
+  assert.match(script, /assert\.ok\(existsSync\(plist\)/);
+  assert.match(script, /verifyApp\(path\.join\(bundleRoot, 'macos', appName\)\)/);
+  assert.match(script, /verifyApp\(path\.join\(mount, appName\)\)/);
+  assert.match(script, /'codesign', \['--verify', '--deep', '--strict', app\]/);
+});
+
 test('PE inspection distinguishes the x64 payload from a normal x86 NSIS bootstrapper', t => {
   const file = path.join(temporary(t), 'synthetic.exe');
   const bytes = Buffer.alloc(512); bytes.writeUInt16LE(0x5a4d); bytes.writeUInt32LE(0x80, 0x3c); bytes.writeUInt32LE(0x4550, 0x80);

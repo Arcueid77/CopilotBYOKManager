@@ -79,7 +79,7 @@ rustup target add x86_64-apple-darwin aarch64-apple-darwin
 node scripts/package-macos.mjs
 ```
 
-The script uses `universal-apple-darwin`, Tauri's official DMG bundler, and verifies `lipo`, Info.plist, hardened code signatures and the app inside a read-only mounted DMG. Formal signing is restricted to the environment job; see [Apple setup](release-secrets.md). Tauri notarizes/staples the app; the script also submits/staples/validates the final DMG. Temporary credentials/keychain are cleaned on success or failure. A detach failure never leads to recursively deleting through a mounted filesystem.
+The script uses `universal-apple-darwin` and `--bundles app,dmg` with Tauri's official bundler. Both outputs are requested because the locked CLI removes its intermediate `.app` in DMG-only mode; verification must retain that app, not skip its checks. Only the final DMG is distributed. It verifies `lipo`, Info.plist, hardened code signatures and the app again inside a read-only mounted DMG. Formal signing is restricted to the environment job; see [Apple setup](release-secrets.md). Tauri notarizes/staples the app; the script also submits/staples/validates the final DMG. Temporary credentials/keychain are cleaned on success or failure. A detach failure never leads to recursively deleting through a mounted filesystem.
 
 To assemble an exact clean local source's Windows-only test outputs (PowerShell):
 
@@ -129,6 +129,7 @@ The engineering host's default tests pass, but requiring file-symlink fixtures w
 - [Tauri macOS signing and notarization](https://v2.tauri.app/distribute/sign/macos/)
 - [Tauri app bundles](https://v2.tauri.app/distribute/macos-application-bundle/) and [DMG bundler](https://v2.tauri.app/distribute/dmg/)
 - [Locked CLI v2.11.4 signing implementation](https://github.com/tauri-apps/tauri/blob/tauri-cli-v2.11.4/crates/tauri-bundler/src/bundle/macos/sign.rs)
+- [Locked CLI v2.11.4 bundle retention/cleanup](https://github.com/tauri-apps/tauri/blob/tauri-cli-v2.11.4/crates/tauri-bundler/src/bundle.rs#L225-L249)
 - [GitHub hosted runners](https://docs.github.com/en/actions/reference/runners/github-hosted-runners)
 
 References were checked for this engineering change on 2026-10-15. Recheck official support before upgrading tools or platform scope; do not copy migration-specific compatibility bundles from other projects.
