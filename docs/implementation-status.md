@@ -1,6 +1,6 @@
 # CopilotBYOKManager implementation status
 
-Updated 2026-10-14 for the four-page core configuration edition, appearance and CC Switch-style Windows tray behavior on `main` (working tree based on `5a63e26`). This is an implementation/evidence summary, not complete-MVP or release acceptance. The [MVP specification](mvp-implementation-spec.md) and [feature availability](feature-availability.md) distinguish the retained extended scope from the current interface. The product has not had a public release.
+Updated 2026-10-15 for the maintainer-approved v0.1 four-page release scope and packaging/README engineering, based on clean `main` at `83a82db3555eb0defa278bd6e042b7c55a76088f`. This is an implementation/evidence summary, not complete-MVP or release acceptance. The [specification §21](mvp-implementation-spec.md#21-final-acceptance) and [feature availability](feature-availability.md) separate core release gates from the retained extended milestone. The product has not had a public release.
 
 ## Current implementation
 
@@ -35,7 +35,26 @@ Technical detail: [architecture](architecture.md), [hardening](hardening-handoff
 
 ## Validation evidence
 
-Evidence must stay attached to the source and validation layer that produced it. Tests use temporary data and fake external services; reports and screenshots are retained outside Git.
+Evidence must stay attached to the source and validation layer that produced it. Tests use temporary data and fake external services. Private runtime reports remain outside Git; the reviewed, synthetic README screenshots are checked in with [provenance](images/README.md) and are not runtime acceptance evidence.
+
+### v0.1 release engineering — 2026-10-15
+
+The packaging identity, data/credential namespaces, native write/ownership/recovery logic and four-page application code remain unchanged. Tauri Bundler is enabled: Windows current-user x64 NSIS plus standalone ZIP; Mac universal DMG with a conservative 15.0 candidate floor. Formal Mac requires Developer ID/Hardened Runtime/notarization/stapling; Windows is explicitly unsigned. A new independent release workflow freezes source SHA, reruns locked checks and defaults tags to Draft. Publish preserves the exact reviewed Draft bytes. It does not publish automatically on tag push.
+
+The bilingual README is now a product overview; full procedures moved to [English](user-guide.md) / [Chinese](user-guide.zh-CN.md) guides. Six current-browser screenshots use fictional providers and no keys, clearly labeled simulated. [Release engineering](release-engineering.md), [Apple setup](release-secrets.md), [release gates](release-criteria.md) and notes now use core v0.1 rather than hidden full-MVP features as the release scope.
+
+Local Windows NSIS/ZIP build and metadata verification succeeded during engineering. Mac packaging/signing/notarization and hosted workflow execution have **not** run on this Windows host. Core native-isolated UI/tray, clean Windows, Intel/Apple Silicon and live client requests remain NOT RUN/BLOCKED as applicable; no prior native run is promoted to current acceptance. No remote push, tag, Release, secret/environment/settings change, account purchase or sponsor contact is part of this work. See the final engineering handoff for exact local check counts and artifact SHA-256.
+
+| Engineering check | Observed result and limit |
+| --- | --- |
+| Dependencies / versions | `npm ci` passed; all 10 application version sources agree at 0.1.0; local Node 24.15.0 and explicitly selected Rust 1.88.0, without changing the default toolchain |
+| Release policy / locked Tauri schema | 16 tests passed, including version/ref/fork/PR rejection, all required Apple secrets, missing/tampered assets, fixed source, Draft-only mutation and immutable promotion bytes; GitHub CLI is fake in tests |
+| Web | 998 bilingual messages / 973 explicit keys; 63 desktop + 6 retained tests passed (69) |
+| Default Rust checks | `npm run check` passed: fmt, 275 library + 6 integration tests, strict Clippy. One existing file-symlink test takes its documented privilege-unavailable return on this account; the count is not proof that branch ran |
+| Strict link-capability run | With `COPILOT_BYOK_MANAGER_TEST_REQUIRE_LINKS=1`, 274 library tests passed and the symlink fixture failed with Windows error 1314 (missing privilege), before integration/Clippy. No test or CI requirement was weakened; rerun on a link-capable runner |
+| Isolated browser / docs | 18 current core scenario groups passed; six synthetic screenshots visually inspected. Local Markdown file/anchor checks passed; no real client writes or requests |
+| Workflow / scripts | Task-local checksum-verified actionlint 1.7.12 passed both workflows; Node script and PowerShell parser checks passed. Hosted workflow execution is still unverified |
+| Packaging | Local x64 NSIS and standalone ZIP generated, version/PE/unsigned checks passed. This does not prove installation, WebView2 failure behavior, tray interaction or Mac support |
 
 ### CC Switch tray conventions — 2026-10-14
 
@@ -132,12 +151,21 @@ The browser regression uses native-response fixtures, not live Tauri IPC. Native
 
 The earlier 2026-10-13 documentation/rename refresh reran the required web, Rust, formatting, Clippy and whitespace checks successfully against unchanged application code. It also checked local documentation paths and heading links. That documentation-only run preceded the application identity and bilingual-interface work above and added no browser, native-isolated or real-client acceptance result.
 
-## Remaining work within the required scope
+## Remaining work within the v0.1 core scope
 
-1. Rerun NativeIsolated on the final application source before claiming fresh native UI acceptance for the new navigation and modal behavior.
-2. Complete Windows 11 x64 dedicated-user/VM acceptance for installation, publisher/package policy, official account flows, actual runtime/Billing access, supported resource consumption and new opt-in usage observations. The direct app asset strategy remains an implementation gap.
-3. Resume JetBrains runtime acceptance only when the maintainer resumes the deferred task: per-IDE official login, restart/model visibility, one approved minimal provider request, and separately evidenced multi-IDE sharing. Prepared Rider files are not a passing result.
-4. Broaden usage/identity/resource coverage only after a supported upstream interface is verified. Add versioned parsers and sanitized fixtures for new semantics; do not infer absent CLI input semantics, VS Code cache-write counters, app-local usage or ambiguous Connection attribution.
+1. Establish fresh core NativeIsolated/desktop evidence on the final source, adapting old hidden-page cases without claiming an unchanged full B00–B32 run. Verify Windows tray/Exit/relaunch against the real isolated desktop.
+2. Complete clean Windows 11 x64 final-NSIS install/start/reopen/uninstall, WebView2 and user configuration preservation. Authenticode is not required; unsigned/source/hash disclosure is.
+3. Have the maintainer configure Apple credentials and protected release environment, run Mac ad-hoc and formal pipelines, then accept the actual Draft DMG separately on Apple Silicon and Intel. Universal build alone is insufficient.
+4. Verify exact advertised VS Code/CLI/manual App paths and authorized provider requests. Resume JetBrains runtime work only when the maintainer resumes it: per-IDE official login, model visibility, minimal request and multi-IDE sharing. Prepared Rider files and reviewed plugin bytes are not passing runtime results.
+5. Review Draft attachment hashes, notes, real support matrix and security-report availability; approve public candidate promotion only after core gates. No automation result alone gives this approval.
+
+## Deferred extended milestone, not v0.1 blockers
+
+- Direct Copilot App asset-download fallback remains unimplemented; do not advertise it.
+- Runtime quota/personal Billing, opt-in CLI/VS Code usage, resource consumption and their dedicated-user UI acceptance remain unaccepted and hidden, not PASS.
+- Broaden usage/identity/resource coverage only after supported upstream interfaces are verified, with versioned parsers and sanitized fixtures. Missing semantics, cache-write counters, app-local usage and ambiguous attribution remain unknown.
+
+Existing persistence, migration and security regressions still run; hidden modules must not query their services from the core shell, break startup or delete retained data.
 
 Use [local validation](local-validation-plan.md) for execution details. Historical handoffs remain evidence records rather than unchecked to-do lists.
 

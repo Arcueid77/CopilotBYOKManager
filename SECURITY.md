@@ -2,6 +2,8 @@
 
 CopilotBYOKManager manages developer-tool configuration, may launch allowlisted application installers, orchestrates official GitHub sign-in flows, stores a separate GitHub personal-usage authorization, and reads local usage metadata. Treat reports and diagnostic files as potentially sensitive.
 
+The v0.1 four-page core edition does not expose or automatically query Usage, Billing, separate personal-usage authorization or Resources. Their existing data and backend security contracts remain protected; the sections below cover retained code as well as currently exposed features.
+
 The product has not had a public release. Its dedicated configuration directory and credential namespace are not permission to adopt other applications' secrets or client authentication material.
 
 ## Do not publish secrets or private workspace content
@@ -68,12 +70,23 @@ Do not attach a real token or raw session log. Extract the smallest synthetic re
 
 ## Installer handling expectations
 
+These rules concern **third-party client/component installers launched by the manager**, not an Authenticode requirement on the manager's own first Windows package.
+
 - Install operations are selected by native, compiled allowlists.
 - The frontend and remote metadata cannot supply an executable command line.
 - Downloaded GitHub Copilot app assets must pass bounded-download, architecture, digest when available, and expected-publisher validation before launch.
 - Redirects must remain inside a documented allowlist and must never downgrade transport security.
 - Installation success is confirmed by post-install rediscovery, not by process exit code alone.
 - CopilotBYOKManager does not automatically uninstall or downgrade applications as rollback.
+
+## Manager release artifacts
+
+- The Windows x64 NSIS/standalone community build is explicitly **Unsigned community build**. Authenticode is not required for v0.1; do not imply a verified Windows publisher or instruct users to disable SmartScreen.
+- Formal macOS Universal DMGs require Developer ID Application, Hardened Runtime, notarization and stapled tickets. Ad-hoc/not-notarized testing artifacts are named separately and cannot be promoted as formal packages.
+- Check the precise source SHA, version, architecture and SHA-256 list. A checksum verifies agreement with the published bytes, not authorship by itself or runtime correctness.
+- Draft-first publication verifies the complete asset set, downloads and checks hashes before public promotion, and refuses already-public asset replacement. No auto-updater is enabled.
+- P12/P8 files, certificate passwords, private signing identities, API identifiers and signing-key material must never appear in the repository, reports or attachments. Secrets belong only in the maintainer's protected release environment; see [release secrets](docs/release-secrets.md).
+- Standalone ZIPs can write app state, OS credentials and client configuration outside their folder. Uninstalling the manager must not remove unrelated/client configuration.
 
 ## Sign-in expectations
 

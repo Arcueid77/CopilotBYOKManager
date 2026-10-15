@@ -18,7 +18,9 @@ Do not substitute an earlier conversation, mockup, local patch, or stale design 
 
 Read `docs/implementation-status.md` for the current implementation/evidence baseline and `docs/README.md` for the document index. Dated handoffs retain historical results, not the current backlog.
 
-The 2026-10-14 core configuration edition exposes only Overview / Providers / Apps / About. Preserve hidden Usage/Billing/authorization/Resources implementations and data without mounting or querying them from the core shell. Keep recovery, publication results and revocation accessible within the four pages. Read `docs/feature-availability.md` before re-exposing staged capabilities; this does not authorize excluded features or complete-MVP claims. Theme is presentation-only. Windows close-to-tray requires a working native tray, explicit restore/Quit and normal-close fallback when unavailable.
+The maintainer-approved 2026-10-15 v0.1 release scope exposes only Overview / Providers / Apps / About. Preserve hidden Usage/Billing/authorization/Resources implementations and data without mounting or querying them from the core shell. Their live acceptance belongs to a later extended milestone, not v0.1 blockers or PASS results. Keep recovery, publication results and revocation accessible within the four pages. Read `docs/feature-availability.md` before re-exposing staged capabilities; this does not authorize excluded features or complete-MVP claims. Theme is presentation-only. Windows close-to-tray requires a working native tray, explicit restore/Quit and normal-close fallback when unavailable.
+
+Read `docs/release-engineering.md`, `docs/release-criteria.md` and `docs/release-secrets.md` before release work. v0.1 requires Windows x64 current-user NSIS (explicitly unsigned) and a formal Developer ID signed/notarized/stapled macOS Universal DMG, with exact source SHA, version and SHA256SUMS. Ad-hoc Mac builds are testing-only. Strict `vX.Y.Z` tags create Drafts; public promotion preserves reviewed Draft bytes and requires separate maintainer approval. No push/tag/Release/settings/secret mutation is implied by local engineering work.
 
 ## Branch policy
 
@@ -45,13 +47,13 @@ The checked-in implementation is a pre-release desktop application with connecte
 
 The maintainer requires automatic JetBrains GitHub Copilot BYOK deployment, not only manual runbooks. The adapter observes public IDE/profile metadata and projects reviewed plugin versions into the official runtime's dedicated `github-copilot/byok.json` namespace through normal native-held plans, ownership, journals and rollback. Shared writes are deduplicated. Only CopilotBYOKManager's own provider keys may be materialized; never read/copy GitHub login credentials, Password Safe, authentication files or conversations. Unknown plugin versions remain unsupported pending verification. Publication is not proof of running/authenticated IDEs or successful provider requests. See `docs/jetbrains-support.md`; JetBrains is not a mandatory installation dependency of the original three-surface setup.
 
-This is not a completed MVP or release-acceptance claim. Required clean-Windows installation, real-account/client/request and resource-consumption acceptance remains open. Direct Copilot app asset-download fallback is not implemented; unsupported upstream identity/usage/resource interfaces remain explicit limitations. Rider runtime work is deferred by maintainer direction.
+This is not a completed MVP or release-acceptance claim. Core clean-Windows/Mac installation, native desktop behavior and real-client/request acceptance remain open. Resource-consumption/usage/Billing acceptance and the unimplemented direct Copilot app asset-download fallback belong to the retained extended milestone; they do not block v0.1. Unsupported upstream interfaces remain explicit limitations. Rider runtime work is deferred by maintainer direction.
 
 The 2026-10-13 UX changes passed web/Rust and isolated browser checks. NativeIsolated B00–B32 last passed on the earlier 2026-10-12 closeout source; the changed suite was only syntax-checked for `3791283`. Do not reuse that older run as fresh native acceptance. See `docs/implementation-status.md` and `docs/local-validation-plan.md`.
 
 ## Required scope boundary
 
-Implement only `docs/mvp-implementation-spec.md`.
+Implement only `docs/mvp-implementation-spec.md`, using section 21.1 for the current v0.1 core release and section 21.2 for the deferred extended milestone. Do not reopen hidden features to satisfy the old full-MVP checklist.
 
 The required milestone does not include:
 
@@ -125,7 +127,7 @@ Use `rust_decimal` or another exact fixed-point representation for credits, pric
 
 ## Implementation order
 
-Follow section 18 of `docs/mvp-implementation-spec.md`:
+For future extended implementation, follow section 18 of `docs/mvp-implementation-spec.md`. This retained order does not authorize expanding the current core-release task:
 
 1. deployment hardening and SQLite/domain foundation;
 2. environment detection and reviewed installation plans;
@@ -144,7 +146,7 @@ Do not start with a large static UI mock. Build each vertical slice through doma
 
 The deployment/persistence foundation and connected feature slices above already exist. Inspect their code and current tests before selecting work; do not restart from the original prototype or replay a historical handoff as unimplemented requirements.
 
-Use the remaining-work and validation sections in `docs/implementation-status.md` to choose the next required slice. Preserve `state.json` and Usage DB migrations, native plan/ownership/recovery invariants, exact decimals, unknown/partial states and existing regression coverage. Tests must remain isolated. Real client/account/installation acceptance must use the documented dedicated environment and the maintainer's current scope; deferred Rider work is not an automatic next action.
+Use the core and extended remaining-work sections in `docs/implementation-status.md` to choose the next slice. Preserve `state.json` and Usage DB migrations, native plan/ownership/recovery invariants, exact decimals, unknown/partial states and existing regression coverage. Tests must remain isolated. Real client/account/installation acceptance must use the documented dedicated environment and the maintainer's current scope; deferred Rider work is not an automatic next action.
 
 ## Coding conventions
 
@@ -194,9 +196,11 @@ Run from the repository root before handing off a slice:
 
 ```bash
 npm run check:web
+npm run check:version
+npm run test:release
 cargo fmt --all -- --check
-cargo test --workspace
-cargo clippy --workspace --all-targets -- -D warnings
+cargo test --workspace --locked
+cargo clippy --workspace --all-targets --locked -- -D warnings
 git diff --check
 ```
 

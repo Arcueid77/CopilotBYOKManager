@@ -2,9 +2,9 @@
 
 ## 1. Status and interpretation
 
-This document is the normative implementation contract for CopilotBYOKManager's required pre-release milestone. Everything described as **must**, **required**, or **shall** is required scope. This document intentionally contains no post-MVP roadmap.
+This document is the normative implementation contract for CopilotBYOKManager. The maintainer's 2026-10-15 release decision makes the **v0.1 four-page core configuration edition** the first public-release scope. Section 21.1 and the [release criteria](release-criteria.md) define its acceptance. Requirements for hidden/extended services are retained for a later extended milestone (section 21.2), not v0.1 release blockers. All security, safe-write, credential, recovery, persistence and data-preservation invariants continue to apply to existing code.
 
-The maintainer's 2026-10-14 interface decision selects a **core configuration edition**: Overview / Providers / Apps / About. Usage, personal Billing/authorization and shared Resources remain implemented but are not offered through this interface. This staging decision does not mark the complete milestone accepted or remove security/persistence requirements. See [feature availability](feature-availability.md). Hidden UI sections below describe the retained extended milestone, not controls available in the core edition.
+The interface exposes **Overview / Providers / Apps / About**. Usage, personal Billing/authorization and shared Resources remain implemented but are not offered or automatically queried through this interface. Their real-account/consumption acceptance, plus the unimplemented direct Copilot App installer-download fallback, are deferred to the extended milestone. They are not marked PASS. Hidden modules must not corrupt data or break core startup. See [feature availability](feature-availability.md). Hidden UI sections below describe retained contracts, not controls to re-enable for v0.1.
 
 Where an upstream GitHub, VS Code, package-manager, model-price, or client-log interface changes, the implementation must prefer a safe explicit Unsupported/SchemaError state over undocumented credential extraction, brittle private-state mutation, fabricated data, or silent fallback.
 
@@ -12,7 +12,9 @@ The checked-in code contains connected native deployment/recovery, installation,
 
 ## 2. Product goal
 
-A user on a clean Windows 11 x64 machine must be able to:
+For v0.1, configure a provider's endpoint/key/models once, fetch or manually enter models, choose apps, review native-held changes, publish, inspect results, revoke owned configuration and recover safely. Saving a provider, publishing configuration, selecting a model in the client and completing a request remain four distinct states. English/Chinese and Light/Dark/System are included; desktop behaviors require platform-specific acceptance. Copilot App is manual-only; reviewed JetBrains versions are not advertised as runtime-accepted without real evidence. The core promise is: **Configure one provider. Publish it safely across your Copilot clients.**
+
+The retained extended milestone additionally targets this clean Windows 11 x64 flow:
 
 1. open CopilotBYOKManager and see which Copilot surfaces and required components are installed;
 2. install one selected missing component or all missing components from a reviewed native plan;
@@ -24,7 +26,7 @@ A user on a clean Windows 11 x64 machine must be able to:
 8. understand exactly which values are verified, inferred, estimated, stale, partial, unavailable, or unknown;
 9. recover safely from failed/interrupted configuration writes without losing unrelated user configuration.
 
-## 3. Required scope
+## 3. Core and retained extended scope
 
 ### 3.1 Copilot surfaces
 
@@ -39,7 +41,9 @@ A logical surface may share a physical package/runtime/source with another surfa
 
 JetBrains does not add a mandatory IDE/plugin installation to the original three-surface clean-machine workflow. The maintainer requires automatic BYOK deployment, not manual instructions as the completed integration. Project verified runtime versions into the dedicated `github-copilot/byok.json` namespace using normal reviewed one-shot plans, prepare-all, durable ownership, private journals, atomic writes and conditional rollback. Preserve unmanaged providers and deduplicate IDEs sharing the physical file. Materialize only the Connection's own provider key; never read Password Safe, private authentication XML/databases, client OAuth tokens or conversation stores. Unknown versions/schema and incompatible endpoints must refuse automatic writes explicitly. Disk publication is separate from IDE restart/model-picker refresh, sign-in and provider execution. Each enabled profile still needs an official per-IDE account check; changed profiles invalidate manual confirmation, and Copilot app confirmation cannot cover JetBrains. Resources/OTel import require separately verified paths/parsers; unsupported coverage stays unknown, not zero. See `jetbrains-support.md` for the reviewed automatic-write contract, fixtures and boundaries.
 
-### 3.2 Required capabilities
+### 3.2 Retained capability contracts
+
+The following list spans core and extended implementation. For v0.1, use section 21.1, not this entire list as a release checklist. Existing installation/account details stay safe and accurate where accessible; installing all three clients, separate Billing authorization, usage imports and resource consumption are not prerequisites for core provider publication.
 
 - environment/component discovery;
 - reviewed installation plans;
@@ -1066,7 +1070,26 @@ CI must run relevant checks on Windows, macOS, and Linux; Windows must also perf
 
 ## 21. Final acceptance
 
-The required milestone is complete only when an evaluator who did not implement CopilotBYOKManager can perform this Windows 11 x64 flow:
+### 21.1 v0.1 core configuration release
+
+An evaluator must verify the final package and exact source SHA, not a prototype or another commit:
+
+1. Install the current-user Windows x64 NSIS package on a clean Windows 11 user/VM; check WebView2 handling, start menu, uninstall registration, startup, reopen and uninstall without deleting client configuration.
+2. Install the macOS Universal DMG through Applications; verify Developer ID Application, Hardened Runtime, notarization and stapled tickets. Test Intel and Apple Silicon separately before claiming both accepted. The conservative candidate floor is macOS 15, matching the selected CI runner, not a claim of real-Mac acceptance.
+3. Verify only Overview / Providers / Apps / About are exposed. Hidden services must not be queried automatically or delete retained data; keep their native security/migration regressions.
+4. Add one provider, save/read/update/delete its OS-held key, fetch or enter models, and preserve unknown capability states.
+5. Review explicit targets through native-held expiring one-shot plans, publish, inspect persistent results, select the model in each advertised real client and send an authorized minimal request. Record all four states separately.
+6. Confirm other providers/configuration are preserved, stale previews and external edits are refused, shared JetBrains writes are deduplicated, and only durably owned configuration can be revoked.
+7. Interrupt a write and exercise journal/recovery, conditional rollback, missing/invalid state and credential failures with isolated data; failures must remain explicit and safe.
+8. Verify bilingual copy, themes, drafts, keyboard/error/busy states and platform desktop behavior. On Windows, verify tray fallback, restore, Exit and repeat launch. On Mac, verify Finder launch, CLI detection, close-window behavior and Cmd+Q; do not claim a Windows-style tray.
+9. Pass locked builds, automated checks and final native integration checks at the same SHA. No secrets, raw conversations or private recovery data in diagnostic/release artifacts.
+10. Validate strict `vX.Y.Z` version agreement, Windows Setup + formal Mac DMG + SHA256SUMS, source metadata, signing disclosures and bilingual docs. Windows Authenticode is not required: label **Unsigned community build**. Ad-hoc Mac artifacts are testing-only, never formal releases. Publish only after all core gates and explicit maintainer approval.
+
+Detailed evidence and GO / NO-GO criteria are in [release criteria](release-criteria.md); build/signing operations are in [release engineering](release-engineering.md). Core acceptance does not imply the full extended milestone below passed. No store listing, updater or Linux/Windows ARM64/MSI release is required or introduced.
+
+### 21.2 Retained extended milestone (not v0.1 gates)
+
+This separate milestone remains incomplete. It is accepted only when an evaluator who did not implement CopilotBYOKManager can perform this Windows 11 x64 flow:
 
 1. install/run CopilotBYOKManager from a clean package;
 2. observe missing/installed states without fabricated data;

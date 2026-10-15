@@ -1,6 +1,6 @@
 # CopilotBYOKManager feature availability
 
-Updated 2026-10-14. The current **core configuration edition** has four pages: **Overview, Providers, Apps and About**. Its main task is to configure a provider once, preview publication to selected Copilot apps, inspect results and safely revoke owned configuration. The product remains pre-release.
+Updated 2026-10-15. The **v0.1 release-candidate scope** is the core configuration edition with four pages: **Overview, Providers, Apps and About**. Configure one provider, review selected targets, publish safely, inspect results and revoke owned configuration. The product remains unreleased; scope approval is not acceptance or publication.
 
 ## Available in the current interface
 
@@ -14,7 +14,7 @@ Writing configuration is not proof of authentication, model selection or a succe
 
 ## Planned capabilities not offered in this edition
 
-These are existing required-scope plans, not new product promises. There are no promised dates. Hiding a capability does not delete its implementation, tests, authorization metadata or imported records; the interface does not load or invoke it.
+These are retained extended-milestone plans, not v0.1 release gates or new product promises. There are no promised dates. Hiding a capability does not delete its implementation, tests, authorization metadata or imported records; the interface does not load or invoke it. Their unfinished live-account/resource acceptance stays deferred, not PASS.
 
 This is a frontend availability change, not removal of native services. Normal store opening, schema/recovery checks and the dashboard's database-health metadata remain; hidden feature queries and actions are not started by the four-page interface.
 
@@ -27,9 +27,10 @@ This is a frontend availability change, not removal of native services. Normal s
 | MCP, Markdown Skills and Instructions | Reviewed public-path authoring/publication/revocation implemented; entry hidden | Real app consumption/revocation for advertised paths; not universal synchronization |
 | Unified activity page | Extended renderer implemented; standalone page hidden | Reconcile operation records in one comprehensible view; core publication records stay accessible |
 | Direct Copilot App installer download fallback | Required policy specified; strategy not implemented | Official assets, size/architecture/hash/publisher verification and post-install rediscovery |
-| Signed distributed Windows package | Packaging hooks exist; final signed package and clean-user acceptance incomplete | Installer, WebView2, signature/checksums, clean install/reopen/uninstall and support evidence |
 
 ## Acceptance work is not another feature
+
+Windows x64 current-user NSIS and macOS Universal DMG are the required v0.1 delivery formats. Windows is an **Unsigned community build** (Authenticode is not required). Formal Mac packages require Developer ID, Hardened Runtime, notarization and stapled tickets; dry-run is explicitly ad-hoc testing only. Packaging scripts and the Draft-first workflow do not prove install/runtime acceptance. See [release engineering](release-engineering.md).
 
 Current-source native integration, Windows tray behavior, clean Windows installation and real app/provider requests require their own evidence. JetBrains/Rider runtime acceptance remains deferred until the maintainer resumes it. A browser fixture, passing unit test or compiled EXE cannot substitute for these checks.
 
@@ -52,8 +53,9 @@ Organization/enterprise Billing, provider invoices, cloud usage synchronization,
 | MCP、Markdown Skills、Instructions | 已有实现，入口隐藏 | 受支持路径上的真实应用消费和撤销验收 |
 | 独立统一活动页 | 已有实现，页面隐藏 | 综合操作记录的易用性；发布/撤销记录本版仍可查看 |
 | Copilot App 直接下载安装策略 | 已有规范，尚未实现 | 官方资产、大小/架构/散列/签名校验和重新检测 |
-| 正式签名 Windows 安装包 | 打包入口已有，正式交付未完成 | 最终安装包、WebView2、签名/校验和和干净 Windows 验收 |
 
 隐藏入口不会删除已有数据，也不会在四页刷新时加载这些模块。规划记录不承诺日期，验收缺口不算通过。组织/企业账单、Provider 发票、云同步、超额付费设置和复制客户端凭据不属于计划。
+
+维护者已批准四页版为 v0.1 首发范围，隐藏功能的真实用量/账单/资源验收延期到扩展版，不再阻塞本版，也不记为通过。本版交付要求为 Windows x64 NSIS（明确未签名，不要求 Authenticode）和正式签名、公证的 macOS Universal DMG；双平台安装、桌面行为及真实请求仍待验收。
 
 这是界面开放范围的调整，不是删除原生服务：正常打开存储、检查版本与恢复状态、返回数据库健康元数据仍保留；四页界面不会自动发起隐藏功能的查询或操作。

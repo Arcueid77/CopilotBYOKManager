@@ -6,6 +6,8 @@ This document describes the checked-in native services and the architecture requ
 
 The repository implements deployment/recovery, reviewed installation, account orchestration, resources, official usage, local import, attribution and pricing slices. Sections labeled **required** remain acceptance contracts; implemented modules and passing isolated tests do not establish clean-machine or real-client acceptance. The unreleased product uses its own CopilotBYOKManager storage and credential namespace, without historical-brand aliases or automatic adoption.
 
+For the maintainer-approved v0.1 release, only the four-page core is offered. The extended Usage/Billing/Resources contracts remain binding on retained code but their live acceptance is deferred, not a core release gate or PASS result. See specification §21.1 and [release engineering](release-engineering.md). Packaging preserves every identity below: Windows current-user NSIS is explicitly unsigned; formal macOS Universal DMG requires Developer ID/notarization/stapling. Neither a bundle nor a successful workflow proves real-device/client acceptance.
+
 ## Product model
 
 ### Application identity and interface language

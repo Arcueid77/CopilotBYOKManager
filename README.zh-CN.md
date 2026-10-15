@@ -1,323 +1,165 @@
-# CopilotBYOKManager
+<p align="center">
+  <img src="apps/desktop/src-tauri/icons/icon.png" width="80" alt="CopilotBYOKManager 图标">
+</p>
 
-[English](README.md) | **简体中文**
+<h1 align="center">CopilotBYOKManager</h1>
 
-**Provider 一次配置，多端 Copilot 复用。**
+<p align="center"><strong>Provider 一次配置，安全发布到多个 Copilot 客户端。</strong></p>
 
-在一个地方保存 AI 供应商的接口地址、API 密钥和模型，再将同一份配置应用到 **VS Code、Copilot CLI 和受支持的 JetBrains IDE**。Copilot App 提供手动配置引导。
+<p align="center">集中管理端点、密钥和模型，逐项预览目标改动，再发布到 VS Code、Copilot CLI 与已审核版本的 JetBrains。</p>
 
-不用为每个客户端重新维护一份 Provider。换地址、换密钥或增减模型时，修改连接，再预览并发布到需要更新的客户端即可。
+<p align="center">
+  <a href="https://github.com/AvaloNero/CopilotBYOKManager/actions/workflows/ci.yml"><img src="https://github.com/AvaloNero/CopilotBYOKManager/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <img src="https://img.shields.io/badge/status-v0.1%20candidate-purple" alt="v0.1 候选版，验收待完成">
+  <img src="https://img.shields.io/badge/interface-English%20%7C%20简体中文-blue" alt="中英文界面">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="MIT 许可证"></a>
+</p>
 
-[开始使用](#getting-started) · [支持的客户端](#supported-clients) · [首次配置](#first-connection) · [日常管理](#everyday-use) · [未推出功能](#usage) · [常见问题](#faq)
+<p align="center">
+  <a href="#download">下载状态</a> · <a href="#quick-start">快速上手</a> · <a href="#supported-clients">支持客户端</a> · <a href="#security">安全</a> · <a href="docs/README.md">文档</a> · <a href="https://github.com/AvaloNero/CopilotBYOKManager/issues">问题反馈</a> · <a href="README.md">English</a>
+</p>
 
-> 当前为预发布版本，尚未提供 GitHub Releases 安装包。可以先试用浏览器界面，或从源码启动桌面版。干净 Windows 安装、真实账号和客户端实际请求仍有待验收；具体范围见[当前实现与验证状态](docs/implementation-status.md)。
+> **预发布阶段。** 尚未公开发行安装包。打包和自动检查通过，不代表干净机器或真实客户端已经验收。见[当前证据](docs/implementation-status.md)与[发布门槛](docs/release-criteria.md)。
 
-界面支持**简体中文和英文**。首次启动跟随系统语言，其他语言默认英文；可在顶部的“界面语言”中切换并记住选择。请先完成或关闭正在编辑的表单、发布预览再切换。连接名称、模型 ID、端点和诊断原文保持不变，不做翻译。
+![总览：当前浏览器预览，使用模拟数据](docs/images/overview-zh-CN.png)
 
-## 当前四个页面
+*当前四页界面，使用模拟数据；没有真实账号、密钥或客户端写入。[截图说明](docs/images/README.md)。*
 
-| 页面 | 主要操作 |
-| --- | --- |
-| 总览 | 查看配置状态、待处理事项、下一步和最近发布结果 |
-| 供应商 | 管理地址、密钥、模型，预览发布及撤销受管配置 |
-| 应用 | 为应用选择供应商，核对检测、安装、官方登录和发布记录 |
-| 关于 | 外观、帮助、离线规划记录、本地存储与恢复信息 |
+## 为什么使用 CopilotBYOKManager
 
-在顶部或关于页的 **外观**中选择 **跟随系统、浅色、深色**，偏好会单独保存。切换主题不会丢失表单草稿或发布预览。
+- **Provider 在一处维护。** 地址、密钥和模型放在一起，再选择要发布的应用。
+- **多客户端预览后发布。** 写入之前，逐项检查所选应用与档案的变化。
+- **尊重已有配置。** 只管理能核验归属的配置；外部变化会阻止破坏性覆盖。
 
-Windows 默认关闭至托盘。在 **关于 → 关闭窗口时**选择 **收起到系统托盘**或 **退出程序**，选择会保存。左键点击托盘图标或选择 **打开主窗口**恢复；右键选择 **退出 CopilotBYOKManager**结束程序。普通最小化仍留在任务栏。再次打开程序会唤回已有窗口，不另开实例。托盘菜单跟随界面语言。
+## 工作方式
 
-托盘创建失败、隐藏失败或窗口偏好无法读取时，关闭按钮正常退出；损坏的偏好文件保留，不自动覆盖。实际行为以关于页读取的状态为准。浏览器试用没有系统托盘。
+**添加供应商 → 核对目标和改动 → 发布、选用模型、验证。**
 
-## 它能帮你做什么
-
-- **统一管理 Provider：**保存多个连接，获取或手动填写模型，设置首选模型。
-- **将配置应用到多个客户端：**选择目标、查看变更、确认发布，并逐项查看结果和下一步。
-- **维护客户端：**检查安装状态，按审核过的计划安装支持的 Windows 组件，逐个完成官方登录与账号核对。
-- **聚焦核心流程：**总览、供应商、应用、关于。用量、账单和资源入口暂时隐藏，已有数据保留。
-
-界面中的“供应商”就是一份可复用的 Provider 配置；“发布”是把它写入选定客户端。**保存不等于发布，发布不等于客户端已经选用。**
+保存 Provider、发布配置、客户端选中模型、实际请求成功是四个不同状态。账号登录仍需在客户端独立完成，管理器不会共享登录凭据。
 
 <a id="supported-clients"></a>
 
-## 支持的客户端
+## 支持客户端
 
-| 客户端 | Provider 配置方式 | 使用前需要知道 |
+下表描述已实现的配置路径，**不代表已通过真实运行验收**。真实客户端验收仍待完成。
+
+| 客户端 | 方式 | 当前边界与下一步 |
 | --- | --- | --- |
-| VS Code Stable / Insiders 及检测到的配置档案 | 自动添加或更新本连接的供应商分组，保留其他供应商 | 发布后，在对应配置档案的 Copilot 模型选择器中选用 |
-| GitHub Copilot CLI | 自动配置一条环境变量路由及首选模型 | 默认不勾选；一次只使用一条此类路由，发布后新开终端和 CLI 会话 |
-| JetBrains IDE 中的 GitHub Copilot 插件 | 对审核过的插件版本自动写入共享 BYOK 配置 | 先关闭相关 IDE，发布后重新打开、登录并选用模型 |
-| GitHub Copilot App | 提供配置步骤，不自动写入 Provider | 在 App 内手动添加供应商并验证 |
+| VS Code Stable / Insiders / 配置档案 | 自动 | 受管供应商分组。在对应档案选用模型并测试。[检测细节](docs/vscode-detection.md) |
+| GitHub Copilot CLI | 自动 | 单条环境变量路由。新开终端和会话，核对路由与模型。[客户端手册](docs/user-guide.zh-CN.md#5-到客户端里选用并验证) |
+| 已审核的 JetBrains GitHub Copilot 插件发行版 | 自动，固定版本 | 关闭后重开 IDE，分别登录、选用和测试。[确切版本表](docs/jetbrains-support.md#version-and-compatibility-boundary) |
+| GitHub Copilot App | 手动 | 无自动写入或验证，在 App 内配置并核对。[指引](docs/user-guide.zh-CN.md#5-到客户端里选用并验证) |
 
-JetBrains 仅支持[版本表中的 1.19 插件发行版](docs/jetbrains-support.md#version-and-compatibility-boundary)，不表示所有 1.19 或更新版本都兼容。使用同一运行时目录的 IDE 会共享配置，包括未勾选的 IDE。
+目前不宣称任何 JetBrains 插件版本已经通过真实运行验收。未知或更新版本不支持自动写入；共用运行时目录的 IDE 可能看到同一份配置。客户端政策、订阅和供应商权限要求仍然适用。
 
-各客户端可接受的协议、地址和模型能力可能不同，以发布预览为准。本软件管理配置，不提供模型服务、订阅或免费额度，也不替代客户端自身的权限要求。
+<a id="download"></a>
 
+## 下载与安装
+
+经批准的候选版会出现在 [Releases](https://github.com/AvaloNero/CopilotBYOKManager/releases)。以下是计划产物，并非已有下载链接：
+
+| 平台 | 安装包 | 状态 |
+| --- | --- | --- |
+| Windows 11 x64 | `CopilotBYOKManager-vX.Y.Z-windows-x64-setup.exe` | 候选版；干净机验收待完成。**Unsigned community build（未签名社区构建）** |
+| Windows 11 x64，可选 | `CopilotBYOKManager-vX.Y.Z-windows-x64-standalone.zip` | 验收边界相同；需要 WebView2 |
+| macOS Universal | `CopilotBYOKManager-vX.Y.Z-macos-universal.dmg` | 计划中；Apple 凭据、Intel / Apple Silicon 验收待完成。正式包必须 **Developer ID signed and notarized（签名并公证）** |
+
+Windows Setup 安装到当前用户。macOS 打包从 15.0 起，这是保守的构建范围，不是已验证的系统支持承诺。测试 DMG 使用 `*-testing-adhoc.dmg`：**Ad-hoc signed, not notarized; testing only（临时签名、未公证，仅供测试）**。
+
+安装前核对 `SHA256SUMS.txt` 与源码 SHA。Standalone 是“免安装版”，**不是完全便携版**：状态、系统凭据和客户端配置仍使用用户存储。[安装包说明（英文）](docs/release-engineering.md)。
+
+现在即可从本地源码打开[当前浏览器前端](apps/desktop/web/index.html)。它使用示例数据，不执行原生写入；请填写虚构数据，不要输入真实密钥。
+
+<a id="quick-start"></a>
 <a id="getting-started"></a>
+<a id="first-connection"></a>
 
-## 开始使用
+## 快速上手
 
-### 先试用界面，不改动电脑配置
+1. 在 **供应商**添加 Provider 地址与 API 密钥。
+2. 获取模型目录或手动填写模型 ID，保存供应商。
+3. 选择需要配置的应用与档案；CLI 需要主动勾选。
+4. 核对原生预览，确认发布，查看逐目标结果。
+5. 在客户端选用模型，发送一条不含敏感内容的最小测试请求。
 
-1. 在本仓库页面选择 **Code → Download ZIP**，下载并解压源码。
-2. 用浏览器打开本地的 [apps/desktop/web/index.html](apps/desktop/web/index.html)。
-3. 尝试添加供应商、选择应用和查看发布预览。
+目录测试只检查模型列表，不证明聊天或工具能力。真实请求可能产生费用。字段、客户端步骤、更新、撤销和恢复见[中文手册](docs/user-guide.zh-CN.md)与[English guide](docs/user-guide.md)。
 
-页面会显示“浏览器试用”。该模式使用模拟数据，不写入真实客户端、不执行安装或登录，也不向 Provider 发起请求；请使用示例数据，不要填写真实密钥。本核心配置版暂未开放用量、账单和资源管理。
+## 核心功能
 
-[交互设计原型](prototype/copilot-byok-manager.html)另行保留供设计参考；体验当前界面请使用上面的前端入口。
+| 功能 | 提供什么 |
+| --- | --- |
+| 集中管理供应商 | 端点、协议、密钥引用、模型目录和首选模型 |
+| 多客户端发布 | 明确选择目标，保留逐目标结果 |
+| 写入前审核 | 原生持有、到期失效、单次消费的计划与目标重检 |
+| 按归属撤销 | 仅清理受管配置，保留其他供应商 |
+| 中断后安全恢复 | 私有写前日志、条件回滚与明确恢复入口 |
+| 本地凭据与双语界面 | 系统凭据库保存主密钥；中英文；浅色 / 深色 / 跟随系统 |
 
-### 启动可实际配置客户端的桌面版
+**总览 · 供应商 · 应用 · 关于。**[窗口与外观说明](docs/user-guide.zh-CN.md#当前四个页面)包含已实现的 Windows 托盘选项；真实桌面验收仍待完成。
 
-准备 Git、Node.js 22+、Rust 1.88+，以及 [Tauri 2 的系统依赖](https://v2.tauri.app/start/prerequisites/)。Windows 还需要 MSVC C++ 构建工具和 WebView2；macOS/Linux 请按官方依赖说明准备环境。
+<a id="security"></a>
 
-在终端中运行：
+## 安全与隐私
+
+- 不复制客户端 OAuth Token、Cookie、SecretStorage 或 Password Safe。
+- Provider 主密钥保存在系统凭据库。
+- 部分客户端格式要求将 Provider Key 写入磁盘配置。
+- 写入前生成原生预览，并再次核对目标。
+- 外部变化后拒绝破坏性覆盖、撤销或回滚。
+- 恢复数据可能含敏感配置，不得上传。
+- 不添加默认遥测或对话上传。
+
+分享诊断前阅读 [SECURITY.md](SECURITY.md)。漏洞通过[安全页面](https://github.com/AvaloNero/CopilotBYOKManager/security)反馈；开启私密报告时，请使用私密渠道。
+
+<a id="usage"></a>
+
+## 已知限制
+
+- CLI 当前为单条受管环境路由，不是多供应商同时路由。
+- Copilot App 需要手动配置；JetBrains 仅限确切审核过的插件发行版。
+- 写入成功不代表已登录、选中模型或请求成功。
+- Usage、Billing、Resources/MCP/Skills/Instructions 不属于本核心版。已有数据保留。[功能记录](docs/feature-availability.md)。
+- 干净 Windows、原生托盘、真实请求及两种 Mac 架构均**待验收**。Rider 验收继续延期。
+
+## 界面截图
+
+全部来自当前浏览器前端，使用**模拟数据**，不是真实客户端验收。总览见首屏。
+
+| 供应商编辑 · 浅色 | 发布预览 · 深色 |
+| --- | --- |
+| ![示例端点与空密钥](docs/images/provider-zh-CN.png) | ![模拟发布审核，不写入客户端](docs/images/publication-zh-CN.png) |
+
+## 赞助
+
+目前未列出赞助商或付款链接。赞助不会影响兼容性测试结论，也不会让供应商自动成为默认项。
+
+<a id="everyday-use"></a>
+<a id="faq"></a>
+
+## 文档与支持
+
+[用户手册](docs/user-guide.zh-CN.md) · [English guide](docs/user-guide.md) · [文档索引](docs/README.md) · [模型目录](docs/provider-model-discovery.md) · [实现证据](docs/implementation-status.md) · [发行工程（英文）](docs/release-engineering.md)
+
+使用问题提交 [Issues](https://github.com/AvaloNero/CopilotBYOKManager/issues)，附版本、步骤和脱敏状态。[发布标准](docs/release-criteria.md)、[本机验证计划](docs/local-validation-plan.md)和[推广计划](docs/promotion-plan.md)保留详细中文说明。
+
+<details>
+<summary>开发 / 从源码构建</summary>
+
+CI 使用 Node 22、Rust 1.88.0 与 [Tauri 系统依赖](https://v2.tauri.app/start/prerequisites/)。Windows 需要 MSVC/WebView2；macOS 需要 Xcode 命令行工具。修改前阅读 [AGENTS.md](AGENTS.md)、[规范](docs/mvp-implementation-spec.md)和[架构](docs/architecture.md)。
 
 ```bash
 git clone https://github.com/AvaloNero/CopilotBYOKManager.git
 cd CopilotBYOKManager
 npm ci
 npm run dev
-```
-
-当前开发分支是 `main`。首次启动需要下载依赖并编译；成功后会打开 CopilotBYOKManager 桌面窗口。
-
-如需构建不带安装器的桌面程序，运行 `npm run build -- --no-bundle`。打包细节见[本地验证说明](docs/local-validation-plan.md)；构建成功不代表已经通过干净机器安装验收。
-
-<a id="first-connection"></a>
-
-## 首次配置：从一个 Provider 到多个 Copilot
-
-### 1. 确认要使用的客户端
-
-进入 **应用**，核对已检测到的应用和配置档案。只需准备自己要用的客户端，不必全部安装。
-
-- 已安装但状态未更新：在 **安装与更新** 中点击 **刷新状态**。
-- 缺少支持的 Windows 组件：点击对应组件的 **安装**，核对计划后再确认；不支持自动安装的客户端需自行安装。
-- 展开 **官方登录与账号核对**，按提示在各客户端完成官方登录。软件不会把一个客户端的登录凭据复制给另一个客户端。
-
-可以通过 **逐个核对同一 GitHub 账号**记录自己的确认。手动确认和软件已核验身份会分别显示。**配置 Provider 不要求先授权本软件读取个人账单**，账单授权独立于应用登录，本核心配置版暂未开放该入口。
-
-### 2. 添加供应商
-
-进入 **供应商 → 添加供应商**，填写：
-
-| 字段 | 应该填写什么 |
-| --- | --- |
-| 名称 | 便于识别的名称，例如“工作用 Provider” |
-| 端点地址 | 供应商提供的 API 基址，不是官网或控制台地址 |
-| API 密钥 | 该供应商的密钥；只有允许匿名访问的端点才可留空，目标客户端也须支持 |
-| 模型 | 通过“获取模型”添加，或手动填写上游模型 ID |
-
-`https://api.example.com/v1` 只是地址格式示例，不能实际调用。远程端点需使用 HTTPS；本机回环地址可使用 HTTP。
-
-如果供应商并非默认的 OpenAI 兼容 Chat Completions 接口，先展开 **高级选项：供应商类型、接口协议与请求头**：
-
-- 按供应商说明选择 **Chat Completions、Responses 或 Messages**。
-- 更改供应商类型不会自动修改地址或协议；请分别核对。
-- 仅在需要时填写请求头，每行采用 `名称: 值`。用 `${apiKey}` 引用密钥，不要把真实密钥写进请求头文本。
-
-API 密钥在管理器中保存在系统凭据库，不会回显到表单。发布时，部分客户端格式需要将密钥写入其配置，相关文件不能公开分享。
-
-### 3. 添加模型并保存
-
-推荐先点击 **获取模型**，按名称或 ID 筛选，勾选需要的模型：它会立即加入同一个可编辑草稿。点击 **保存供应商**时，勾选和手动填写的模型一起保存，不再需要另点“添加已选”。不会自动全选，也不会覆盖已有的手动名称或停用设置。取消勾选会移除尚未手动修改的目录新增行；更改端点或凭据设置会清除未保存的目录勾选，保留已配置和手动修改的模型。
-
-供应商不提供模型目录时，可以直接在 **模型**中每行填写一个模型：
-
-```text
-your-model-id | 工作模型
-another-model-id | 备用模型
-```
-
-请把示例 ID 换成供应商实际提供的 ID；竖线后的显示名称可以省略。Azure 连接需手动填写实际部署名称，不能直接用基础模型名称替代。
-
-选择 **首选模型**，然后点击 **保存供应商**：
-
-- Copilot CLI 会把首选模型用于 `COPILOT_MODEL`。
-- VS Code、JetBrains 等有模型选择器的客户端仍需在客户端内选择；这里的“首选”不会强制切换打开的会话。
-
-**此时只保存了连接，尚未修改客户端。**“获取模型”和连接卡片上的“测试连接”都只检查模型目录，不验证聊天、工具调用或视觉能力。
-
-### 4. 预览并发布
-
-1. 在连接卡片上点击 **发布到应用**。
-2. 逐个核对目标，取消不需要的客户端或配置档案。**Copilot CLI 默认不勾选**，需要使用其单一路由时再主动选择。
-3. 如果包含 JetBrains，先关闭使用该共享配置的相关 IDE。
-4. 点击 **生成预览**，核对每个目标的处理方式；需要时展开 **写入明细**。标为“需手动处理”的目标不会自动配置成功。
-5. 确认无误后点击 **确认发布**。
-
-更改连接或目标、预览过期、配置被其他程序修改后，都需要重新预览。预览有效期为 15 分钟，且只能使用一次。
-
-完成后，在 **总览 → 最近一次发布**或 **连接 → 最近配置操作**查看各目标的结果。这里会保留需要重启、手动处理或选用模型的提示，不必依赖短暂弹出的通知。
-
-没有供应商时，总览在环境提醒之前显示 **添加第一个供应商**；点击 **选择供应商并发布**进入供应商页。应用行的 **核对**会定位对应应用卡片；也可在应用卡片上选择供应商后直接预览该目标。改变选择会使闲置预览失效，切换语言保留选择。发布过程中不能切换页面、刷新或收起预览；失败或结果不确定时，核对发布记录与恢复状态，再生成新预览。
-
-### 5. 到客户端里选用并验证
-
-**VS Code**
-
-打开发布时选中的配置档案，在 Copilot 的模型选择器中选择刚发布的模型。多个 Provider 可以保留在不同分组中，实际用哪个模型由客户端选择。
-
-**Copilot CLI**
-
-新开终端，再启动新的 CLI 会话，核对实际选用的模型。旧终端不会自动获得新的环境变量。本软件当前使用旧式环境变量配置方式，不写入 `providers.json`；这条 BYOK 路由生效期间，不要期待同时使用 GitHub 官方模型路由。
-
-**JetBrains**
-
-重新打开对应 IDE，完成 GitHub Copilot 官方登录，在 Copilot Chat 的模型选择器中选用已发布模型。共享配置不等于共享登录状态，每个 IDE 都要单独核对。未知插件版本不会自动写入；更多限制见[JetBrains 使用与兼容说明](docs/jetbrains-support.md)。
-
-**Copilot App**
-
-进入 **应用 → Copilot App 供应商 → 查看手动配置步骤**。在 App 的 **Model providers**中添加供应商，填写提示的地址与模型，并在 App 内输入需要的密钥。完成后可点击 **我已完成手动配置**记录确认；这不是软件自动验证的结果。
-
-如果本次发布包含 App，也可直接点击结果里的 **查看该连接的手动配置步骤**。指引绑定本次连接，不会误用其他地方选中的 Provider。
-
-最后，在要使用的客户端里发送一条不含敏感项目内容的简短请求，确认模型能正常响应。真实请求可能产生供应商费用。**配置已写入、账号已登录、模型已选用、请求成功是四个不同的状态。**
-
-<a id="everyday-use"></a>
-
-## 日常管理
-
-### 修改地址、密钥或模型
-
-在 **供应商**中找到 Provider，点击 **编辑**：
-
-1. 修改相应字段。已有密钥留空表示保留；替换时输入新密钥，删除时勾选 **移除已保存的密钥**。
-2. 点击 **保存供应商**。
-3. 再次 **发布到应用 → 生成预览 → 确认发布**，更新需要的目标。
-4. 按发布结果提示重新打开客户端或新建会话。
-
-修改连接不会后台自动同步到所有客户端。若修改了端点、协议或请求头后获取模型提示需要凭据，请为当前端点重新输入密钥，软件不会静默把已存密钥发到变更后的地址。
-
-### 增加或切换 Provider
-
-在 **供应商**中添加另一份连接，再发布到所需客户端：
-
-- VS Code / JetBrains：多个供应商分组可共存，去客户端模型选择器切换。
-- Copilot CLI：此环境变量方式一次只使用一条路由。先核对现有归属；遇到其他连接或外部配置冲突时，不会直接覆盖。必要时先按下节撤销旧连接的受管配置，再发布新连接。
-- Copilot App：在 App 内手动添加或切换。
-
-这里不是自动故障切换或负载均衡；更改首选模型也不会强制切换其他客户端正在使用的模型。
-
-### 停用、停止管理和撤销有什么区别
-
-| 操作 | 管理器中的变化 | 客户端中的变化 |
-| --- | --- | --- |
-| 关闭连接的启用开关 | 保留连接，停止新的发布 | 已发布配置仍保留，不会自动切回官方模型 |
-| **移除 → 仅停止管理… → 确认停止管理** | 删除连接、发布记录、受管证明及专用凭据 | 配置和其中已写入的密钥仍保留，之后由你自行管理 |
-| **移除 → 预览撤销并删除 → 确认撤销并删除** | 撤销成功后删除连接 | 仅清理能核验为本软件管理的配置，不删除其他供应商 |
-
-**想让客户端不再使用这份配置，请选择“撤销并删除”，不要只停用连接。**撤销前核对预览中的所有目标；它会处理该连接已发布的受管配置，不只是某一个客户端。
-
-如果目标已被外部修改，撤销或回滚会拒绝覆盖，连接可能保留以便继续处理。先查看 **应用 → 发布与撤销记录**与 **关于 → 本地存储与安全**中的恢复状态，不要直接删除配置文件或备份。
-
-<a id="usage"></a>
-
-## 已规划但暂未推出的功能
-
-官方配额、个人账单及独立授权、本地模型/会话用量、费用估算、MCP/Skills/Instructions 暂未开放。实现和已有数据保留，但四页界面不会加载这些模块或执行相关操作。
-
-[功能记录](docs/feature-availability.md)区分“已有实现但隐藏”“尚未实现”和“待验收”。在 **关于 → 未推出功能记录**也可离线查看简短清单，不承诺上线日期。
-
-<a id="faq"></a>
-
-## 常见问题
-
-### 已经保存连接，为什么客户端没有变化？
-
-保存只更新管理器。还要点击 **发布到应用**，生成预览并确认，然后按客户端要求选模型、重启 IDE 或新开终端。更新已有连接也是同样的流程。
-
-### “测试模型目录”成功，为什么聊天仍然失败？
-
-它只检查模型目录接口。请继续核对模型 ID、接口协议、客户端支持的能力、账号权限和供应商可用额度，并在实际客户端中验证。目录返回了某个模型，不代表它一定支持工具调用、图片或特定上下文长度。
-
-### 获取不到模型，能不能继续配置？
-
-可以。若供应商没有兼容的目录接口，直接手动填写模型 ID；Azure 填部署名称。如果提示权限被拒绝、网络错误或格式不支持，先核对地址、密钥和供应商文档，不能把目录读取失败直接等同于模型不可用。
-
-### 发布后仍看不到模型，先查哪里？
-
-先查看 **总览 → 最近一次发布**的逐目标结果，再核对：
-
-1. 是否发布到了实际正在使用的 VS Code 配置档案或 JetBrains 运行时目录。
-2. 该目标是自动写入成功，还是仍需手动处理。
-3. IDE 是否需要重新打开，CLI 是否在新终端、新会话中运行。
-4. 插件版本和客户端是否受支持；JetBrains 尤其需要核对固定版本表。
-5. 客户端是否已完成官方登录，并在模型选择器中主动选用。
-
-“应用配置状态”只核对本软件发布的配置，不读取客户端当前选中的模型。
-
-### CLI 提示已有配置冲突，或者我想回到官方路由怎么办？
-
-当前适配器不接管已有的 `providers.json` 注册表。若其优先级遮蔽了环境变量路由，软件会拒绝发布；请自行核对 CLI 的现有配置，不要直接删除含凭据的文件。
-
-要撤销本软件的覆盖，使用对应连接的 **预览撤销并删除**，先查看它会影响哪些已发布目标，确认后新开终端和 CLI 会话。该操作只撤销本软件拥有的配置；若仍有用户自行设置的路由，它们会保留，还需在 CLI 内核对实际路由。
-
-### 为什么 JetBrains 不支持我的版本？
-
-自动写入只对已审核的确切插件发行版开放。较新、未知、禁用或自定义路径中的插件可能需要手动处理。请提供 IDE 与插件版本反馈兼容性问题，不要为绕过检查修改版本标记。检测到了 IDE 配置目录，也不等于已验证这个 IDE 能运行或发起请求。
-
-### 为什么发布按钮不可用，或者要求重新预览？
-
-检查连接是否启用，以及是否出现只读恢复提示。修改目标、配置变化、预览使用过或超过 15 分钟后，都需重新生成预览。如果提示上次操作中断，先按 **核对安全恢复**引导处理；详情在 **关于 → 本地存储与安全**和 **活动记录**。
-
-### 为什么找不到用量、账单或资源页？
-
-本版先聚焦供应商配置与发布，相关入口暂时隐藏，不会删除已有记录。开放条件见[功能记录](docs/feature-availability.md)。
-
-### 密钥和数据放在哪里？能否直接分享配置排查问题？
-
-在 **关于 → 本地存储与安全**中查看实际状态文件位置。管理器的 API 密钥与独立 GitHub 授权存放在系统凭据库；发布后的客户端配置及私有回滚数据可能包含密钥。
-
-不要分享完整配置、数据库、环境变量、回滚文件或原始会话日志。反馈时只提供版本、操作步骤、脱敏后的错误和状态。完整规则见[安全说明](SECURITY.md)。
-
-## 隐私与当前边界
-
-- 不复制客户端的 OAuth Token、浏览器 Cookie、VS Code SecretStorage 或 JetBrains Password Safe。
-- 用量导入只持久化允许的元数据，不保存或上传提示词、回复、源代码、工具内容或原始日志行。
-- 发布前展示变更，并保留受管写入的恢复信息；目标被外部修改后不会强行回滚覆盖。
-- 当前不提供组织/企业账单、Provider 发票查询、云端用量同步、超额付费设置，也不提供完整的 macOS/Linux 一键安装。
-- 自动化与隔离环境测试不能替代真实客户端验收。已实现能力、未覆盖范围及验证记录见[实现状态](docs/implementation-status.md)。
-
-## 获取帮助与参与开发
-
-使用问题可提交到 [GitHub Issues](https://github.com/AvaloNero/CopilotBYOKManager/issues)。建议提供操作系统、软件提交版本、相关客户端和插件版本、复现步骤、预期与实际结果，以及脱敏后的状态信息。安全问题请按 [SECURITY.md](SECURITY.md) 私下报告。
-
-更多资料：[文档索引](docs/README.md) · [模型目录兼容性](docs/provider-model-discovery.md) · [JetBrains 支持](docs/jetbrains-support.md) · [用量来源](docs/usage-sources.md) · [发布标准](docs/release-criteria.md) · [推广计划](docs/promotion-plan.md)。
-
-<details>
-<summary>开发、构建与检查</summary>
-
-桌面端使用 Tauri、Rust 和轻量 Web 前端。参与实现前请阅读 [AGENTS.md](AGENTS.md)、[MVP 规范](docs/mvp-implementation-spec.md)和[架构说明](docs/architecture.md)。
-
-在仓库根目录运行：
-
-```bash
-npm run check:web
-cargo fmt --all -- --check
-cargo test --workspace
-cargo clippy --workspace --all-targets -- -D warnings
+npm run check
 git diff --check
 ```
 
-`npm run check` 包含 Web 与 Rust 检查，差异空白检查需另行运行。CI 在 Ubuntu、Windows 和 macOS 上检查，并在 Windows 构建原生应用。
-
-可选浏览器回归入口为 `node apps/desktop/web/tests/browser-smoke.cjs`。需要时设置 `COPILOT_BYOK_MANAGER_PLAYWRIGHT` 为已安装的 Playwright 模块路径，`COPILOT_BYOK_MANAGER_BROWSER` 指定浏览器。测试使用隔离配置、模拟数据和临时截图，不代表真实客户端验收。
-
-源码位置：
-
-- [原生后端与适配器](apps/desktop/src-tauri/)
-- [桌面前端](apps/desktop/web/)
-- [交互设计参考](prototype/)
-- [验证与打包脚本](scripts/)
-
-测试和验收边界见[本地验证计划](docs/local-validation-plan.md)与[验证记录](docs/implementation-status.md#validation-evidence)。
+开发分支为 `main`。`npm run build -- --no-bundle -- --locked` 只构建应用。NSIS / Universal DMG 和 dry-run 步骤见[发行工程（英文）](docs/release-engineering.md)。
 
 </details>
 
-## 许可证
+## 许可证与声明
 
-[MIT](LICENSE)。
-
-本项目独立开发，与 GitHub、JetBrains 无隶属、赞助或背书关系。GitHub、GitHub Copilot 和 JetBrains 等名称属于各自权利人。
+[MIT](LICENSE)。独立社区项目，与 GitHub、JetBrains 无隶属、赞助或背书关系；相关名称和商标属于各自权利人。本软件不托管模型、不提供订阅或免费额度。

@@ -1,6 +1,18 @@
 # CopilotBYOKManager documentation
 
-Start with the user manual in [English](../README.md) or [简体中文](../README.zh-CN.md) for setup and everyday use, then the [current implementation status](implementation-status.md) for coverage, validation evidence and remaining acceptance work.
+Start with the product overview in [English](../README.md) or [简体中文](../README.zh-CN.md). Full setup and everyday-use instructions are in the [English user guide](user-guide.md) / [中文用户手册](user-guide.zh-CN.md). The [current implementation status](implementation-status.md) distinguishes reviewed code, simulated previews and outstanding real acceptance.
+
+## Release and user documentation
+
+| Document | Purpose |
+| --- | --- |
+| [English user guide](user-guide.md) / [中文用户手册](user-guide.zh-CN.md) | Four pages, provider fields, model discovery, client follow-up, revoke/recovery and FAQ |
+| [Release engineering](release-engineering.md) | English v0.1 scope, reproducible Windows/macOS builds, dry-run/Draft/publish and artifact checks |
+| [Apple secrets and acceptance](release-secrets.md) | Maintainer-only account/credential/environment setup, real Intel/Apple Silicon/Windows checks |
+| [Release notes template](release-notes-template.md) | Version/SHA-bound download, signing, client, privacy and pending-acceptance disclosures |
+| [Screenshot provenance](images/README.md) | Current browser UI, simulated data, reproduction and privacy limits |
+
+The first release is the four-page v0.1 core, not the complete extended MVP. The release gates and local validation procedures below are **in Chinese**; the English engineering and Apple guides explain the operational steps and remaining acceptance in English. Hidden feature acceptance stays deferred, not PASS.
 
 ## Current contracts and implementation
 
