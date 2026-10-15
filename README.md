@@ -66,6 +66,8 @@ Watch [Releases](https://github.com/AvaloNero/CopilotBYOKManager/releases) for a
 
 Windows Setup installs for the current user. macOS packaging starts at 15.0: a conservative build floor, not a tested support claim. Test DMGs use `*-testing-adhoc.dmg`: **Ad-hoc signed, not notarized; testing only**.
 
+A **macOS test build is available** in the [verified dry-run's artifacts](https://github.com/AvaloNero/CopilotBYOKManager/actions/runs/38706651589). Download `release-dry-run-…` for the Universal DMG, `SHA256SUMS.txt` and source metadata (`dad7bd4`). No Apple Developer ID signature or notarization; this is not a formal Release or real-Mac acceptance. Sign in to GitHub if prompted; artifacts are retained for 14 days under the current workflow policy.
+
 Check `SHA256SUMS.txt` and the source SHA before installing. Standalone means no installer, **not fully portable**: state, OS credentials and client configuration still use user storage. [Package guide](docs/release-engineering.md).
 
 To explore now, open [the current browser frontend](apps/desktop/web/index.html) from a local source checkout. It uses sample data and performs no native writes. Use fictitious values, not real keys.

@@ -93,7 +93,7 @@ JetBrains 目前只有已审核版本的适配实现，真实验收仍待完成�
 ## 5. 当前缺口与执行顺序
 
 1. 工程与单元测试不代表发布 GO；以[实现状态](implementation-status.md)和每次 CI 的固定 SHA 结果为准。
-2. 完成 Mac dry-run 和正式签名流水线验证；人工配置 Apple 账号、证书、API key 和 release environment；不在本次任务内购买或写外部设置。
+2. Mac dry-run 已在 `dad7bd4` 的[测试构建](https://github.com/AvaloNero/CopilotBYOKManager/actions/runs/38706651589)通过，包括最终 DMG 内应用校验；正式签名流水线仍待验证。Apple 账号、证书、API key 和 release environment 仍由维护者另行配置；本轮没有购买或修改外部设置。
 3. 完成当前原生 IPC/Windows 托盘、干净 Windows、Apple Silicon 和 Intel Mac 的最终包验收，以及拟宣传的真实客户端请求。
 4. G0–G7 通过并由维护者批准后公开候选；G8 后才扩大推广。隐藏功能留待未来版本，不阻塞核心版。
 

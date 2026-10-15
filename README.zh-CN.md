@@ -66,6 +66,8 @@
 
 Windows Setup 安装到当前用户。macOS 打包从 15.0 起，这是保守的构建范围，不是已验证的系统支持承诺。测试 DMG 使用 `*-testing-adhoc.dmg`：**Ad-hoc signed, not notarized; testing only（临时签名、未公证，仅供测试）**。
 
+**macOS 测试包现已可取用**：打开[已通过的测试构建附件](https://github.com/AvaloNero/CopilotBYOKManager/actions/runs/38706651589)，下载 `release-dry-run-…`，其中含 Universal DMG、`SHA256SUMS.txt` 和源码记录（`dad7bd4`）。未做 Apple 开发者签名或公证，不是正式 Release，也不代表 Mac 真机验收通过。如有提示请登录 GitHub；按当前工作流设置，附件保留 14 天。
+
 安装前核对 `SHA256SUMS.txt` 与源码 SHA。Standalone 是“免安装版”，**不是完全便携版**：状态、系统凭据和客户端配置仍使用用户存储。[安装包说明（英文）](docs/release-engineering.md)。
 
 现在即可从本地源码打开[当前浏览器前端](apps/desktop/web/index.html)。它使用示例数据，不执行原生写入；请填写虚构数据，不要输入真实密钥。

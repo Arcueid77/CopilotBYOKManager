@@ -1,6 +1,6 @@
 # CopilotBYOKManager implementation status
 
-Updated 2026-10-15 for the maintainer-approved v0.1 four-page release scope and packaging/README engineering, based on clean `main` at `83a82db3555eb0defa278bd6e042b7c55a76088f`. This is an implementation/evidence summary, not complete-MVP or release acceptance. The [specification §21](mvp-implementation-spec.md#21-final-acceptance) and [feature availability](feature-availability.md) separate core release gates from the retained extended milestone. The product has not had a public release.
+Updated 2026-10-15 for the maintainer-approved v0.1 four-page release scope, icon refresh and unsigned Mac preview. Initial release engineering started at `83a82db3555eb0defa278bd6e042b7c55a76088f`; current package source and evidence are recorded below. This is an implementation/evidence summary, not complete-MVP or release acceptance. The [specification §21](mvp-implementation-spec.md#21-final-acceptance) and [feature availability](feature-availability.md) separate core release gates from the retained extended milestone. The product has not had a public release.
 
 ## Current implementation
 
@@ -37,13 +37,33 @@ Technical detail: [architecture](architecture.md), [hardening](hardening-handoff
 
 Evidence must stay attached to the source and validation layer that produced it. Tests use temporary data and fake external services. Private runtime reports remain outside Git; the reviewed, synthetic README screenshots are checked in with [provenance](images/README.md) and are not runtime acceptance evidence.
 
-### v0.1 release engineering — 2026-10-15
+### Icon refresh and unsigned Mac preview — 2026-10-15
+
+Package source: `dad7bd49b383338ef299d3e313eaca1c7836d268`. The maintainer requested a Copilot-related mark; the new locally packaged icon combines a Copilot-inspired robot/goggle outline and a key. The high-resolution transparent source, official Tauri PNG/ICO/ICNS exports, app header/favicon and bilingual README screenshots are updated. [Artwork provenance and final edit prompt](../apps/desktop/src-tauri/icons/README.md) record use of the built-in image-generation tool. Product identity, native configuration/ownership/recovery logic, credentials, migrations and window/tray behavior are unchanged.
+
+The maintainer explicitly authorized pushing the local engineering/icon commits and running only a Mac dry-run. Its separate job has no GitHub environment or Apple secret mappings; formal signing and public publication remain protected and are not authorized by a preview. No tag, GitHub Release, repository setting, secret, environment or Apple account was created or changed.
+
+The [first Mac attempt](https://github.com/AvaloNero/CopilotBYOKManager/actions/runs/38704585598) passed both platform test suites and built the Universal DMG, but failed the subsequent standalone-app identity check: locked Tauri cleaned its intermediate `.app` for a DMG-only build. The wrapper now requests standard `app,dmg` outputs, retains the app for verification, and still distributes only the DMG. A regression guard preserves both app checks and strict signature verification; no check was skipped. The [corrected dry-run](https://github.com/AvaloNero/CopilotBYOKManager/actions/runs/38706651589) passed all selected checks, Mac packaging and checksum assembly. Formal signing, Windows cloud packaging and public Release jobs were skipped as requested. [Normal three-platform CI](https://github.com/AvaloNero/CopilotBYOKManager/actions/runs/38706650798) also passed on this exact source.
+
+| Check | Current evidence |
+| --- | --- |
+| Local source checks | `npm run check` and whitespace check passed: 19 release-policy/icon tests, 69 web tests, 275 Windows library + 6 integration tests, formatting and strict Clippy |
+| Browser layout | 18 header/icon combinations passed: English/Chinese, Light/Dark/System, 960/1180/1440px; six sanitized screenshots regenerated; no native writes |
+| Hosted strict-link tests | Both dry-runs passed with `COPILOT_BYOK_MANAGER_TEST_REQUIRE_LINKS=1`; platform suites contain Windows 275 + 6 Rust tests and Mac 268 + 6. Local Windows error 1314 remains a host limitation, not a passed local branch |
+| Windows packages | Clean `dad7bd4` source produced unsigned x64 NSIS and standalone ZIP; architecture, versions, metadata and SHA-256 verified locally |
+| Mac package | Universal DMG produced on `macos-15`, Node 22, Rust 1.88. Retained app and final mounted-DMG app passed identity/version/minimum-OS, x86_64+arm64 and strict code-signature/Hardened Runtime checks. Ad-hoc, **not notarized**; testing artifacts only |
+
+The verified Mac set is the run's `release-dry-run-dad7bd49b383338ef299d3e313eaca1c7836d268` Actions artifact (ID `11959232397`, ZIP size 17,529,162 bytes). GitHub reports archive SHA-256 `9b28314e19dfca9dfb39a7f5852ff232366b6d28e2b570665b4597ddc23aaa12`; this is the **artifact ZIP digest, not the inner DMG digest**. The ZIP includes the DMG, `SHA256SUMS.txt`, metadata and release notes. Files are retained for 14 days under the current workflow policy. The engineering Windows host's GitHub CLI download stalled and a bounded direct HTTP retry timed out; no local Mac copy or independent local rehash is claimed. Download from the successful run and verify its included checksum list before testing.
+
+Mac first launch, Keychain behavior, Intel/Apple Silicon runtime, clean Windows and real client/provider-request acceptance remain separate and uncompleted. Rider remains deferred. A successful build or a new icon does not make the core release GO.
+
+### Initial local v0.1 release engineering — 2026-10-15
 
 The packaging identity, data/credential namespaces, native write/ownership/recovery logic and four-page application code remain unchanged. Tauri Bundler is enabled: Windows current-user x64 NSIS plus standalone ZIP; Mac universal DMG with a conservative 15.0 candidate floor. Formal Mac requires Developer ID/Hardened Runtime/notarization/stapling; Windows is explicitly unsigned. A new independent release workflow freezes source SHA, reruns locked checks and defaults tags to Draft. Publish preserves the exact reviewed Draft bytes. It does not publish automatically on tag push.
 
 The bilingual README is now a product overview; full procedures moved to [English](user-guide.md) / [Chinese](user-guide.zh-CN.md) guides. Six current-browser screenshots use fictional providers and no keys, clearly labeled simulated. [Release engineering](release-engineering.md), [Apple setup](release-secrets.md), [release gates](release-criteria.md) and notes now use core v0.1 rather than hidden full-MVP features as the release scope.
 
-Local Windows NSIS/ZIP build and metadata verification succeeded during engineering. Mac packaging/signing/notarization and hosted workflow execution have **not** run on this Windows host. Core native-isolated UI/tray, clean Windows, Intel/Apple Silicon and live client requests remain NOT RUN/BLOCKED as applicable; no prior native run is promoted to current acceptance. No remote push, tag, Release, secret/environment/settings change, account purchase or sponsor contact is part of this work. See the final engineering handoff for exact local check counts and artifact SHA-256.
+At this initial local stage, Windows NSIS/ZIP build and metadata verification succeeded; Mac packaging/signing/notarization and hosted workflow execution had **not** run. That stage did not push or change remote state. The later, explicitly authorized remote preview is recorded above. Core native-isolated UI/tray, clean Windows, Intel/Apple Silicon and live client requests remain NOT RUN/BLOCKED as applicable; no prior native run is promoted to current acceptance.
 
 | Engineering check | Observed result and limit |
 | --- | --- |
@@ -155,7 +175,7 @@ The earlier 2026-10-13 documentation/rename refresh reran the required web, Rust
 
 1. Establish fresh core NativeIsolated/desktop evidence on the final source, adapting old hidden-page cases without claiming an unchanged full B00–B32 run. Verify Windows tray/Exit/relaunch against the real isolated desktop.
 2. Complete clean Windows 11 x64 final-NSIS install/start/reopen/uninstall, WebView2 and user configuration preservation. Authenticode is not required; unsigned/source/hash disclosure is.
-3. Have the maintainer configure Apple credentials and protected release environment, run Mac ad-hoc and formal pipelines, then accept the actual Draft DMG separately on Apple Silicon and Intel. Universal build alone is insufficient.
+3. Mac ad-hoc packaging is verified above. For formal distribution, have the maintainer configure Apple credentials and the protected release environment, verify the formal pipeline, then accept the actual Draft DMG separately on Apple Silicon and Intel. Universal build alone is insufficient.
 4. Verify exact advertised VS Code/CLI/manual App paths and authorized provider requests. Resume JetBrains runtime work only when the maintainer resumes it: per-IDE official login, model visibility, minimal request and multi-IDE sharing. Prepared Rider files and reviewed plugin bytes are not passing runtime results.
 5. Review Draft attachment hashes, notes, real support matrix and security-report availability; approve public candidate promotion only after core gates. No automation result alone gives this approval.
 
