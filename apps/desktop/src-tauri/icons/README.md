@@ -1,9 +1,10 @@
 # Application icons
 
-The maintainer requested a new application icon on 2026-10-15. The artwork uses
-one white key/routing symbol with three branches on an indigo tile: configure
-one provider, then publish to multiple clients. It is not a GitHub, Microsoft
-or client logo and does not imply their endorsement.
+The maintainer requested a new application icon and a recognizable Copilot
+reference on 2026-10-15. The artwork combines a Copilot-inspired robot/goggle
+outline with a key on an indigo tile: a bring-your-own-key manager for Copilot
+clients. This adapted project icon does not imply GitHub or Microsoft
+affiliation, sponsorship or endorsement; their marks remain their property.
 
 ## Source and exports
 
@@ -29,14 +30,17 @@ representation. Do not commit the CLI's unrelated Android/iOS/Appx exports.
 The Windows tray uses the same default application icon without changing its
 close/restore/quit behavior.
 
-## Final generation prompt
+## Final edit prompt
+
+The edit used the initial indigo key/routing icon as its visual reference and
+replaced only the white emblem. The original tile and transparent outer margin
+were preserved. The built-in image-generation tool was used for both steps.
 
 ```text
-Use case: logo-brand
-Asset type: production desktop application icon for CopilotBYOKManager, a local tool to configure one provider/API key and safely publish it to several Copilot clients.
-Primary request: design a completely new, original, memorable application icon expressing one key, multiple connections. One single bold white key-shaped routing emblem: a large clean hollow ring connects through a short stem to three substantial rounded branches/endpoints. Treat it as one integrated symbol, not a diagram or collection of tiny icons. Strong silhouette readable at 16 and 32 pixels.
-Style/medium: polished restrained desktop app icon, precise simple geometry, gently tactile enamel finish, minimal detail. Use the existing app's indigo/periwinkle accent palette (#7c8cff) with a deep indigo tile and an ivory-white emblem. Subtle controlled tonal depth, no neon effects.
-Composition/framing: one centered icon only, straight-on orthographic view, square 1024x1024 image. A rounded-square icon tile fills about 86 percent of the canvas with even transparent margin, smooth crisp corners. Emblem comfortably centered with generous internal padding and bold consistent stroke thickness. No mockup or device frame.
-Background: true transparent alpha outside the rounded-square tile, no checkerboard baked into pixels. Tile itself opaque.
-Constraints: no text, letters, watermark, gradients with rainbow colors, sparkles, tiny circuits, padlock overlay, robot face, GitHub Copilot or Microsoft branding, duplicate icons, perspective, or surrounding scene. This is one final app icon asset, not a presentation sheet.
+Use case: precise-object-edit / logo-brand
+Asset type: production app icon for CopilotBYOKManager, an independent provider/API-key manager for GitHub Copilot clients.
+Input image: edit target. Preserve its indigo rounded-square tile, straight-on orientation, dimensions, subtle enamel depth, generous margins, and true transparent alpha outside the tile.
+Requested change: replace ONLY the white routing/key symbol with a clean, instantly recognizable Copilot-related emblem. The dominant shape should be a friendly compact coding-assistant robot head with the distinctive two large rounded rectangular aviator-goggle lenses, a connecting bridge and short side earpieces that people associate with GitHub Copilot. White/off-white outline with indigo negative space in the lenses, simple lower face/head contour. Integrate one short unmistakable key stem with two teeth into the lower-right of the head silhouette, so the overall mark reads Copilot plus bring-your-own-key. The robot/goggles must remain the dominant focal point, the key a subordinate integrated element, not a separate sticker.
+Composition: one centered integrated white emblem filling roughly 65 percent of the opaque tile. Bold, balanced geometry, strong open negative space, readable at 16/32 pixels. No tiny eyes, mouth, circuit lines, intricate detail, branch diagram or extra symbols.
+Keep the original background/tile and restrained visual finish unchanged. No text, letters, official badge, seal, watermark, extra icons, mockups, or perspective. Transparent background stays genuinely transparent. Output only the finished app icon.
 ```
