@@ -1,6 +1,6 @@
 # Current-interface screenshot provenance
 
-Captured 2026-10-16 from `apps/desktop/web/`, based on `a2639b8f12e45d994652a29f7d2576699b29cfd6` plus the concise-copy changes. These are **browser fallback previews with simulated data**.
+Captured 2026-10-16 from `apps/desktop/web/`, based on `20562b2` plus the confirmed CLI replacement changes. These are **browser fallback previews with simulated data**.
 
 | Files | View |
 | --- | --- |

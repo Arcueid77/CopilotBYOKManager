@@ -1576,9 +1576,9 @@
     "未检测到",
     "Not detected"
   ],
-  "单一路由：启用 BYOK 期间不走 GitHub 官方模型；需新开终端和 CLI 会话。请主动勾选。": [
-    "单一路由：启用 BYOK 期间不走 GitHub 官方模型；需新开终端和 CLI 会话。请主动勾选。",
-    "Single route: while BYOK is active, CLI does not use GitHub's official models. Open a new terminal and CLI session. Select this target explicitly."
+  "使用所选供应商替换 CLI 当前环境配置。请主动勾选。": [
+    "使用所选供应商替换 CLI 当前环境配置。请主动勾选。",
+    "Replace the current CLI environment configuration with the selected provider. Select this target explicitly."
   ],
   "发布 {0}": [
     "发布 {0}",
@@ -2264,9 +2264,9 @@
     "请在 Copilot App 中手动添加供应商。",
     "Add the provider manually in Copilot App."
   ],
-  "本软件使用旧式环境变量方式：替换 CLI 的单一路由，首选模型写入 COPILOT_MODEL。请新开终端和 CLI 会话，此覆盖生效时不要期待使用 GitHub 官方路由。": [
-    "本软件使用旧式环境变量方式：替换 CLI 的单一路由，首选模型写入 COPILOT_MODEL。请新开终端和 CLI 会话，此覆盖生效时不要期待使用 GitHub 官方路由。",
-    "This app uses the legacy environment route: it replaces CLI's single route and writes the preferred model to COPILOT_MODEL. Open a new terminal and CLI session. Do not expect GitHub's official route while this override is active."
+  "确认后替换 CLI 当前的供应商环境配置，并设置首选模型。完成后新开终端和 CLI 会话。": [
+    "确认后替换 CLI 当前的供应商环境配置，并设置首选模型。完成后新开终端和 CLI 会话。",
+    "Confirm to replace the current CLI provider environment and set the preferred model. Then open a new terminal and CLI session."
   ],
   "已添加勾选模型，请核对后保存连接。": [
     "已添加勾选模型，请核对后保存连接。",

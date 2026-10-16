@@ -22,6 +22,8 @@ The maintainer-approved 2026-10-15 v0.1 release scope exposes only Overview / Pr
 
 Read `docs/release-engineering.md`, `docs/release-criteria.md` and `docs/release-secrets.md` before release work. v0.1 requires Windows x64 current-user NSIS (explicitly unsigned) and a formal Developer ID signed/notarized/stapled macOS Universal DMG, with exact source SHA, version and SHA256SUMS. Ad-hoc Mac builds are testing-only. Strict `vX.Y.Z` tags create Drafts; public promotion preserves reviewed Draft bytes and requires separate maintainer approval. No push/tag/Release/settings/secret mutation is implied by local engineering work.
 
+CLI publication replaces its existing user-environment configuration after preview and explicit confirmation, regardless of prior ownership. Do not restore an ownership prerequisite for CLI apply. Keep stale-plan checks, private before/after snapshots, conditional rollback and new ownership recording; CLI revocation and other clients retain their ownership checks.
+
 ## Branch policy
 
 `main` is the active development branch while CopilotBYOKManager is pre-release. Do not create a feature branch or pull request unless the maintainer explicitly requests one. Keep commits reviewable and leave `main` buildable after every completed vertical slice.

@@ -1,15 +1,15 @@
 # CopilotBYOKManager implementation status
 
-Updated 2026-10-16 for concise interface/documentation copy, four-page layout polish and the Windows console-free release fix, on top of the maintainer-approved v0.1 scope, icon refresh and unsigned Mac preview. Initial release engineering started at `83a82db3555eb0defa278bd6e042b7c55a76088f`; current package source and evidence are recorded below. The [specification §21](mvp-implementation-spec.md#21-final-acceptance) and [feature availability](feature-availability.md) separate core release gates from the retained extended milestone. The product has not had a public release.
+Updated 2026-10-16 for confirmed CLI replacement, concise interface/documentation copy, four-page layout polish and the Windows console-free release fix, on top of the maintainer-approved v0.1 scope, icon refresh and unsigned Mac preview. Initial release engineering started at `83a82db3555eb0defa278bd6e042b7c55a76088f`; current package source and evidence are recorded below. The [specification §21](mvp-implementation-spec.md#21-final-acceptance) and [feature availability](feature-availability.md) separate core release gates from the retained extended milestone. The product has not had a public release.
 
 ## Current implementation
 
 | Area | Implemented behavior | Current boundary |
 | --- | --- | --- |
 | Connections and models | Native CRUD, enablement, read-only catalog discovery/probe, checkbox-to-draft model selection saved with the form, preferred-model order, OS-held keys | Model-catalog lookup; disabling preserves published configuration |
-| Deployment and recovery | Native one-shot expiring plans, live fingerprints, durable ownership, prepare-all writes, journals, compensation, conditional rollback, revoke-and-delete and detach | External changes or unproven ownership refuse destructive replacement |
+| Deployment and recovery | Native one-shot expiring plans, live fingerprints, durable ownership, prepare-all writes, journals, compensation, conditional rollback, revoke-and-delete and detach | Changes after preview require a new review; ownership required outside confirmed CLI publication |
 | VS Code | Stable/Insiders/profile discovery; owned `chatLanguageModels.json` groups coexist with other suppliers | Select the model in the client; sign-in only focuses an existing Windows editor or gives manual instructions |
-| Copilot CLI | One owned legacy environment route plus `COPILOT_MODEL`; CLI target requires explicit selection by default | New terminal/session required; no `providers.json` write; a shadowing registry blocks publication |
+| Copilot CLI | Confirmed replacement of the current environment route plus `COPILOT_MODEL`, regardless of prior ownership; CLI target requires explicit selection by default | New terminal/session required; no `providers.json` write; a shadowing registry blocks publication; revocation requires ownership |
 | JetBrains | Automatic dedicated shared BYOK projection for reviewed 1.19 distributions, with per-profile proofs and deduplicated writes | Unknown versions unsupported; per-IDE login, picker visibility and actual requests are separate acceptance steps |
 | Copilot app | Component discovery, official-flow/manual account steps and provider runbook | Provider writes and a separate private local-usage source are unsupported |
 | Installation | Pinned reviewed Windows WinGet/component plans, identity checks, persisted per-component outcomes, scoped cancellation and rediscovery | Direct app asset-download fallback and clean-machine package acceptance are not complete |
@@ -37,6 +37,17 @@ Technical detail: [architecture](architecture.md), [hardening](hardening-handoff
 ## Validation evidence
 
 Evidence must stay attached to the source and validation layer that produced it. Tests use temporary data and fake external services. Private runtime reports remain outside Git; the reviewed, synthetic README screenshots are checked in with [provenance](images/README.md).
+
+### Confirmed CLI replacement — 2026-10-16
+
+Based on `20562b2`, CLI publication accepts unmanaged, foreign-owner, legacy and externally edited environment configuration after preview and explicit confirmation. It records new ownership after application; revocation and other clients keep their ownership checks. Before/after snapshots, stale-plan checks, private journals, conditional rollback and credential redaction remain. No persistence migration or new dependency is needed. Bilingual confirmation copy, README and user guides describe the replacement directly.
+
+- `npm run check` passed: 22 release tests, 72 web tests, 994 bilingual messages / 970 UI keys, 279 library + 6 integration Rust tests, formatting and strict Clippy. Documentation links and whitespace checks passed.
+- New isolated Rust fixtures cover replacement without prior ownership, fresh ownership markers, unchanged revocation checks, exact foreign-byte rollback (including Windows registry type), and edits before transaction/write/rollback. An additional Unix incomplete-block fixture is included for platform CI.
+- Isolated browser regression passed 20 scenario groups, including bilingual CLI review, cancellation with no apply call and exactly one explicitly confirmed apply. README screenshot capture passed 18 header combinations.
+- [Official environment fields](https://docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/use-byok-models) and [configuration roots](https://docs.github.com/en/copilot/reference/copilot-cli-reference/cli-config-dir-reference) were rechecked on 2026-10-16. The adapter still uses the existing environment projection; provider-registry/custom-root support is unchanged.
+
+Validation used temporary files, fake registry values and isolated browser fixtures. Current native packaging and real-client acceptance remain in the release checklist.
 
 ### Concise interface and documentation copy — 2026-10-16
 

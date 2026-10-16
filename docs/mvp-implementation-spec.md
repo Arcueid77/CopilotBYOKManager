@@ -178,7 +178,7 @@ Apply receives only `plan_id` and explicit confirmation. It must:
 Before the first target write:
 
 - resolve and validate every target;
-- reject symlinks, unsupported junctions/reparse points, non-regular files, oversized files, malformed JSON5, incomplete managed shell blocks, and ownership conflicts;
+- reject symlinks, unsupported junctions/reparse points, non-regular files, oversized files, malformed JSON5, incomplete managed shell blocks, and ownership conflicts except the confirmed CLI replacement defined in §6.7;
 - create bounded before/after snapshots or private snapshot references;
 - prove all operations are writable/prepared;
 - persist Prepared deployment records and rollback manifest;
@@ -214,7 +214,9 @@ At minimum:
 - concrete target identity;
 - last deployed fingerprint/version.
 
-Ownership validation requires the persisted evidence listed above. Foreign-owner, unmanaged, legacy, and ambiguous state must be Conflict/ActionRequired.
+Ownership validation requires the persisted evidence listed above. Foreign-owner, unmanaged, legacy, and ambiguous state must be Conflict/ActionRequired for VS Code, JetBrains, Resources and all revocation.
+
+Copilot CLI publication is an explicit replacement of its single user-environment route. It must accept existing unmanaged, foreign-owner, legacy or externally edited configuration without requiring a prior ownership proof. The user selects CLI, reviews the replacement and confirms the native-held plan. Preserve exact before bytes in the private transaction journal, reject changes since preview, and record fresh ownership only after successful application. Keep unrelated shell content and environment variables unchanged. Revocation still requires a matching current ownership proof. Public provider-registry precedence and custom-root checks remain separate from ownership.
 
 ### 6.8 Deletion
 

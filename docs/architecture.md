@@ -276,7 +276,7 @@ The native plan, transaction and ownership services implement this lifecycle. In
 Before the first write:
 
 - read and parse every target;
-- reject symlinks, junction/reparse points, non-regular files, oversized files, malformed JSON5, incomplete shell blocks, and ownership conflicts;
+- reject symlinks, junction/reparse points, non-regular files, oversized files, malformed JSON5, incomplete shell blocks, and ownership conflicts outside confirmed CLI publication;
 - inspect every existing ancestor before canonicalization and recheck file/parent boundaries before reads and replacement; only exact supported macOS system aliases are allowed;
 - never return raw JSON5 parser diagnostics, which may echo own or foreign credentials; return a safe file location and repair/fresh-preview guidance;
 - build before/after snapshots for every writable target;
@@ -503,7 +503,7 @@ Managed configuration must include installation-owner and connection identity. A
 
 Separate adapters/services own environment projection, executable discovery/version verification, official sign-in launch/evidence, official runtime quota/model data, and local usage import.
 
-CopilotBYOKManager refuses to overwrite unmanaged or foreign-owner provider overrides. Unix changes across managed environment and shell files form one prepared transaction.
+CLI publication replaces the reviewed user-environment route after explicit confirmation, including unmanaged, foreign-owner, legacy or externally edited overrides. Prior ownership is not required for publication; successful application replaces the physical route's ownership record. Preview is read-only, exact before bytes stay in the private journal, and changes after review invalidate the plan. Revocation still verifies this installation, Connection and unchanged projection. Unix changes across environment files and bounded shell blocks form one prepared transaction, preserving unrelated shell content. Public registry precedence and custom-root checks remain unchanged.
 
 ### GitHub Copilot app
 

@@ -39,7 +39,7 @@ test("changed, inaccessible and omitted source observations never become zero or
   assert.match(manager.sourceRows(snapshot), /发布状态暂不可用/);
 });
 test("copy scopes the exclusive CLI environment projection, manual app boundary and model pickers", () => {
-  assert.match(manager.policy("copilot-cli"), /旧式环境变量.*单一路由.*COPILOT_MODEL/);
+  assert.match(manager.policy("copilot-cli"), /确认后替换 CLI 当前.*环境配置.*首选模型/);
   assert.match(manager.policy("copilot-cli"), /新开终端/);
   assert.equal(manager.policy("github-copilot-app"), "请在 Copilot App 中手动添加供应商。");
   assert.match(manager.policy("jetbrains-copilot"), /保留其他来源.*共享.*重启/);

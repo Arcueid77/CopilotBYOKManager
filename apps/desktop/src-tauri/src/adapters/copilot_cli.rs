@@ -14,6 +14,8 @@ use uuid::Uuid;
 
 #[cfg(any(windows, test))]
 mod env_snapshot;
+#[cfg(test)]
+mod ownership_tests;
 mod provider_registry;
 
 pub(crate) fn routing_fingerprint() -> AppResult<String> {
@@ -101,12 +103,12 @@ pub fn preview(connection: &Connection, target: &ClientTarget) -> DeploymentOper
         title: format!("Activate {} for Copilot CLI", connection.name),
         description: format!("Replace the single user-environment provider route and set the preferred model to {model}"),
         changes: vec![
+            "Confirmation replaces the current CLI provider environment, including configuration created outside this app".to_string(),
             "Write COPILOT_PROVIDER_* routing variables".to_string(),
             format!("Set COPILOT_MODEL and wire model to {model}"),
             "Store the materialized credential only in the platform user environment".to_string(),
             "New terminal processes will inherit the change".to_string(),
-            "This legacy environment projection replaces the previous CLI provider route; it does not add another selectable provider. Use a new terminal and CLI session; do not expect the GitHub-hosted route while this environment override is active".to_string(),
-            "Do not write providers.json; a detected registry that takes precedence blocks this environment deployment".to_string(),
+            "Requires environment routing; providers.json precedence is checked before preview".to_string(),
         ],
         supported: target.detected && target.supports_write,
         requires_restart: true,
@@ -289,8 +291,7 @@ pub(crate) fn prepare_owned(
     proofs: &[crate::deployment::ownership::TargetOwnership],
     revoke: bool,
 ) -> AppResult<Vec<crate::transaction::PreparedWrite>> {
-    use crate::deployment::ownership;
-    let mut writes = if revoke {
+    let writes = if revoke {
         validate_existing_configuration()?;
         observed_resources()?
             .into_iter()
@@ -308,39 +309,28 @@ pub(crate) fn prepare_owned(
     } else {
         prepare(connection, secret)?
     };
-    let physical_id = ownership::cli_resource_id();
-    let existing = proofs.iter().find(|proof| proof.resource_id == physical_id);
-    if let Some(proof) = existing {
-        if revoke && proof.connection_id != connection.id {
-            return Err(ownership::conflict());
-        }
+    finish_preparation(connection, owner_id, proofs, revoke, writes)
+}
+
+fn finish_preparation(
+    connection: &Connection,
+    owner_id: &str,
+    proofs: &[crate::deployment::ownership::TargetOwnership],
+    revoke: bool,
+    mut writes: Vec<crate::transaction::PreparedWrite>,
+) -> AppResult<Vec<crate::transaction::PreparedWrite>> {
+    use crate::deployment::ownership;
+    // CLI publication replaces the reviewed route after explicit confirmation,
+    // regardless of who created it. Revocation still requires durable ownership.
+    // The native plan retains these exact before bytes for stale checks/rollback.
+    if revoke {
         ownership::verify_projection(
             proofs,
             owner_id,
-            &proof.connection_id,
-            &physical_id,
+            &connection.id,
+            &ownership::cli_resource_id(),
             &ownership::cli_projection(&writes, false)?,
         )?;
-    } else {
-        #[cfg(windows)]
-        let unmanaged = writes.iter().any(|write| write.before.is_some());
-        #[cfg(unix)]
-        let unmanaged = writes.iter().enumerate().any(|(index, write)| {
-            if matches!(index, 0 | 1 | 5) {
-                write.before.is_some()
-            } else {
-                write.before.as_deref().is_some_and(|bytes| {
-                    let text = String::from_utf8_lossy(bytes);
-                    text.contains(BLOCK_START) || text.contains(BLOCK_END)
-                })
-            }
-        });
-        if unmanaged {
-            return Err(ownership::conflict());
-        }
-        if revoke {
-            return Err(ownership::conflict());
-        }
     }
     #[cfg(windows)]
     for write in &mut writes {
@@ -783,7 +773,7 @@ mod tests {
         }
     }
 
-    fn connection() -> Connection {
+    pub(super) fn connection() -> Connection {
         let mut spec = model("gpt-example", true);
         spec.capabilities.max_output_tokens = Some(16_384);
         connection_with(ProviderKind::Openai, ApiProtocol::Responses, vec![spec])

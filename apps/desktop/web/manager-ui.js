@@ -11,7 +11,7 @@
   const date = value => Number.isNaN(Date.parse(value)) ? tr("时间未知") : new Date(value).toLocaleString(i18n.locale(), { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
 
   function policy(kind) {
-    if (kind === "copilot-cli") return tr("本软件使用旧式环境变量方式：替换 CLI 的单一路由，首选模型写入 COPILOT_MODEL。请新开终端和 CLI 会话，此覆盖生效时不要期待使用 GitHub 官方路由。");
+    if (kind === "copilot-cli") return tr("确认后替换 CLI 当前的供应商环境配置，并设置首选模型。完成后新开终端和 CLI 会话。");
     if (kind === "github-copilot-app") return tr("请在 Copilot App 中手动添加供应商。");
     if (kind === "jetbrains-copilot") return tr("仅更新本连接的供应商分组，保留其他来源；共享 BYOK 配置去重写入。重启相关 IDE 后，在模型选择器中选用。");
     return tr("仅更新本连接的供应商分组，保留其他来源；发布后在客户端的模型选择器中选用。");

@@ -118,7 +118,9 @@ Required mitigation:
 - markers include `installation_owner_id` and `connection_id`;
 - persisted state keeps the last deployed target identity and fingerprint;
 - marker text alone is never sufficient ownership proof;
-- foreign-owner or ambiguous state is a conflict requiring user resolution.
+- foreign-owner or ambiguous state is a conflict for other client/resource writes and every revocation;
+- CLI publication uses explicit reviewed replacement authority instead of prior ownership: snapshot unmanaged/foreign/changed configuration, require confirmation, recheck live bytes, and commit new ownership only after verified writes;
+- test that CLI replacement accepts unowned configuration while cancellation performs no write, stale reviews fail, rollback restores original bytes, and revocation still rejects foreign or externally changed state.
 
 ### Rollback overwrites newer user work
 

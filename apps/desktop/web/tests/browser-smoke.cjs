@@ -288,6 +288,30 @@ async function checkEditor(browser, url, errors) {
   assert.equal(saved.models[1].enabled, false); assert.equal(saved.models[1].capabilities.vision, true);
   await page.close();
 }
+async function checkCliReplacementConfirmation(browser, url, errors) {
+  for (const locale of ["en", "zh-CN"]) {
+    const page = await fixturePage(browser, url, errors);
+    await page.locator("#interface-language").selectOption(locale);
+    await route(page, "clients");
+    const open = () => page.locator('.client-card[data-client-id="cli"] [data-action="deploy-client"]').click();
+    const applications = () => page.evaluate(() => window.__calls.filter(call => call.cmd === "apply_deployment_plan"));
+    await open();
+    assert.equal(await page.locator("#target-cli").isChecked(), true);
+    assert.equal(await page.locator("#apply-deployment").isDisabled(), true);
+    await page.locator("#preview-deployment").click();
+    await page.locator(".manager-operation").waitFor();
+    assert.match(await page.locator(".manager-operation").innerText(), locale === "en" ? /Confirm to replace the current CLI provider environment/ : /确认后替换 CLI 当前的供应商环境配置/);
+    assert.equal((await applications()).length, 0, "Preview must not apply");
+    await page.locator("[data-deployment-close]").click();
+    assert.equal((await applications()).length, 0, "Closing review must not apply");
+    await open();
+    await page.locator("#preview-deployment").click();
+    await page.locator("#apply-deployment").click();
+    await page.waitForFunction(() => !document.querySelector("#inline-deployment"));
+    assert.deepEqual((await applications()).map(call => call.args), [{ planId: "reviewed-plan", confirmed: true }]);
+    await page.close();
+  }
+}
 async function checkPublication(browser, url, errors) {
   const page = await fixturePage(browser, url, errors);
   await route(page, "clients"); await page.locator('.client-card[data-client-id="vscode"] [data-action="deploy-client"]').click();
@@ -432,6 +456,7 @@ async function checkTrayLocale(browser, url, errors) {
     await checkShell(browser, url, errors);
     await checkEditor(browser, url, errors);
     await checkPublication(browser, url, errors);
+    await checkCliReplacementConfirmation(browser, url, errors);
     await checkCatalogCopy(browser, url, errors);
     await checkRecovery(browser, url, errors);
     await checkWindowPreferences(browser, url, errors);
@@ -442,6 +467,6 @@ async function checkTrayLocale(browser, url, errors) {
     for (const name of routes) { await route(preview, name); assert.ok(await preview.locator(".preview-banner").count()); }
     await preview.close();
     assert.deepEqual(errors, []);
-    console.log(JSON.stringify({ status: "passed", scenarios: ["four core routes", "Chinese and English", "light and dark contrast", "system appearance changes", "preference persistence", "no hidden feature queries", "unsupported route rejection", "draft/focus/save guards", "catalog check-save and invalidation", "concise bilingual catalog results and failure recovery", "app-specific provider publication", "busy/error/fresh-preview lifecycle", "manual app exact provider", "reviewed JetBrains fixture", "persistent history", "read-only/recovery visibility", "close preference success/failure/recovery", "bounded tray locale only", "browser preview boundaries"], output }));
+    console.log(JSON.stringify({ status: "passed", scenarios: ["four core routes", "Chinese and English", "light and dark contrast", "system appearance changes", "preference persistence", "no hidden feature queries", "unsupported route rejection", "draft/focus/save guards", "catalog check-save and invalidation", "concise bilingual catalog results and failure recovery", "app-specific provider publication", "CLI replacement explicit confirmation in both languages", "busy/error/fresh-preview lifecycle", "manual app exact provider", "reviewed JetBrains fixture", "persistent history", "read-only/recovery visibility", "close preference success/failure/recovery", "bounded tray locale only", "browser preview boundaries"], output }));
   } finally { await browser.close(); server.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; server.close(); });

@@ -63,7 +63,7 @@ pub(super) fn ensure_environment_is_effective() -> AppResult<()> {
         AppError::Config("Cannot resolve Copilot provider configuration root".into())
     })?;
     if has_declarations(&home.join(".copilot/providers.json"))? {
-        return Err(AppError::Unsupported("Copilot providers.json takes precedence over legacy COPILOT_PROVIDER_* variables. Its existing declarations are not owned by CopilotBYOKManager; use the official client to review them before environment deployment".into()));
+        return Err(AppError::Unsupported("Copilot providers.json takes precedence over COPILOT_PROVIDER_* variables. Review provider routing in the official client before applying an environment route".into()));
     }
     Ok(())
 }

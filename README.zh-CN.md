@@ -46,7 +46,7 @@
 | 客户端 | 方式 | 当前边界与下一步 |
 | --- | --- | --- |
 | VS Code Stable / Insiders / 配置档案 | 自动 | 受管供应商分组。在对应档案选用模型并测试。[检测细节](docs/vscode-detection.md) |
-| GitHub Copilot CLI | 自动 | 单条环境变量路由。新开终端和会话，核对路由与模型。[客户端手册](docs/user-guide.zh-CN.md#5-到客户端里选用并验证) |
+| GitHub Copilot CLI | 自动 | 确认后替换当前环境配置。完成后新开终端和会话。[客户端手册](docs/user-guide.zh-CN.md#5-到客户端里选用并验证) |
 | 已审核的 JetBrains GitHub Copilot 插件发行版 | 自动，固定版本 | 关闭后重开 IDE，分别登录、选用和测试。[确切版本表](docs/jetbrains-support.md#version-and-compatibility-boundary) |
 | GitHub Copilot App | 手动 | 无自动写入或验证，在 App 内配置并核对。[指引](docs/user-guide.zh-CN.md#5-到客户端里选用并验证) |
 

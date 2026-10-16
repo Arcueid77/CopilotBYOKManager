@@ -46,7 +46,7 @@ Configure providers in these clients:
 | Client | Mode | Current boundary and next step |
 | --- | --- | --- |
 | VS Code Stable / Insiders / profiles | Automatic | Owned provider groups. Select the model in the correct profile, then test. [Detection details](docs/vscode-detection.md) |
-| GitHub Copilot CLI | Automatic | One environment route. Open a new terminal/session and verify the route/model. [Client guide](docs/user-guide.md#5-select-and-verify-the-model-in-each-client) |
+| GitHub Copilot CLI | Automatic | Replaces the current environment route after confirmation. Open a new terminal/session. [Client guide](docs/user-guide.md#5-select-and-verify-the-model-in-each-client) |
 | Reviewed JetBrains GitHub Copilot distributions | Automatic, version-pinned | Close/reopen IDEs, sign in separately, select and test. [Exact reviewed versions](docs/jetbrains-support.md#version-and-compatibility-boundary) |
 | GitHub Copilot App | Manual | No automatic provider writes or verification. Configure and verify inside the App. [Guide](docs/user-guide.md#5-select-and-verify-the-model-in-each-client) |
 

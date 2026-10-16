@@ -197,7 +197,7 @@ Editing a connection does not automatically synchronize it to all clients in the
 Add another connection under **Providers (供应商)**, then publish it to the clients you want:
 
 - **VS Code / JetBrains:** multiple provider groups can coexist. Switch using the client's model picker.
-- **Copilot CLI:** this environment-variable method uses one route at a time. Check the current ownership first; conflicting configuration from another connection or an external source is not overwritten directly. If necessary, revoke the old connection's managed configuration as described below before publishing the new connection.
+- **Copilot CLI:** uses one environment route at a time. Select the provider, review the preview and confirm to replace the current route, even if it was configured manually or by another tool. Open a new terminal and CLI session afterward. If configuration changes after preview, generate a fresh preview and confirm again.
 - **Copilot App:** add or switch providers manually inside the app.
 
 Select the active model in each client's model picker.
