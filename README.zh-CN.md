@@ -9,14 +9,14 @@
 <p align="center">集中管理端点、密钥和模型，逐项预览目标改动，再发布到 VS Code、Copilot CLI 与已审核版本的 JetBrains。</p>
 
 <p align="center">
-  <a href="https://github.com/AvaloNero/CopilotBYOKManager/actions/workflows/ci.yml"><img src="https://github.com/AvaloNero/CopilotBYOKManager/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/Arcueid77/CopilotBYOKManager/actions/workflows/ci.yml"><img src="https://github.com/Arcueid77/CopilotBYOKManager/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <img src="https://img.shields.io/badge/status-v0.1%20candidate-purple" alt="v0.1 候选版，验收待完成">
   <img src="https://img.shields.io/badge/interface-English%20%7C%20简体中文-blue" alt="中英文界面">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="MIT 许可证"></a>
 </p>
 
 <p align="center">
-  <a href="#download">下载状态</a> · <a href="#quick-start">快速上手</a> · <a href="#supported-clients">支持客户端</a> · <a href="#security">安全</a> · <a href="docs/README.md">文档</a> · <a href="https://github.com/AvaloNero/CopilotBYOKManager/issues">问题反馈</a> · <a href="README.md">English</a>
+  <a href="#download">下载状态</a> · <a href="#quick-start">快速上手</a> · <a href="#supported-clients">支持客户端</a> · <a href="#security">安全</a> · <a href="docs/README.md">文档</a> · <a href="https://github.com/Arcueid77/CopilotBYOKManager/issues">问题反馈</a> · <a href="README.md">English</a>
 </p>
 
 > **预发布阶段。** 尚未公开发行安装包。见[当前证据](docs/implementation-status.md)与[发布门槛](docs/release-criteria.md)。
@@ -56,7 +56,7 @@ JetBrains 支持上方版本表中列出的插件发行版；共用运行时目�
 
 ## 下载与安装
 
-经批准的候选版会出现在 [Releases](https://github.com/AvaloNero/CopilotBYOKManager/releases)。以下是计划产物，并非已有下载链接：
+经批准的候选版会出现在 [Releases](https://github.com/Arcueid77/CopilotBYOKManager/releases)。以下是计划产物，并非已有下载链接：
 
 | 平台 | 安装包 | 状态 |
 | --- | --- | --- |
@@ -66,7 +66,7 @@ JetBrains 支持上方版本表中列出的插件发行版；共用运行时目�
 
 Windows Setup 安装到当前用户。macOS 安装包目标版本为 15.0 及以上。测试 DMG 使用 `*-testing-adhoc.dmg`：**Ad-hoc signed, not notarized; testing only（临时签名、未公证，仅供测试）**。
 
-**macOS 测试包现已可取用**：打开[已通过的测试构建附件](https://github.com/AvaloNero/CopilotBYOKManager/actions/runs/38706651589)，下载 `release-dry-run-…`，其中含 Universal DMG、`SHA256SUMS.txt` 和源码记录（`dad7bd4`）。测试包采用临时签名，未公证。如有提示请登录 GitHub；按当前工作流设置，附件保留 14 天。
+**macOS 测试包现已可取用**：打开[已通过的测试构建附件](https://github.com/Arcueid77/CopilotBYOKManager/actions/runs/38706651589)，下载 `release-dry-run-…`，其中含 Universal DMG、`SHA256SUMS.txt` 和源码记录（`dad7bd4`）。测试包采用临时签名，未公证。如有提示请登录 GitHub；按当前工作流设置，附件保留 14 天。
 
 安装前核对 `SHA256SUMS.txt` 与源码 SHA。Standalone 为免安装版；状态、系统凭据和客户端配置使用用户存储。[安装包说明（英文）](docs/release-engineering.md)。
 
@@ -111,7 +111,7 @@ Windows Setup 安装到当前用户。macOS 安装包目标版本为 15.0 及以
 - 恢复数据可能含敏感配置，不得上传。
 - 不添加默认遥测或对话上传。
 
-分享诊断前阅读 [SECURITY.md](SECURITY.md)。漏洞通过[安全页面](https://github.com/AvaloNero/CopilotBYOKManager/security)反馈；开启私密报告时，请使用私密渠道。
+分享诊断前阅读 [SECURITY.md](SECURITY.md)。漏洞通过[安全页面](https://github.com/Arcueid77/CopilotBYOKManager/security)反馈；开启私密报告时，请使用私密渠道。
 
 <a id="usage"></a>
 
@@ -141,7 +141,7 @@ Windows Setup 安装到当前用户。macOS 安装包目标版本为 15.0 及以
 
 [用户手册](docs/user-guide.zh-CN.md) · [English guide](docs/user-guide.md) · [文档索引](docs/README.md) · [模型目录](docs/provider-model-discovery.md) · [实现证据](docs/implementation-status.md) · [发行工程（英文）](docs/release-engineering.md)
 
-使用问题提交 [Issues](https://github.com/AvaloNero/CopilotBYOKManager/issues)，附版本、步骤和脱敏状态。[发布标准](docs/release-criteria.md)、[本机验证计划](docs/local-validation-plan.md)和[推广计划](docs/promotion-plan.md)保留详细中文说明。
+使用问题提交 [Issues](https://github.com/Arcueid77/CopilotBYOKManager/issues)，附版本、步骤和脱敏状态。[发布标准](docs/release-criteria.md)、[本机验证计划](docs/local-validation-plan.md)和[推广计划](docs/promotion-plan.md)保留详细中文说明。
 
 <details>
 <summary>开发 / 从源码构建</summary>
@@ -149,7 +149,7 @@ Windows Setup 安装到当前用户。macOS 安装包目标版本为 15.0 及以
 CI 使用 Node 22、Rust 1.88.0 与 [Tauri 系统依赖](https://v2.tauri.app/start/prerequisites/)。Windows 需要 MSVC/WebView2；macOS 需要 Xcode 命令行工具。修改前阅读 [AGENTS.md](AGENTS.md)、[规范](docs/mvp-implementation-spec.md)和[架构](docs/architecture.md)。
 
 ```bash
-git clone https://github.com/AvaloNero/CopilotBYOKManager.git
+git clone https://github.com/Arcueid77/CopilotBYOKManager.git
 cd CopilotBYOKManager
 npm ci
 npm run dev

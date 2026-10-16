@@ -9,14 +9,14 @@
 <p align="center">Manage your endpoint, API key and models once, review every target change, then publish to VS Code, Copilot CLI and reviewed JetBrains versions.</p>
 
 <p align="center">
-  <a href="https://github.com/AvaloNero/CopilotBYOKManager/actions/workflows/ci.yml"><img src="https://github.com/AvaloNero/CopilotBYOKManager/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/Arcueid77/CopilotBYOKManager/actions/workflows/ci.yml"><img src="https://github.com/Arcueid77/CopilotBYOKManager/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <img src="https://img.shields.io/badge/status-v0.1%20candidate-purple" alt="v0.1 candidate; acceptance pending">
   <img src="https://img.shields.io/badge/interface-English%20%7C%20简体中文-blue" alt="English and Simplified Chinese">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="MIT license"></a>
 </p>
 
 <p align="center">
-  <a href="#download">Download status</a> · <a href="#quick-start">Quick Start</a> · <a href="#supported-clients">Supported Clients</a> · <a href="#security">Security</a> · <a href="docs/README.md">Documentation</a> · <a href="https://github.com/AvaloNero/CopilotBYOKManager/issues">Issues</a> · <a href="README.zh-CN.md">简体中文</a>
+  <a href="#download">Download status</a> · <a href="#quick-start">Quick Start</a> · <a href="#supported-clients">Supported Clients</a> · <a href="#security">Security</a> · <a href="docs/README.md">Documentation</a> · <a href="https://github.com/Arcueid77/CopilotBYOKManager/issues">Issues</a> · <a href="README.zh-CN.md">简体中文</a>
 </p>
 
 > **Pre-release.** No public installer has been released yet. See [current evidence](docs/implementation-status.md) and [release gates (中文)](docs/release-criteria.md).
@@ -56,7 +56,7 @@ JetBrains supports the exact plugin distributions listed above; IDEs sharing a r
 
 ## Download and install
 
-Watch [Releases](https://github.com/AvaloNero/CopilotBYOKManager/releases) for an approved candidate. These are planned packages, not existing download links:
+Watch [Releases](https://github.com/Arcueid77/CopilotBYOKManager/releases) for an approved candidate. These are planned packages, not existing download links:
 
 | Platform | Package | Status |
 | --- | --- | --- |
@@ -66,7 +66,7 @@ Watch [Releases](https://github.com/AvaloNero/CopilotBYOKManager/releases) for a
 
 Windows Setup installs for the current user. macOS packages target version 15.0 and later. Test DMGs use `*-testing-adhoc.dmg`: **Ad-hoc signed, not notarized; testing only**.
 
-A **macOS test build is available** in the [verified dry-run's artifacts](https://github.com/AvaloNero/CopilotBYOKManager/actions/runs/38706651589). Download `release-dry-run-…` for the Universal DMG, `SHA256SUMS.txt` and source metadata (`dad7bd4`). The test package is ad-hoc signed and not notarized. Sign in to GitHub if prompted; artifacts are retained for 14 days under the current workflow policy.
+A **macOS test build is available** in the [verified dry-run's artifacts](https://github.com/Arcueid77/CopilotBYOKManager/actions/runs/38706651589). Download `release-dry-run-…` for the Universal DMG, `SHA256SUMS.txt` and source metadata (`dad7bd4`). The test package is ad-hoc signed and not notarized. Sign in to GitHub if prompted; artifacts are retained for 14 days under the current workflow policy.
 
 Check `SHA256SUMS.txt` and the source SHA before installing. The standalone package runs without installation; state, OS credentials and client configuration use user storage. [Package guide](docs/release-engineering.md).
 
@@ -111,7 +111,7 @@ Requests may incur charges. See the [English user guide](docs/user-guide.md) or 
 - Recovery data may contain sensitive configuration: do not upload it.
 - No default telemetry or conversation upload.
 
-Read [SECURITY.md](SECURITY.md) before sharing diagnostics. Use the [security page](https://github.com/AvaloNero/CopilotBYOKManager/security) for vulnerabilities, privately when that channel is enabled.
+Read [SECURITY.md](SECURITY.md) before sharing diagnostics. Use the [security page](https://github.com/Arcueid77/CopilotBYOKManager/security) for vulnerabilities, privately when that channel is enabled.
 
 <a id="usage"></a>
 
@@ -141,7 +141,7 @@ No sponsors or payment links are currently listed. Sponsorship will not determin
 
 [User guide](docs/user-guide.md) · [中文手册](docs/user-guide.zh-CN.md) · [Documentation index](docs/README.md) · [Model catalogs](docs/provider-model-discovery.md) · [Implementation evidence](docs/implementation-status.md) · [Release engineering](docs/release-engineering.md)
 
-Use [Issues](https://github.com/AvaloNero/CopilotBYOKManager/issues) with versions, steps and redacted statuses. The [release criteria](docs/release-criteria.md), [local validation plan](docs/local-validation-plan.md) and [promotion plan](docs/promotion-plan.md) are in Chinese; the [release guide](docs/release-engineering.md) covers maintainer steps in English.
+Use [Issues](https://github.com/Arcueid77/CopilotBYOKManager/issues) with versions, steps and redacted statuses. The [release criteria](docs/release-criteria.md), [local validation plan](docs/local-validation-plan.md) and [promotion plan](docs/promotion-plan.md) are in Chinese; the [release guide](docs/release-engineering.md) covers maintainer steps in English.
 
 <details>
 <summary>Development / Build from source</summary>
@@ -149,7 +149,7 @@ Use [Issues](https://github.com/AvaloNero/CopilotBYOKManager/issues) with versio
 CI uses Node 22, Rust 1.88.0 and [Tauri system dependencies](https://v2.tauri.app/start/prerequisites/). Windows needs MSVC/WebView2; macOS needs Xcode command-line tools. Read [AGENTS.md](AGENTS.md), [the specification](docs/mvp-implementation-spec.md) and [architecture](docs/architecture.md).
 
 ```bash
-git clone https://github.com/AvaloNero/CopilotBYOKManager.git
+git clone https://github.com/Arcueid77/CopilotBYOKManager.git
 cd CopilotBYOKManager
 npm ci
 npm run dev

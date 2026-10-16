@@ -17,7 +17,7 @@ Follow [Apple Developer ID](https://developer.apple.com/developer-id/), [App Sto
 
 ## 2. Configure the GitHub environment manually
 
-Create an environment named **`release`** in `AvaloNero/CopilotBYOKManager`. Configure required reviewers / manual approval when the repository plan supports it; if not available, maintain explicit human approval before dispatching publish and do not present it as an enforced environment gate. Allow the protected main workflow and intended version tags according to your repository's branch/tag policy. Do not approve arbitrary forks or unreviewed source for secrets.
+Create an environment named **`release`** in `Arcueid77/CopilotBYOKManager`. Configure required reviewers / manual approval when the repository plan supports it; if not available, maintain explicit human approval before dispatching publish and do not present it as an enforced environment gate. Allow the protected main workflow and intended version tags according to your repository's branch/tag policy. Do not approve arbitrary forks or unreviewed source for secrets.
 
 Add these environment secrets with the exact names used by [release.yml](../.github/workflows/release.yml):
 

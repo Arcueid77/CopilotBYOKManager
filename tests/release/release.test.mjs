@@ -322,7 +322,7 @@ test('publishing waits for downloaded asset verification before making a Draft p
   assert.equal(draft, false);
   assert.ok(calls.findIndex(c => c[1] === 'download') < calls.findIndex(c => c.includes('--draft=false')));
   assert.equal(calls.filter(c => c[1] === 'upload' || c[1] === 'create').length, 0, 'Promotion must not replace accepted packages');
-  assert.deepEqual(calls.filter(c => c[1] === 'edit').map(c => c.slice(3)), [['--repo', 'AvaloNero/CopilotBYOKManager', '--draft=false', '--prerelease', '--latest=false']]);
+  assert.deepEqual(calls.filter(c => c[1] === 'edit').map(c => c.slice(3)), [['--repo', 'Arcueid77/CopilotBYOKManager', '--draft=false', '--prerelease', '--latest=false']]);
 });
 
 test('publish rejects rebuilt publish-mode artifacts instead of replacing the accepted Draft', t => {

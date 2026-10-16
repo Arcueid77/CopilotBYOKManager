@@ -10,5 +10,5 @@ you want its owned configuration removed from supported clients.
 Saving a provider, publishing configuration, selecting a model and completing a
 request are different states. A successful publication is not request validation.
 
-Documentation: https://github.com/AvaloNero/CopilotBYOKManager
-Security: https://github.com/AvaloNero/CopilotBYOKManager/security
+Documentation: https://github.com/Arcueid77/CopilotBYOKManager
+Security: https://github.com/Arcueid77/CopilotBYOKManager/security

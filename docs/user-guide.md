@@ -76,7 +76,7 @@ Prepare Git, Node.js 22+, Rust 1.88+, and the [Tauri 2 system dependencies](http
 Run in a terminal:
 
 ```bash
-git clone https://github.com/AvaloNero/CopilotBYOKManager.git
+git clone https://github.com/Arcueid77/CopilotBYOKManager.git
 cd CopilotBYOKManager
 npm ci
 npm run dev
@@ -284,7 +284,7 @@ Do not share complete configuration files, databases, environment variables, rol
 
 ## Help and contributing
 
-Report usage problems through [GitHub Issues](https://github.com/AvaloNero/CopilotBYOKManager/issues). Include your operating system, application commit, relevant client and plugin versions, reproduction steps, expected and actual behavior, and redacted status information. Report security issues privately as described in [SECURITY.md](../SECURITY.md).
+Report usage problems through [GitHub Issues](https://github.com/Arcueid77/CopilotBYOKManager/issues). Include your operating system, application commit, relevant client and plugin versions, reproduction steps, expected and actual behavior, and redacted status information. Report security issues privately as described in [SECURITY.md](../SECURITY.md).
 
 Further reading: [Documentation index](README.md) · [Model catalog compatibility](provider-model-discovery.md) · [JetBrains support](jetbrains-support.md) · [Usage sources](usage-sources.md) · [Release engineering](release-engineering.md) · [Release criteria (中文)](release-criteria.md) · [Launch plan (中文)](promotion-plan.md).
 

@@ -116,7 +116,7 @@ async function nativeFixture() {
     if (cmd === "get_resources") return structuredClone({ resources, bindings: [], detail: "Fixture" });
     if (cmd === "preview_resource_sync") { resourcePlan = "fixture-resource-plan"; return { id: resourcePlan, expiresAt: new Date(Date.now() + 15 * 60000).toISOString(), operations: [{ title: "VS Code fixture", change: "create", destination: "Fixture", detail: "Synthetic owned content only" }] }; }
     if (cmd === "apply_resource_plan") { assertNative(args.planId === resourcePlan && args.confirmed === true && Object.keys(args).length === 2); resourcePlan = null; return; }
-    if (cmd === "plugin:opener|open_url") { assertNative(args.url.startsWith("https://github.com/AvaloNero/CopilotBYOKManager") && args.with === null); return; }
+    if (cmd === "plugin:opener|open_url") { assertNative(args.url.startsWith("https://github.com/Arcueid77/CopilotBYOKManager") && args.with === null); return; }
     if (cmd === "set_connection_enabled") { const saved = connections.find(c => c.id === args.connectionId); assertNative(saved && typeof args.enabled === "boolean"); saved.enabled = args.enabled; revision++; return structuredClone(saved); }
     if (cmd === "upsert_connection") {
       const input = args.input, saved = connections.find(c => c.id === input.id);

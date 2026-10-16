@@ -19,9 +19,9 @@
   const languageSelect = document.querySelector("#interface-language");
   languageSelect.value = i18n.locale();
   const helpUrls = Object.freeze({
-    manual: "https://github.com/AvaloNero/CopilotBYOKManager/blob/main/README.md",
-    "manual-zh": "https://github.com/AvaloNero/CopilotBYOKManager/blob/main/README.zh-CN.md",
-    issues: "https://github.com/AvaloNero/CopilotBYOKManager/issues",
+    manual: "https://github.com/Arcueid77/CopilotBYOKManager/blob/main/README.md",
+    "manual-zh": "https://github.com/Arcueid77/CopilotBYOKManager/blob/main/README.zh-CN.md",
+    issues: "https://github.com/Arcueid77/CopilotBYOKManager/issues",
   });
 
   const routes = {
@@ -141,7 +141,7 @@
           baseUrl: "https://openrouter.ai/api/v1",
           providerKind: "openai",
           protocol: "chat-completions",
-          headers: { "HTTP-Referer": "https://github.com/AvaloNero/CopilotBYOKManager" },
+          headers: { "HTTP-Referer": "https://github.com/Arcueid77/CopilotBYOKManager" },
           models: [
             model("anthropic/claude-sonnet-4", "Claude Sonnet 4"),
             model("openai/gpt-5", "GPT-5"),

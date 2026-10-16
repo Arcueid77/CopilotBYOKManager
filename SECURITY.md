@@ -23,7 +23,7 @@ Use synthetic credentials and a minimal temporary fixture whenever possible.
 
 ## Reporting a vulnerability
 
-Use the [repository security page](https://github.com/AvaloNero/CopilotBYOKManager/security) and report suspected vulnerabilities privately through GitHub's private vulnerability reporting feature when enabled. Do not open a public proof of concept before the maintainer has had a reasonable opportunity to investigate.
+Use the [repository security page](https://github.com/Arcueid77/CopilotBYOKManager/security) and report suspected vulnerabilities privately through GitHub's private vulnerability reporting feature when enabled. Do not open a public proof of concept before the maintainer has had a reasonable opportunity to investigate.
 
 Reports are especially valuable for:
 

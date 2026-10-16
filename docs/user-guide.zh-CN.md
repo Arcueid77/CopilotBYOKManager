@@ -76,7 +76,7 @@ JetBrains 适配器仅针对[版本表中的 1.19 插件发行版](jetbrains-sup
 在终端中运行：
 
 ```bash
-git clone https://github.com/AvaloNero/CopilotBYOKManager.git
+git clone https://github.com/Arcueid77/CopilotBYOKManager.git
 cd CopilotBYOKManager
 npm ci
 npm run dev
@@ -284,7 +284,7 @@ another-model-id | 备用模型
 
 ## 获取帮助与参与开发
 
-使用问题可提交到 [GitHub Issues](https://github.com/AvaloNero/CopilotBYOKManager/issues)。建议提供操作系统、软件提交版本、相关客户端和插件版本、复现步骤、预期与实际结果，以及脱敏后的状态信息。安全问题请按 [SECURITY.md](../SECURITY.md) 私下报告。
+使用问题可提交到 [GitHub Issues](https://github.com/Arcueid77/CopilotBYOKManager/issues)。建议提供操作系统、软件提交版本、相关客户端和插件版本、复现步骤、预期与实际结果，以及脱敏后的状态信息。安全问题请按 [SECURITY.md](../SECURITY.md) 私下报告。
 
 更多资料：[文档索引](README.md) · [模型目录兼容性](provider-model-discovery.md) · [JetBrains 支持](jetbrains-support.md) · [用量来源](usage-sources.md) · [发行工程（英文）](release-engineering.md) · [发布标准](release-criteria.md) · [推广计划](promotion-plan.md)。
 

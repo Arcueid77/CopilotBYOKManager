@@ -29,7 +29,7 @@
     "targets": ["nsis"],
     "createUpdaterArtifacts": false,
     "publisher": "AvaloNero",
-    "homepage": "https://github.com/AvaloNero/CopilotBYOKManager",
+    "homepage": "https://github.com/Arcueid77/CopilotBYOKManager",
     "category": "DeveloperTool",
     "shortDescription": "Configure one provider. Publish it safely across your Copilot clients.",
     "icon": ["icons/icon.ico", "icons/icon.png", "icons/icon.icns"],

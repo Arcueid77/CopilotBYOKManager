@@ -31,7 +31,7 @@ Save a provider, publish it to your apps, then select a model in each app.
 ## Client and platform acceptance
 
 This candidate's outstanding acceptance is listed in the
-[release criteria](https://github.com/AvaloNero/CopilotBYOKManager/blob/{{COMMIT}}/docs/release-criteria.md).
+[release criteria](https://github.com/Arcueid77/CopilotBYOKManager/blob/{{COMMIT}}/docs/release-criteria.md).
 Windows clean-machine installation, Apple Silicon and Intel Mac checks, and real
 provider requests remain **acceptance pending** until a dated per-client record
 is linked there.
@@ -71,9 +71,9 @@ Copilot App 仅手动指引，JetBrains 仅限已审核的确切插件版本。
 
 Commit: `{{COMMIT}}` · Version: `v{{VERSION}}` · Checksums: `SHA256SUMS.txt`
 
-[English guide](https://github.com/AvaloNero/CopilotBYOKManager/blob/{{COMMIT}}/docs/user-guide.md)
-· [中文手册](https://github.com/AvaloNero/CopilotBYOKManager/blob/{{COMMIT}}/docs/user-guide.zh-CN.md)
-· [Issues](https://github.com/AvaloNero/CopilotBYOKManager/issues)
-· [Private security reporting](https://github.com/AvaloNero/CopilotBYOKManager/security)
+[English guide](https://github.com/Arcueid77/CopilotBYOKManager/blob/{{COMMIT}}/docs/user-guide.md)
+· [中文手册](https://github.com/Arcueid77/CopilotBYOKManager/blob/{{COMMIT}}/docs/user-guide.zh-CN.md)
+· [Issues](https://github.com/Arcueid77/CopilotBYOKManager/issues)
+· [Private security reporting](https://github.com/Arcueid77/CopilotBYOKManager/security)
 
 Independent project; not affiliated with or endorsed by GitHub or JetBrains. MIT.

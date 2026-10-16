@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { TAG_PATTERN, VERSION_PATTERN } from './check-release-version.mjs';
 
-export const REPOSITORY = 'AvaloNero/CopilotBYOKManager';
+export const REPOSITORY = 'Arcueid77/CopilotBYOKManager';
 export const PRODUCT = 'CopilotBYOKManager';
 export const APPLE_SECRET_NAMES = ['APPLE_CERTIFICATE_BASE64', 'APPLE_CERTIFICATE_PASSWORD', 'APPLE_SIGNING_IDENTITY', 'APPLE_API_KEY_ID', 'APPLE_API_ISSUER_ID', 'APPLE_API_PRIVATE_KEY_BASE64'];
 

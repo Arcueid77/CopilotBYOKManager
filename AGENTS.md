@@ -2,7 +2,7 @@
 
 This file is the entry point for a coding agent continuing the repository on `main`.
 
-The public repository is `AvaloNero/CopilotBYOKManager`. This is an unreleased product. Use `CopilotBYOKManager` for the product and configuration directory, `copilot-byok-manager` for packages/binaries, and `COPILOT_BYOK_MANAGER_*` for app-specific environment options. Do not add historical-brand aliases, automatic credential adoption or old-directory migration.
+The public repository is `Arcueid77/CopilotBYOKManager`. This is an unreleased product. Use `CopilotBYOKManager` for the product and configuration directory, `copilot-byok-manager` for packages/binaries, and `COPILOT_BYOK_MANAGER_*` for app-specific environment options. Do not add historical-brand aliases, automatic credential adoption or old-directory migration.
 
 ## Read first
 
