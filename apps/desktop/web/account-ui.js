@@ -280,7 +280,7 @@
             ? "actionRequired"
             : "skippedNotInstalled",
           detail: operation.supported
-            ? tr("浏览器试用：仅模拟打开入口，不证明真实登录；请在客户端完成后刷新")
+            ? tr("浏览器试用：已模拟打开登录入口")
             : operation.description,
         }));
         const launched = steps.filter(

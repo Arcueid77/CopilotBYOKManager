@@ -10,7 +10,7 @@ Overview, Providers, Apps and About: central endpoint/key/model profiles, model
 catalog discovery or manual entry, native-held previews, owned publication and
 revocation, and safe recovery. English / 简体中文 and Light / Dark / System.
 
-Saving, publishing, selecting a model, and completing a request are four different states.
+Save a provider, publish it to your apps, then select a model in each app.
 
 ## Downloads and trust
 
@@ -23,7 +23,7 @@ Saving, publishing, selecting a model, and completing a request are four differe
 - Optional Windows standalone ZIP: extract before running. This is **not fully
   portable**: state, credentials and client configuration still use user storage.
 - macOS Universal DMG: **{{MACOS_STATUS}}**. Drag the app to Applications.
-  Packaging floor: macOS 15.0. Universal slices do not prove real-device acceptance.
+  Packaging floor: macOS 15.0.
 - Compare the files with `SHA256SUMS.txt`; `release-metadata.json` records the exact
   source, architecture and signing checks. Checksums detect changed bytes, not a
   trusted publisher identity.
@@ -34,13 +34,13 @@ This candidate's outstanding acceptance is listed in the
 [release criteria](https://github.com/AvaloNero/CopilotBYOKManager/blob/{{COMMIT}}/docs/release-criteria.md).
 Windows clean-machine installation, Apple Silicon and Intel Mac checks, and real
 provider requests remain **acceptance pending** until a dated per-client record
-is linked there. Do not infer support from a compiled package or this template.
+is linked there.
 
 | Client | Configuration boundary | After publication |
 | --- | --- | --- |
 | VS Code Stable / Insiders / profiles | Automatic owned group projection; runtime acceptance pending | Select a model in the correct profile; test a minimal request |
 | Copilot CLI | Automatic single environment route; runtime acceptance pending | Start a new terminal and session; verify route/model |
-| JetBrains GitHub Copilot | Adapter-reviewed exact `1.19.0-252` and `1.19.0-261-{windows,macos,linux}-{x64,arm64}` plugin distributions only; no runtime-accepted version claimed | Close/reopen each IDE, sign in separately, choose a model and test |
+| JetBrains GitHub Copilot | Adapter-reviewed exact `1.19.0-252` and `1.19.0-261-{windows,macos,linux}-{x64,arm64}` plugin distributions; runtime acceptance pending | Close/reopen each IDE, sign in separately, choose a model and test |
 | Copilot App | Manual guidance only | Configure, select and verify in the App |
 
 ## Known limits and safety
@@ -62,10 +62,10 @@ is linked there. Do not infer support from a compiled package or this template.
 ## 中文摘要
 
 Provider 一次配置，安全发布到多个 Copilot 客户端。本版只开放总览、供应商、应用、关于。
-保存 Provider、发布配置、客户端选中模型、实际请求成功是四个不同状态。
+保存供应商，发布到应用，再到客户端选用模型。
 Windows 为未签名社区构建；Mac 仅在上文明确写明 Developer ID 签名、公证及票据验证时
-才属于正式签名产物。测试 DMG 不可冒充正式包。打包成功不等于干净机、两种 Mac 架构或
-真实客户端请求已验收。Copilot App 仅手动指引，JetBrains 仅限已审核的确切插件版本。
+才属于正式签名产物。测试 DMG 使用临时签名，未公证。
+Copilot App 仅手动指引，JetBrains 仅限已审核的确切插件版本。
 
 ## Source and support
 

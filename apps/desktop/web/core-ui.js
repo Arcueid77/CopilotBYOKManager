@@ -32,11 +32,11 @@
   function windowBehaviorDescription(data, native) {
     const behavior = data.windowBehavior;
     if (!native) return tr("浏览器试用不提供系统托盘。");
-    if (!behavior) return tr("窗口行为状态无法读取，请刷新后核对；不能确认是否会收起到托盘。");
+    if (!behavior) return tr("无法读取窗口设置，请刷新后重试。");
     if (behavior.preferencesAvailable === false) return tr("窗口偏好无法读取，原文件保留；本次关闭窗口将正常退出。请核对偏好文件后重新启动。");
     if (behavior.trayAvailable === false) return tr("系统托盘不可用，关闭窗口将正常退出。");
     if (behavior.closeAction === "exit") return tr("关闭窗口将退出程序。也可从托盘菜单退出；普通最小化仍留在任务栏。");
-    return behavior.closeToTray === true ? tr("关闭窗口收起到系统托盘；点击托盘图标恢复，右键菜单可退出。普通最小化仍留在任务栏。") : behavior.closeToTray === false ? tr("系统托盘不可用，关闭窗口将正常退出。") : tr("窗口行为状态无法读取，请刷新后核对；不能确认是否会收起到托盘。");
+    return behavior.closeToTray === true ? tr("关闭窗口收起到系统托盘；点击托盘图标恢复，右键菜单可退出。普通最小化仍留在任务栏。") : behavior.closeToTray === false ? tr("系统托盘不可用，关闭窗口将正常退出。") : tr("无法读取窗口设置，请刷新后重试。");
   }
   function about(snapshot, data, native, urls) {
     const behavior = windowBehaviorDescription(data, native);

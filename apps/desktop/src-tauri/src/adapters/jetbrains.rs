@@ -13,7 +13,7 @@ use uuid::Uuid;
 
 pub const PLUGIN_ID: &str = "com.github.copilot";
 pub const MANUAL_PROVIDER: &str = "This plugin version or endpoint is not supported by the automatic BYOK adapter. Update to a reviewed plugin version or use Copilot Chat > Manage Models. CopilotBYOKManager never reads client authentication or Password Safe.";
-pub const SIGN_IN: &str = "In each listed JetBrains IDE, use Tools > GitHub Copilot > Login to GitHub and complete the official browser flow. Check the selected account in each IDE. Public plugin metadata does not prove the IDE is running, authenticated, or configured.";
+pub const SIGN_IN: &str = "In each listed JetBrains IDE, use Tools > GitHub Copilot > Login to GitHub and complete the official browser flow. Check the selected account in each IDE.";
 const MAX_ENTRIES: usize = 128;
 const MAX_PROFILES: usize = 32;
 const MAX_JAR_BYTES: u64 = 64 * 1024 * 1024;

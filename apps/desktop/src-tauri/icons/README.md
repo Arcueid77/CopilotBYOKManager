@@ -3,8 +3,8 @@
 The maintainer requested a new application icon and a recognizable Copilot
 reference on 2026-10-15. The artwork combines a Copilot-inspired robot/goggle
 outline with a key on an indigo tile: a bring-your-own-key manager for Copilot
-clients. This adapted project icon does not imply GitHub or Microsoft
-affiliation, sponsorship or endorsement; their marks remain their property.
+clients. Created for the independent CopilotBYOKManager community project.
+GitHub and Microsoft retain ownership of their respective marks.
 
 ## Source and exports
 

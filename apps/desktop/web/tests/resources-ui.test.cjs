@@ -12,7 +12,7 @@ test("resource data is escaped and publication is not represented as verified cl
 test("resources unavailable in browser or storage recovery are not fabricated empty native catalogs", () => {
   const browser = render(null, null, false); assert.ok(browser.includes("浏览器试用不可用")); assert.ok(!browser.includes("尚无资源"));
   const unavailable = render(null, "Read-only recovery", true); assert.ok(unavailable.includes("资源存储不可用"));
-  const empty = render({ resources: [], bindings: [] }, null, true); assert.ok(empty.includes("保存不会自动发布"));
+  const empty = render({ resources: [], bindings: [] }, null, true); assert.ok(empty.includes("尚无资源。"));
 });
 test("review renders native semantic changes and owned content as escaped text", () => {
   const html = renderPlan({ operations: [{ title: "CLI <script>attack()</script>", change: "create", destination: 'file:fixture/<img src=x>', detail: "Public target", contentPreview: '</pre><script>attack()</script>' }, { title: "Manual app", change: "manual", detail: "No stable path" }] });

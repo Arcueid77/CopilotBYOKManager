@@ -40,7 +40,7 @@ test('About distinguishes native tray, unavailable tray and browser preview with
   const urls = { manual: 'https://example.invalid/manual', 'manual-zh': 'https://example.invalid/manual-zh', issues: 'https://example.invalid/issues', planned: 'https://example.invalid/plan' };
   assert.match(core.about(snapshot, { windowBehavior: { closeToTray: true } }, true, urls), /关闭窗口收起到系统托盘/);
   assert.match(core.about(snapshot, { windowBehavior: { closeToTray: false } }, true, urls), /关闭窗口将正常退出/);
-  assert.match(core.about(snapshot, {}, true, urls), /不能确认是否会收起到托盘/);
+  assert.match(core.about(snapshot, {}, true, urls), /无法读取窗口设置，请刷新后重试。/);
   const html = core.about(snapshot, {}, false, urls);
   assert.match(html, /浏览器试用不提供系统托盘|data-action="view-planned-features"|&lt;state&gt;/);
   assert.match(core.planned(), /尚未实现|入口暂未开放/);

@@ -25,9 +25,16 @@ async fn job<T: Send + 'static>(
 #[tauri::command]
 pub async fn get_resources(state: State<'_, ManagedState>) -> Result<ResourceOverview, String> {
     let store = state.store().map_err(error)?;
-    Ok(ResourceOverview { resources: store.resources().iter().filter(|record| !record.archived).cloned().collect(),
+    Ok(ResourceOverview {
+        resources: store
+            .resources()
+            .iter()
+            .filter(|record| !record.archived)
+            .cloned()
+            .collect(),
         bindings: store.resource_bindings().to_vec(),
-        detail: "Publication metadata is not proof of client consumption. Preview rechecks ownership, target availability and drift".into() })
+        detail: "Preview rechecks ownership, target availability and configuration changes".into(),
+    })
 }
 
 #[tauri::command(rename_all = "camelCase")]

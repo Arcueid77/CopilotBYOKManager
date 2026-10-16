@@ -691,7 +691,7 @@ const SCENARIOS = {
       s.preview = buildPreviewFromDraft(s, Date.now() - 45 * 60e3);
       conn.updatedAt = Date.now() - 5 * 60e3; // 预览之后连接被编辑
       conn.models[0].maxOut = 32768;
-      s.activity.unshift(mkAct("settings", "编辑连接「星河网关 · Claude 专线」", "info", "修改了模型 claude-sonnet-5 的输出限制。保存连接不等于发布配置：此前生成的部署预览已失效。", { label: "回到工作台重新预览", page: "workbench" }, 5 * 60e3));
+      s.activity.unshift(mkAct("settings", "编辑连接「星河网关 · Claude 专线」", "info", "修改了模型 claude-sonnet-5 的输出限制。此前生成的部署预览已失效，请重新预览。", { label: "回到工作台重新预览", page: "workbench" }, 5 * 60e3));
       return s;
     }
   },
@@ -1333,7 +1333,7 @@ function editorConn() {
 }
 function renderConnections() {
   const ed = editorConn();
-  return pageHead("连接与模型", "连接 = 服务商地址 + API Key + 协议 + 模型列表，只维护一份。保存连接不等于发布配置——修改后需回到工作台重新预览部署。",
+  return pageHead("连接与模型", "连接 = 服务商地址 + API Key + 协议 + 模型列表，只维护一份。修改后回到工作台预览并发布配置。",
     `<button class="btn btn-primary" data-action="new-conn">${icon("plus", 14)} 新建连接</button>`)
   + `<div class="grid" style="grid-template-columns:minmax(0,4fr) minmax(0,8fr);align-items:start">
     <div class="card"><div class="card-head"><div class="card-title">连接列表</div><span class="right"></span><span class="tiny muted">${state.connections.length} 个</span></div>
@@ -1346,7 +1346,7 @@ function renderConnections() {
       </div></div>
     <div class="card"><div class="card-head"><div class="card-title">${ed ? (ui.connNew ? "新建连接" : "编辑连接") : "连接详情"}</div>${ed && !ui.connNew ? `<span class="right"></span><span class="tiny faint">ID: ${esc(ed.id)}</span>` : ""}</div>
       <div class="card-body">${ed ? renderConnEditor(ed) : `<div class="empty"><div class="empty-title">选择左侧连接进行编辑</div></div>`}</div>
-      ${ed ? `<div class="card-foot row g8"><button class="btn btn-primary" data-action="save-conn">${icon("check", 14)} 保存连接</button><span class="tiny muted">保存不等于发布；发布在工作台进行</span><span class="right"></span>${ui.connNew ? `<button class="btn" data-action="cancel-new-conn">取消</button>` : `<button class="btn btn-danger" data-action="ask-delete-conn">${icon("trash", 14)} 删除连接</button>`}</div>` : ""}
+      ${ed ? `<div class="card-foot row g8"><button class="btn btn-primary" data-action="save-conn">${icon("check", 14)} 保存连接</button><span class="tiny muted">保存后到工作台预览并发布</span><span class="right"></span>${ui.connNew ? `<button class="btn" data-action="cancel-new-conn">取消</button>` : `<button class="btn btn-danger" data-action="ask-delete-conn">${icon("trash", 14)} 删除连接</button>`}</div>` : ""}
     </div>
   </div>`;
 }
@@ -1814,7 +1814,7 @@ function renderSettings() {
       </div></div>
       <div class="card"><div class="card-head"><span style="color:var(--accent)">${icon("info", 16)}</span><div class="card-title">关于本原型</div></div>
       <div class="card-body small muted">
-        这是 Copilot BYOK Manager 的<b>浏览器交互原型</b>：所有数据为模拟，不访问真实服务，不执行安装、登录、写入或采集。真实产品为 Windows 桌面应用（保留 macOS / Linux 检测能力）。当前为预发布阶段，「原型中可用」不代表「所有版本均已验证」。
+        这是 Copilot BYOK Manager 的<b>浏览器交互原型</b>：所有数据为模拟，不访问真实服务，不执行安装、登录、写入或采集。真实产品为 Windows 桌面应用（保留 macOS / Linux 检测能力）。
         <div class="row g8 mt12"><button class="btn btn-sm" data-action="open-help">${icon("question", 13)} 使用指南</button><button class="btn btn-sm" data-action="reset-scenario">${icon("refresh", 13)} 重置当前场景</button></div>
       </div></div>
     </div>
@@ -2061,7 +2061,7 @@ function saveConn() {
   delete ed.apiKeyDraft; /* 密钥不落状态、不回显 */
   if (ed.models.length && !ed.models.some(m => m.isDefault && m.enabled)) { const f = ed.models.find(m => m.enabled); if (f) f.isDefault = true; }
   ed.updatedAt = Date.now();
-  if (ui.connNew) { state.connections.push(ed); addAct("settings", "新建连接「" + ed.name + "」", "info", "已保存（未发布）。保存连接不等于发布配置。", { label: "去工作台发布", page: "workbench" }); }
+  if (ui.connNew) { state.connections.push(ed); addAct("settings", "新建连接「" + ed.name + "」", "info", "已保存，前往工作台发布。", { label: "去工作台发布", page: "workbench" }); }
   else {
     const i = state.connections.findIndex(c => c.id === ed.id);
     if (i >= 0) state.connections[i] = ed;

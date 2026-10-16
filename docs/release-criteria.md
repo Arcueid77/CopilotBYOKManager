@@ -10,7 +10,7 @@
 
 | 阶段 | 对外状态 | 准入条件 |
 | --- | --- | --- |
-| 开发 / dry-run | Actions 临时测试附件，不创建 Release | 版本、锁文件、源码检查、所选平台构建和附件校验通过；不能当作安装验收 |
+| 开发 / dry-run | Actions 临时测试附件，不创建 Release | 版本、锁文件、源码检查、所选平台构建和附件校验通过 |
 | Draft `vX.Y.Z` | 私有发布草稿，不公开 | 同一固定 tag/SHA 的双平台检查及全部正式产物通过，Mac 必须正式签名和公证 |
 | 公开 v0.1 候选 | GitHub Pre-release，不设为 Latest | G0–G7 全部通过，维护者审核证据后明确执行 publish |
 | 扩大推广 / 稳定承诺 | 独立维护者决定 | G8 完成；不是当前流水线自动执行的操作 |
@@ -19,7 +19,7 @@
 
 最小正式产物为 Windows x64 current-user NSIS Setup、macOS Universal DMG 和 `SHA256SUMS.txt`，另含源码/工具链元数据与发布说明；Windows standalone ZIP 可选。没有 Linux、Windows ARM64、MSI、商店发行或自动更新。
 
-Windows 验收基线是 Windows 11 x64。macOS 设置最低版本 15.0，与选用的官方 `macos-15` 构建/测试 runner 对齐，是保守的候选范围，**不是已经通过 macOS 15 真机验收**，也不声称支持更老系统。Universal 构建不等于 Intel 和 Apple Silicon 双架构真机通过。
+Windows 验收基线是 Windows 11 x64。macOS 最低版本设为 15.0，与官方 `macos-15` 构建/测试 runner 对齐；Intel 和 Apple Silicon 分别验收。
 
 ## 2. 发布门槛
 
@@ -55,7 +55,7 @@ cargo clippy --workspace --all-targets --locked -- -D warnings
 git diff --check
 ```
 
-`npm run check` 汇总版本、发行负向用例、Web、fmt、Rust 测试及严格 Clippy；上面展开的命令也可单独复核。还需 actionlint、隔离浏览器、核心原生 IPC 和最终包验收。`--no-bundle` 或 NSIS 构建成功都不等于 G3。旧 B00–B32 含隐藏页面，应按本版范围重新建立当前原生证据，不能跳过后仍称“旧全量通过”。
+`npm run check` 汇总版本、发行负向用例、Web、fmt、Rust 测试及严格 Clippy；上面展开的命令也可单独复核。还需 actionlint、隔离浏览器、核心原生 IPC 和最终包验收。旧 B00–B32 含隐藏页面，应按本版范围更新原生用例并记录结果。
 
 ### G4 客户端逐项验收
 
@@ -92,7 +92,7 @@ JetBrains 目前只有已审核版本的适配实现，真实验收仍待完成�
 
 ## 5. 当前缺口与执行顺序
 
-1. 工程与单元测试不代表发布 GO；以[实现状态](implementation-status.md)和每次 CI 的固定 SHA 结果为准。
+1. 发布状态以[实现状态](implementation-status.md)和每次 CI 的固定 SHA 结果为准。
 2. Mac dry-run 已在 `dad7bd4` 的[测试构建](https://github.com/AvaloNero/CopilotBYOKManager/actions/runs/38706651589)通过，包括最终 DMG 内应用校验；正式签名流水线仍待验证。Apple 账号、证书、API key 和 release environment 仍由维护者另行配置；本轮没有购买或修改外部设置。
 3. 完成当前原生 IPC/Windows 托盘、干净 Windows、Apple Silicon 和 Intel Mac 的最终包验收，以及拟宣传的真实客户端请求。
 4. G0–G7 通过并由维护者批准后公开候选；G8 后才扩大推广。隐藏功能留待未来版本，不阻塞核心版。

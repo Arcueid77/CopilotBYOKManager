@@ -53,23 +53,23 @@
   "待正式交付和干净 Windows 验收": ["待正式交付和干净 Windows 验收", "Final distribution and clean Windows acceptance pending"],
   "仅记录现有规划，不承诺上线日期；隐藏能力的数据和后端测试保留。": ["仅记录现有规划，不承诺上线日期；隐藏能力的数据和后端测试保留。", "Existing plans only, without promised dates. Hidden capabilities retain their data and backend tests."],
   "请选择供应商": ["请选择供应商", "Choose a provider"],
-  "窗口行为状态无法读取，请刷新后核对；不能确认是否会收起到托盘。": ["窗口行为状态无法读取，请刷新后核对；不能确认是否会收起到托盘。", "Window behavior could not be read. Refresh and check; hiding to tray is not confirmed."],
-  "模型目录可访问；不代表已验证推理能力。": [
-    "模型目录可访问；不代表已验证推理能力。",
-    "Model catalog available; inference is not verified."
+  "无法读取窗口设置，请刷新后重试。": ["无法读取窗口设置，请刷新后重试。", "Window settings could not be read. Refresh and try again."],
+  "模型目录可访问。": [
+    "模型目录可访问。",
+    "Model catalog available."
   ],
-  "目录条目不证明已使用；本地用量按上方条件筛选。": [
-    "目录条目不证明已使用；本地用量按上方条件筛选。",
-    "Catalog entries do not prove usage. Local observations follow the filters above."
+  "本地用量按上方条件筛选。": [
+    "本地用量按上方条件筛选。",
+    "Local usage follows the filters above."
   ],
   "目录与本地观察的区别": ["目录与本地观察的区别", "Catalogs and local observations"],
   "已勾选 {0} 个新模型，保存连接时一起保存。": [
     "已勾选 {0} 个新模型，保存供应商时一起保存。",
     "{0} new models checked. Save provider saves them together."
   ],
-  "只读取当前端点的模型目录，不发送对话请求。勾选即加入草稿，不会自动全选。": [
-    "只读取当前端点的模型目录，不发送对话请求。勾选即加入草稿，不会自动全选。",
-    "Reads only this endpoint's model catalog, without chat requests. Checked models join the draft; nothing is selected automatically."
+  "获取供应商的模型列表，勾选需要的模型即可加入草稿。": [
+    "获取供应商的模型列表，勾选需要的模型即可加入草稿。",
+    "Fetch the provider's model list and select models to add to your draft."
   ],
   "端点设置已改变，目录勾选已清除；已配置和手动模型保留。": [
     "端点设置已改变，目录勾选已清除；已配置和手动模型保留。",
@@ -316,9 +316,9 @@
     "仅模拟登录入口，未启动真实客户端",
     "Simulated sign-in entry point; no real client was launched"
   ],
-  "浏览器试用：仅模拟打开入口，不证明真实登录；请在客户端完成后刷新": [
-    "浏览器试用：仅模拟打开入口，不证明真实登录；请在客户端完成后刷新",
-    "Browser preview: simulates opening sign-in only, not authentication. Complete sign-in in the client, then refresh."
+  "浏览器试用：已模拟打开登录入口": [
+    "浏览器试用：已模拟打开登录入口",
+    "Browser preview: simulated opening the sign-in page."
   ],
   "模拟登录计划缺失或已使用，请重新预览": [
     "模拟登录计划缺失或已使用，请重新预览",
@@ -552,9 +552,9 @@
     "此操作后，本软件将无法回滚尚未完成的变更。",
     "After this operation, the app cannot roll back unfinished changes."
   ],
-  "这不代表配置正确或发布成功。再次发布前请核对客户端。": [
-    "这不代表配置正确或发布成功。再次发布前请核对客户端。",
-    "This does not mean configuration is correct or deployment succeeded. Check clients before deploying again."
+  "再次发布前请核对客户端配置。": [
+    "再次发布前请核对客户端配置。",
+    "Check client configuration before deploying again."
   ],
   "我确认保留现有文件，并丢弃待恢复的回滚数据。": [
     "我确认保留现有文件，并丢弃待恢复的回滚数据。",
@@ -608,9 +608,9 @@
     "在 App 内选择供应商和模型，并验证请求。",
     "Select the provider and model in the app, then verify a request."
   ],
-  "这里记录你的手动确认，不读取或验证 App 的私有供应商配置。": [
-    "这里记录你的手动确认，不读取或验证 App 的私有供应商配置。",
-    "This records your manual confirmation; it does not read or verify the app's private provider configuration."
+  "完成 App 内配置后，保存你的确认。": [
+    "完成 App 内配置后，保存你的确认。",
+    "Save your confirmation after completing setup in the app."
   ],
   "手动配置 Copilot App": [
     "手动配置 Copilot App",
@@ -620,9 +620,9 @@
     "保存我的确认",
     "Save my confirmation"
   ],
-  "逐个检查客户端显示的账号。这只记录你的确认，不代替自动验证。": [
-    "逐个检查客户端显示的账号。这只记录你的确认，不代替自动验证。",
-    "Check the account shown in every client. This records your confirmation, not automatic verification."
+  "核对每个客户端显示的账号后，保存你的确认。": [
+    "核对每个客户端显示的账号后，保存你的确认。",
+    "Check the account shown in each client, then save your confirmation."
   ],
   "GitHub 用户名": [
     "GitHub 用户名",
@@ -819,10 +819,6 @@
   "获取模型": [
     "获取模型",
     "Fetch models"
-  ],
-  "只读取当前端点的模型目录，不发送对话请求。勾选后添加，不会自动全选。": [
-    "只读取当前端点的模型目录，不发送对话请求。勾选后添加，不会自动全选。",
-    "Reads only the current endpoint's model catalog, without a chat request. Select models to add; none are selected automatically."
   ],
   "筛选模型": [
     "筛选模型",
@@ -1095,10 +1091,6 @@
   "逐个核对同一 GitHub 账号": [
     "逐个核对同一 GitHub 账号",
     "Check the same GitHub account in every client"
-  ],
-  "密钥保存在系统凭据库，不回读到界面。测试连接仅查询模型目录，不验证推理能力。": [
-    "密钥保存在系统凭据库，不回读到界面。测试连接仅查询模型目录，不验证推理能力。",
-    "Keys stay in the OS credential store and are never read back to the UI. Test connection checks only the model catalog, not inference."
   ],
   "最近配置操作": [
     "最近配置操作",
@@ -1992,9 +1984,9 @@
     "查看指引不写入配置、不显示密钥。支持的自动部署在确认发布后，会在专用 BYOK 文件和私有回滚数据中保存供应商密钥。",
     "Viewing this guide writes no configuration and displays no keys. After confirmation, supported automatic deployments store the provider key in the dedicated BYOK file and private rollback data."
   ],
-  "不读取 Password Safe、登录凭据或会话。配置写入不等于登录或请求成功；如未登录，请自行完成官方 Login to GitHub 流程。App 的确认不能覆盖此 IDE。": [
-    "不读取 Password Safe、登录凭据或会话。配置写入不等于登录或请求成功；如未登录，请自行完成官方 Login to GitHub 流程。App 的确认不能覆盖此 IDE。",
-    "Does not read Password Safe, sign-in credentials or sessions. Writing configuration does not prove authentication or successful requests. Complete official Login to GitHub if needed. App confirmation does not cover this IDE."
+  "请在每个 IDE 中通过 Tools > GitHub Copilot > Login to GitHub 登录并核对账号。": [
+    "请在每个 IDE 中通过 Tools > GitHub Copilot > Login to GitHub 登录并核对账号。",
+    "In each IDE, sign in through Tools > GitHub Copilot > Login to GitHub and check the account."
   ],
   "官方插件": [
     "官方插件",
@@ -2008,9 +2000,9 @@
     "浏览器试用 · 示例数据 · 发布仅为模拟，不修改电脑",
     "Browser preview · sample data · simulated deployment only; no changes to your computer"
   ],
-  "连接可管理，发布配置与客户端实际选用分开显示": [
-    "连接可管理，发布配置与客户端实际选用分开显示",
-    "Connections can be managed; deployed configuration and actual client model selection are shown separately"
+  "管理供应商并发布到应用": [
+    "管理供应商并发布到应用",
+    "Manage providers and publish to apps"
   ],
   "有事项需要核对": [
     "有事项需要核对",
@@ -2027,10 +2019,6 @@
   "客户端管理": [
     "管理应用",
     "Manage apps"
-  ],
-  "仅核验本软件发布的配置，不读取当前所选模型。VS Code / JetBrains 保留其他供应商；CLI 环境路由一次一个；App 手动配置。": [
-    "仅核验本软件发布的配置，不读取当前所选模型。VS Code / JetBrains 保留其他供应商；CLI 环境路由一次一个；App 手动配置。",
-    "Verifies only configuration deployed by this app, not the currently selected model. VS Code / JetBrains retain other providers; CLI uses one environment route at a time; App setup is manual."
   ],
   "＋ 添加连接": [
     "＋ 添加供应商",
@@ -2083,10 +2071,6 @@
   "查看记录": [
     "查看记录",
     "View history"
-  ],
-  "以上为配置处理结果，不证明已登录、已选用模型或真实请求成功。": [
-    "以上为配置处理结果，不证明已登录、已选用模型或真实请求成功。",
-    "These are configuration results, not proof of sign-in, model selection or a successful real request."
   ],
   "处理中": [
     "处理中",
@@ -2144,9 +2128,9 @@
     "核对客户端",
     "Review clients"
   ],
-  "部分组件状态未知，不能确认安装完整。": [
-    "部分组件状态未知，不能确认安装完整。",
-    "Some component states are unknown; installation completeness cannot be confirmed."
+  "部分组件状态未知，请重新检测。": [
+    "部分组件状态未知，请重新检测。",
+    "Some component states are unknown. Scan again."
   ],
   "查看安装计划": [
     "查看安装计划",
@@ -2200,25 +2184,25 @@
     "{0} 个模型",
     "Models: {0}"
   ],
-  "来源状态未提供，不能确认已发布": [
-    "来源状态未提供，不能确认已发布",
-    "Source status was not provided; deployment cannot be confirmed"
+  "发布状态暂不可用": [
+    "发布状态暂不可用",
+    "Publication status is unavailable"
   ],
   "当前版本或配置不支持自动发布，请到客户端页核对": [
     "当前版本或配置不支持自动发布，请到客户端页核对",
     "This version or configuration does not support automatic deployment; check the Clients page"
   ],
-  "手动添加供应商 · 无已审核的自动写入接口": [
-    "手动添加供应商 · 无已审核的自动写入接口",
-    "Manual provider setup · no reviewed automatic write interface"
+  "在 Copilot App 中手动添加供应商": [
+    "在 Copilot App 中手动添加供应商",
+    "Add the provider manually in Copilot App"
   ],
   "未检测到客户端": [
     "未检测到客户端",
     "Client not detected"
   ],
-  "暂无本软件可核验的 BYOK 来源": [
-    "暂无本软件可核验的 BYOK 来源",
-    "No BYOK sources verifiable by this app yet"
+  "尚无受管供应商": [
+    "尚无受管供应商",
+    "No managed providers yet"
   ],
   "启用 {0}": [
     "启用 {0}",
@@ -2236,9 +2220,9 @@
     "空目录：发布将移除本连接分组",
     "Empty catalog: deployment removes this connection's group"
   ],
-  "只测试模型目录接口，不验证推理能力": [
-    "只测试模型目录接口，不验证推理能力",
-    "Tests only the model catalog endpoint, not inference"
+  "检查模型目录接口": [
+    "检查模型目录接口",
+    "Check the model catalog endpoint"
   ],
   "测试连接": [
     "测试模型目录",
@@ -2276,9 +2260,9 @@
     "仅更新本连接的供应商分组，保留其他来源；共享 BYOK 配置去重写入。重启相关 IDE 后，在模型选择器中选用。",
     "Updates only this connection's provider group and retains other sources. Shared BYOK writes are deduplicated. Restart affected IDEs, then select the model."
   ],
-  "没有已审核的文档化自动写入接口，请在 App 内手动添加供应商；不读写私有数据库或登录凭据。": [
-    "没有已审核的文档化自动写入接口，请在 App 内手动添加供应商；不读写私有数据库或登录凭据。",
-    "No reviewed, documented automatic write interface. Add the provider manually in the app; private databases and sign-in credentials are not read or written."
+  "请在 Copilot App 中手动添加供应商。": [
+    "请在 Copilot App 中手动添加供应商。",
+    "Add the provider manually in Copilot App."
   ],
   "本软件使用旧式环境变量方式：替换 CLI 的单一路由，首选模型写入 COPILOT_MODEL。请新开终端和 CLI 会话，此覆盖生效时不要期待使用 GitHub 官方路由。": [
     "本软件使用旧式环境变量方式：替换 CLI 的单一路由，首选模型写入 COPILOT_MODEL。请新开终端和 CLI 会话，此覆盖生效时不要期待使用 GitHub 官方路由。",
@@ -2356,9 +2340,9 @@
     "模型目录接口已响应，但列表为空。可手动填写模型 ID。",
     "The catalog endpoint responded with an empty list. Enter model IDs manually."
   ],
-  "模型目录可访问。勾选后添加，不代表已验证推理能力。": [
-    "模型目录可访问。勾选后添加，不代表已验证推理能力。",
-    "Model catalog is accessible. Select models to add; this does not verify inference."
+  "模型目录可访问，勾选模型即可添加。": [
+    "模型目录可访问，勾选模型即可添加。",
+    "Model catalog available. Select models to add."
   ],
   "首选模型不在启用列表中，请重新选择。": [
     "首选模型不在启用列表中，请重新选择。",
@@ -2400,9 +2384,9 @@
     "受管资源配置已移除",
     "Managed resource configuration removed"
   ],
-  "仅写入支持的目标，手动客户端不计为同步成功。": [
-    "仅写入支持的目标，手动客户端不计为同步成功。",
-    "Writes only to supported targets; manual clients are not counted as successfully synchronized."
+  "写入支持的目标，其余客户端请按指引手动配置。": [
+    "写入支持的目标，其余客户端请按指引手动配置。",
+    "Writes to supported targets. Follow the manual steps for other clients."
   ],
   "仅移除已核验的受管配置，保留用户条目。": [
     "仅移除已核验的受管配置，保留用户条目。",
@@ -2448,9 +2432,9 @@
     "内容或不含凭据的 HTTPS MCP 地址",
     "Content or a credential-free HTTPS MCP URL"
   ],
-  "指令面向全部文件；技能填写 Markdown 正文，脚本与资源手动管理。MCP 不接受请求头、密钥或查询参数。保存不会发布。": [
-    "指令面向全部文件；技能填写 Markdown 正文，脚本与资源手动管理。MCP 不接受请求头、密钥或查询参数。保存不会发布。",
-    "Instructions apply to all files. Skills contain Markdown only; manage scripts and assets manually. MCP accepts no headers, keys or query parameters. Saving does not deploy."
+  "指令面向全部文件；技能填写 Markdown 正文，脚本与资源手动管理。MCP 不接受请求头、密钥或查询参数。": [
+    "指令面向全部文件；技能填写 Markdown 正文，脚本与资源手动管理。MCP 不接受请求头、密钥或查询参数。",
+    "Instructions apply to all files. Skills contain Markdown only; manage scripts and assets manually. MCP accepts no headers, keys or query parameters."
   ],
   "添加资源": [
     "添加资源",
@@ -2504,9 +2488,9 @@
     "资源存储不可用，请核对恢复状态。",
     "Resource storage unavailable. Check recovery status."
   ],
-  "尚无资源；保存不会自动发布。": [
-    "尚无资源；保存不会自动发布。",
-    "No resources yet; saving does not deploy automatically."
+  "尚无资源。": [
+    "尚无资源。",
+    "No resources yet."
   ],
   "尚未发布": [
     "尚未发布",
@@ -3012,9 +2996,9 @@
     "浏览器试用 · 不读取真实用量、额度或账单",
     "Browser preview · no real usage, quota or Billing is read"
   ],
-  "JetBrains 用量：未覆盖。尚未验证其 OTel 导入格式，不读取 IDE 日志，也不将 CLI 记录猜测为 JetBrains 用量。缺失数据保持未知，不是零。": [
-    "JetBrains 用量：未覆盖。尚未验证其 OTel 导入格式，不读取 IDE 日志，也不将 CLI 记录猜测为 JetBrains 用量。缺失数据保持未知，不是零。",
-    "JetBrains usage: not covered. Its OTel import format has not been verified. IDE logs are not read and CLI records are not guessed to be JetBrains usage. Missing data remains unknown, not zero."
+  "JetBrains 用量：暂未支持。": [
+    "JetBrains 用量：暂未支持。",
+    "JetBrains usage: not yet supported."
   ],
   "数据来源 / 价格": [
     "数据来源 / 价格",
@@ -3076,9 +3060,9 @@
     "来源版本： {0}",
     "Source version: {0}"
   ],
-  "历史估算保留原快照。Token 缺失或价格档位不明时不估算；零价格不等于价格缺失。": [
-    "历史估算保留原快照。Token 缺失或价格档位不明时不估算；零价格不等于价格缺失。",
-    "Historical estimates retain their original snapshot. Missing tokens or ambiguous price tiers prevent estimates. A zero price is not a missing price."
+  "历史估算保留原价格快照。缺少 Token 或价格档位时显示未知；零价格按免费计。": [
+    "历史估算保留原价格快照。缺少 Token 或价格档位时显示未知；零价格按免费计。",
+    "Historical estimates retain their price snapshot. Missing tokens or price tiers are shown as unknown; a zero price is treated as free."
   ],
   "查找价格": [
     "查找价格",
@@ -3176,9 +3160,9 @@
     "覆盖限制",
     "Coverage limits"
   ],
-  "CLI 累计记录不能证明输入语义或具体客户端。VS Code 仅贡献同意后导出的支持记录。停用保留元数据，清除只删除本软件导入的数据；停止 VS Code 导出还需关闭 OTel。": [
-    "CLI 累计记录不能证明输入语义或具体客户端。VS Code 仅贡献同意后导出的支持记录。停用保留元数据，清除只删除本软件导入的数据；停止 VS Code 导出还需关闭 OTel。",
-    "Cumulative CLI records do not prove input semantics or the originating client. VS Code contributes only supported records exported after opt-in. Disabling retains metadata; clearing deletes only this app's imports. To stop VS Code export, also disable OTel."
+  "CLI 累计记录的输入分类与来源客户端可能未知。VS Code 使用启用导出后的记录。停用保留数据，清除仅删除本软件的导入数据；停止 VS Code 导出还需关闭 OTel。": [
+    "CLI 累计记录的输入分类与来源客户端可能未知。VS Code 使用启用导出后的记录。停用保留数据，清除仅删除本软件的导入数据；停止 VS Code 导出还需关闭 OTel。",
+    "Input categories and source clients may be unknown in cumulative CLI records. VS Code uses records exported after opt-in. Disabling retains data; clearing deletes this app's imports. Also disable OTel to stop VS Code export."
   ],
   "查看": [
     "查看",
@@ -3300,9 +3284,9 @@
     "{0} 个模型 / 路由条目",
     "{0} model / route entries"
   ],
-  "本地用量遵循上方筛选。配置、运行时及所选账单月份的模型仍可显示；目录中的模型不证明请求路由。": [
-    "本地用量遵循上方筛选。配置、运行时及所选账单月份的模型仍可显示；目录中的模型不证明请求路由。",
-    "Local usage follows the filters above. Models from configuration, runtime and the selected Billing month can still appear. Catalog entries do not prove request routing."
+  "模型目录汇总配置、运行时和所选账单月份中的模型；本地用量按上方条件筛选。": [
+    "模型目录汇总配置、运行时和所选账单月份中的模型；本地用量按上方条件筛选。",
+    "The catalog combines models from configuration, runtime and the selected Billing month. Local usage follows the filters above."
   ],
   "可左右滚动查看完整指标，模型列固定；聚焦表格后也可用左右方向键。": [
     "可左右滚动查看完整指标，模型列固定；聚焦表格后也可用左右方向键。",
@@ -3376,9 +3360,9 @@
     "尚无官方金额。",
     "No official amount available yet."
   ],
-  "查询成功，无条目；不代表个人覆盖范围外的用量为零。": [
-    "查询成功，无条目；不代表个人覆盖范围外的用量为零。",
-    "Query succeeded with no items. Usage outside personal account coverage is not assumed to be zero."
+  "所选月份暂无个人账单条目。": [
+    "所选月份暂无个人账单条目。",
+    "No personal billing entries for the selected month."
   ],
   "重置： {0}": [
     "重置： {0}",
@@ -3448,9 +3432,9 @@
     "不限量",
     "Unlimited"
   ],
-  "运行时返回空额度列表，不能推断额度为零。": [
-    "运行时返回空额度列表，不能推断额度为零。",
-    "The runtime returned an empty quota list. This does not imply zero allowance."
+  "运行时暂无额度数据。": [
+    "运行时暂无额度数据。",
+    "No quota data is currently available from the runtime."
   ],
   "· 运行时 {0} · 观察时间 {1}{2}": [
     "· 运行时 {0} · 观察时间 {1}{2}",

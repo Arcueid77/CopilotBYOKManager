@@ -1,22 +1,22 @@
 # CopilotBYOKManager 本机自动验证
 
-本机入口已实现。A 是代码/浏览器回归，B 是隔离的真实 Windows WebView/IPC 集成测试，C1 使用现有环境观察真实能力，C2 为专用空白用户保留可接续验收入口。维护者本轮选择现有环境，未创建用户或 VM，未执行 C2 安装验收。各次实际结果以仓库外的报告为准；本文不把未执行的项目算作通过。
+本机入口已实现。A 是代码/浏览器回归，B 是隔离的真实 Windows WebView/IPC 集成测试，C1 使用现有环境观察真实能力，C2 为专用空白用户保留可接续验收入口。维护者本轮选择现有环境，未创建用户或 VM，未执行 C2 安装验收。各次实际结果以仓库外的报告为准。
 
-当前状态更新于 2026-10-13，见 [实现与验收状态](implementation-status.md)。下文注明日期的 HostObserve、NativeIsolated 与 Rider 记录属于各自源码和环境，不能自动沿用到新提交。当前程序和验证工具统一使用 CopilotBYOKManager 标识；下列命令与路径用于新执行，历史报告仍以各次运行的原始 manifest 为准。
+当前状态更新于 2026-10-13，见 [实现与验收状态](implementation-status.md)。下文注明日期的 HostObserve、NativeIsolated 与 Rider 记录属于各自源码和环境。当前程序和验证工具统一使用 CopilotBYOKManager 标识；下列命令与路径用于新执行，历史报告仍以各次运行的原始 manifest 为准。
 
-2026-10-14 核心配置版只开放总览、供应商、应用、关于。当前隔离浏览器入口针对四页、双语、双主题、表单/发布/恢复、关闭选项成功/失败/损坏、菜单语言合并更新及隐藏模块不加载进行回归，保留扩展模块的单元和原生后端测试。下方 B00–B32 的旧 UI 套件含已隐藏页面导航；重新执行前须适配，不能把工具语法检查或旧版本结果算作本版全量原生通过。Windows 关闭至托盘/直接退出选项及重启保存、左键恢复、右键菜单及退出、菜单语言、重复启动唤回和退出后进程/托盘清理，另需隔离的真实系统交互检查。
+2026-10-14 核心配置版只开放总览、供应商、应用、关于。当前隔离浏览器入口针对四页、双语、双主题、表单/发布/恢复、关闭选项成功/失败/损坏、菜单语言合并更新及隐藏模块不加载进行回归，保留扩展模块的单元和原生后端测试。下方 B00–B32 的旧 UI 套件含已隐藏页面导航；重新执行前须适配当前页面。Windows 关闭至托盘/直接退出选项及重启保存、左键恢复、右键菜单及退出、菜单语言、重复启动唤回和退出后进程/托盘清理，另需隔离的真实系统交互检查。
 
-完成这些验证不等于发布达标。维护者于 2026-10-15 批准四页核心版为 v0.1 范围，按[实现规范 §21.1](mvp-implementation-spec.md#211-v01-core-configuration-release)及[发布标准](release-criteria.md)判定。旧 B/C2 中的 Resources 消费、Billing、独立授权和 Usage 新日志验收保留为扩展版待办，不是 v0.1 门槛，也不能改成 PASS。
+维护者于 2026-10-15 批准四页核心版为 v0.1 范围，按[实现规范 §21.1](mvp-implementation-spec.md#211-v01-core-configuration-release)及[发布标准](release-criteria.md)判定。旧 B/C2 中的 Resources 消费、Billing、独立授权和 Usage 新日志验收保留为扩展版待办。
 
 ## v0.1 当前核心验收入口
 
 - 源码：`npm ci`、`npm run check:version`、`npm run test:release`、`npm run check` 和差异检查；锁文件必须使用。Release 在同一固定 SHA 上独立重复检查。
-- 界面对齐：安装好的 Playwright/Chromium 路径按下文环境变量指定后，运行 `node scripts/check-layout.cjs`。覆盖四页、中英文、明暗主题及 960/1180/1440px 宽度，并检查长名称、不同长度卡片、弹窗滚动和草稿保存。截图目录由 `COPILOT_BYOK_MANAGER_CAPTURE_DIR` 指定；改动前可用 `--capture-only` 保留基线，但该模式不执行对齐断言。只用隔离假数据，不代表原生或客户端验收。
+- 界面对齐：安装好的 Playwright/Chromium 路径按下文环境变量指定后，运行 `node scripts/check-layout.cjs`。覆盖四页、中英文、明暗主题及 960/1180/1440px 宽度，并检查长名称、不同长度卡片、弹窗滚动和草稿保存。截图目录由 `COPILOT_BYOK_MANAGER_CAPTURE_DIR` 指定；改动前可用 `--capture-only` 保留基线，但该模式不执行对齐断言。使用隔离假数据。
 - 包：新发行入口为 [package-windows.ps1](../scripts/package-windows.ps1)（current-user NSIS + 免安装 ZIP）和 [package-macos.mjs](../scripts/package-macos.mjs)（Universal DMG）；命令及校验和装配见[发行工程（英文）](release-engineering.md)。旧 `package-local.ps1` / PrepareLive 是隔离验收准备入口，不是公开发行附件生成器。
 - Windows：以最终 Draft 安装包和哈希，在干净用户验收 WebView2、无开发工具安装、开始菜单、卸载项、重开、托盘/退出及客户端配置不受卸载影响。未签名须明确披露，不以“可信发布者”作为本版硬门槛。
 - Mac：本 Windows 环境不能验证构建、公证或桌面行为。由 GitHub macOS runner 及真实 Intel/Apple Silicon 分别完成签名、DMG 安装、Finder 启动、Keychain CRUD、CLI 检测、模型发布/请求、关闭窗口和 Cmd+Q，详见[Apple 与真机清单（英文）](release-secrets.md)。
-- 原生核心：适配 B00–B08、B19–B22、B26–B29、B31–B32 中与当前四页有关的路径，保留恢复/密钥/事务不变量；旧 B09–B18、B23–B25、B30 的扩展页面流程不得为过验收而重新开放。不能把子集通过称为完整旧套件通过。
-- 真实客户端：精确版本、模型可见、选用、最小请求和安全撤销分别记录；只发经授权的不含项目内容的短消息。App 仍手动；JetBrains/Rider 未恢复授权前继续延期，不宣称已验收。
+- 原生核心：适配 B00–B08、B19–B22、B26–B29、B31–B32 中与当前四页有关的路径，保留恢复/密钥/事务不变量；旧 B09–B18、B23–B25、B30 的扩展页面流程不得为过验收而重新开放。
+- 真实客户端：精确版本、模型可见、选用、最小请求和安全撤销分别记录；只发经授权的不含项目内容的短消息。App 仍手动；JetBrains/Rider 未恢复授权前继续延期。
 
 下文为既有分层工具和历史记录。C1/完整 C2 会访问扩展配额/用量接口，不应不加筛选地作为本版核心验收执行。扩展项延期不减少安全回归，也不允许删已有数据。当前源自动/模拟检查、包生成、真实桌面、干净安装和真实请求是五种不同证据。
 
@@ -24,7 +24,7 @@
 
 应用改动已提交为 `3791283`：Web 检查 46 项通过（桌面 42 + 既有计划测试 4），默认 Rust 267 项通过（库测试 261 + 集成 6），fmt、严格 Clippy 和差异检查通过。隔离浏览器使用全模拟数据，验证了弹窗焦点/Tab/Escape、未保存修改与替换保护、保存中禁重复操作、失败保留输入、账号面板位置、筛选/重置焦点、CLI 显式选择及持续的客户端专属发布指引；1180 × 760 和 960 × 640 两种尺寸已检查。最后的“更多”菜单跳转焦点也已复核。
 
-B04 的部署目标改为显式勾选，B09 先进入模型统计并展开高级筛选，避免新布局使旧测试访问错误入口。**本次只检查原生测试脚本语法，未重跑 B00–B32**；2026-10-12 的 33 项通过记录不能当作新 UX 的原生通过证据。隔离浏览器也不等于 Tauri IPC 或真实 IDE 验收。
+B04 的部署目标改为显式勾选，B09 先进入模型统计并展开高级筛选，避免新布局使旧测试访问错误入口。**本次只检查原生测试脚本语法，B00–B32 待重跑**。上次 33 项通过记录来自 2026-10-12。
 
 Rider 已按维护者要求暂缓。没有新增真实供应商请求、模型选择器或多 IDE 共享通过结果；C2 干净 Windows 验收同样待完成。
 
@@ -51,7 +51,7 @@ A 的既有浏览器套件使用现有 Playwright。自动查找 Codex 的捆绑
 | --- | --- | --- |
 | A / Regression | 规定的 Web、fmt、默认/隔离 feature Rust 测试与 Clippy、工具测试、浏览器 mock、默认 Release、测试参数负向检查、diff 与输出边界检查 | 代码与浏览器契约；默认构建不带隔离入口 |
 | B / NativeIsolated | 新建专属根，启动隔离 EXE，真实 DOM 和 Tauri IPC 驱动 Rust/SQLite/事务/解析/估算，重启与故障恢复 | 真实原生集成；外部客户端、网络、凭据仍为替身 |
-| C1 / HostObserve | 默认 EXE、真实组件/账号观察、公开价格、官方只读 quota/models、独立授权状态、重启 | 仅证明报告中观察到的真实能力，不证明安装或日志导入 |
+| C1 / HostObserve | 默认 EXE、真实组件/账号观察、公开价格、官方只读 quota/models、独立授权状态、重启 | 组件、身份及只读能力检查 |
 | C2 / DedicatedUser | 专用空白用户预检、默认包安装、先单组件后剩余组件、官方登录入口、人工步骤接续、独立 Billing、用户启用的新日志导入与重启 | 代码入口已具备；本轮未执行，干净 Windows 验收仍待完成 |
 
 B 使用 WebdriverIO 直接连接 Microsoft Edge WebDriver，启动 CopilotBYOKManager 的 WebView2，未启用内嵌 WebDriver 插件，也不要求安装 tauri-driver。驱动与 WebView2 版本必须匹配，失败记录 BLOCKED_DRIVER，不降级成 mock。[Microsoft 官方 WebView2 WebDriver 说明](https://learn.microsoft.com/en-us/microsoft-edge/webview2/how-to/webdriver)
@@ -88,19 +88,19 @@ B 覆盖表（具体通过情况见每次报告）：
 | B31 | 持久安装记录、官方 CLI 只读身份跟踪、手动客户端跟踪取消、重启后历史与凭据隔离 |
 | B32 | 仅撤销有持久所有权证明的 VS Code 投影后删除连接，保留无关用户组并拒绝重放 |
 
-计划 TTL、更多目标消失/不可读的恢复组合、客户端输入语义/共享 runtime 去重、价格旧响应等还有既有 Rust/浏览器回归；并非每项都另有原生 UI 重复用例。结果应引用相应层级。
+计划 TTL、更多目标消失/不可读的恢复组合、客户端输入语义/共享 runtime 去重、价格旧响应等还有既有 Rust/浏览器回归，结果记录对应测试层级。
 
 ## C1：现有环境
 
-本轮按维护者选择执行 HostObserve。它会读组件存在性和官方身份观察，刷新公开价格及 Copilot 只读 RPC；CopilotBYOKManager 自身会写状态/缓存，不能称为零磁盘写入。报告分别记录检查结论和实际能力状态；版本未暴露时仍是 null，不能推断版本。
+本轮按维护者选择执行 HostObserve。它会读组件存在性和官方身份观察，刷新公开价格及 Copilot 只读 RPC；CopilotBYOKManager 自身会写状态/缓存。报告分别记录检查结论和实际能力状态；版本未暴露时仍是 null，不能推断版本。
 
 此模式不安装组件、不启动登录、不写客户端配置、不启用日志源、不读历史会话内容、不借用客户端 token。会比对 Connection、部署历史和源 opt-in 前后状态。个人 Billing 的独立授权缺失时记录 BLOCKED，不制造零用量，也不自动跳到其他凭据。
 
-2026-09-10 补充：旧 C1 仅记录组件状态，漏掉了 GUI 探测打开 VS Code 窗口以及内置 Copilot 被误报为缺失的问题，不能作为这两项已验证的证据。现在 C1 先直接启动无参数默认 EXE（不经 WebDriver），再执行原有 IPC 验收，并用只读窗口观察器覆盖启动、三次重复检测和重启。观察器每 100 ms 枚举可见顶层窗口，只返回程序名/PID/窗口句柄；既有 VS Code 窗口作为基线保留，出现新增 VS Code/Insiders 窗口即失败。未知/缺失组件记录 BLOCKED。可在私有验收清单的 `expectedComponents` 中记录独立核对的组件 ID/status/version，并与实际 IPC 结果逐项比对。检测实现和已核对版本见 [VS Code 检测](vscode-detection.md)。
+2026-09-10 补充：旧 C1 仅记录组件状态，漏掉了 GUI 探测打开 VS Code 窗口以及内置 Copilot 被误报为缺失的问题。现在 C1 先直接启动无参数默认 EXE（不经 WebDriver），再执行原有 IPC 验收，并用只读窗口观察器覆盖启动、三次重复检测和重启。观察器每 100 ms 枚举可见顶层窗口，只返回程序名/PID/窗口句柄；既有 VS Code 窗口作为基线保留，出现新增 VS Code/Insiders 窗口即失败。未知/缺失组件记录 BLOCKED。可在私有验收清单的 `expectedComponents` 中记录独立核对的组件 ID/status/version，并与实际 IPC 结果逐项比对。检测实现和已核对版本见 [VS Code 检测](vscode-detection.md)。
 
 当前 CLI 导入只能选择 source，日期查询不能限制导入时读取旧日志；因此真实新日志导入仍放在 C2 的空白用户内执行。
 
-2026-09-11 登录路径补充：启动/重扫时没有新增窗口，不能证明点击登录同样安全。实际旧版登录调用一次 `Code.exe --reuse-window` 后，VS Code 恢复了大量保存窗口。官方 [windowsMainService](https://github.com/microsoft/vscode/blob/main/src/vs/platform/windows/electron-main/windowsMainService.ts) 的初始启动逻辑还会恢复 hot-exit 备份；[app.ts](https://github.com/microsoft/vscode/blob/main/src/vs/code/electron-main/app.ts) 的 `--new-window` 不能覆盖这些恢复分支。已与本机 1.137.0 / 645f29cc3176500b4b5762ba887cf2a7f0ffdf2c 安装代码核对。修复后登录不再启动 VS Code，只定位已有窗口；未打开时显示手动指引。B29 的已打开窗口为替身；真实环境另测关闭状态的重复登录并观察新增窗口/进程，不据此宣称真实登录或已打开窗口的聚焦通过。既有恢复设置和用户文件保持原状。
+2026-09-11 登录路径补充：旧版登录调用一次 `Code.exe --reuse-window` 后，VS Code 恢复了大量保存窗口。官方 [windowsMainService](https://github.com/microsoft/vscode/blob/main/src/vs/platform/windows/electron-main/windowsMainService.ts) 的初始启动逻辑还会恢复 hot-exit 备份；[app.ts](https://github.com/microsoft/vscode/blob/main/src/vs/code/electron-main/app.ts) 的 `--new-window` 不能覆盖这些恢复分支。已与本机 1.137.0 / 645f29cc3176500b4b5762ba887cf2a7f0ffdf2c 安装代码核对。修复后登录不再启动 VS Code，只定位已有窗口；未打开时显示手动指引。B29 的已打开窗口为替身；真实环境另测关闭状态的重复登录并观察新增窗口/进程。真实登录和已有窗口聚焦待验收。既有恢复设置和用户文件保持原状。
 
 窗口适配器先检查窗口类，不查询标题或标题长度；[GetWindowTextLengthW](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getwindowtextlengthw) 对本进程窗口可能发送同步消息。恢复最小化窗口使用 [ShowWindowAsync](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-showwindowasync)，避免等待无响应的客户端。Windows 单元回归创建本测试进程拥有的离屏窗口，故意不处理消息，验证定位在 2 秒内返回并由窗口所属线程清理；不创建或操作真实客户端窗口。
 
@@ -119,24 +119,24 @@ SID 获取或格式校验失败会记录 BLOCKED，且不会登记用户或启�
 
 可接续动作：InstallPackage、InstallFirstComponent、InstallRemainingComponents、SignIn、AccountConfirmation、ProviderSetup、GitHubAuthorization、UsageSources。自动安装使用审核范围内的原生计划；安装后核对实际文件 SHA-256、组件重检测。UAC/MFA、官方客户端登录、手动 provider 配置及独立授权由用户在官方 UI 完成，驱动不输入密码/token，不记录认证页面或按键。
 
-ProviderSetup 会检查真实部署状态及 Copilot app 的手动确认；它仍不证明客户端已经成功发送请求或新终端继承了环境。最小真实请求、回环 provider、各客户端版本和新环境读取的独立核验仍须在专用环境补验，报告不能把这些人工前置动作算作脚本已验证。UsageSources 只在专用用户下启用的源进行导入两次及重启比对，不向模型自动提交提示词。VS Code 须使用 metadata export、captureContent=false。
+ProviderSetup 检查部署状态及 Copilot app 的手动确认。最小请求、回环 provider、各客户端版本和新终端环境读取在专用环境单独验收。UsageSources 只在专用用户下启用的源进行导入两次及重启比对，不向模型自动提交提示词。VS Code 须使用 metadata export、captureContent=false。
 
-本轮 C2 为 deferred/BLOCKED；没有洁净安装或真实新日志导入的通过结论。
+本轮 C2 为 deferred/BLOCKED，洁净安装和新日志导入待验收。
 
 ## JetBrains 隔离真机验收
 
 这项验收独立于 B 层替身和 C2 干净机器验收。静态适配器证据见 [JetBrains 支持边界](jetbrains-support.md)；共享供应商 `byok.json` 与每个 IDE 的 XML 偏好不是同一层配置，不能通过重复写密钥或重置 XML 来制造“所有 IDE 已同步”。
 
-2026-10-12 环境准备观察：现有 PyCharm Community 2023.2.1（232.9559.58）不能运行已审核的 1.19 插件，没有升级或覆盖它。维护者授权了一个独立 Rider 和隔离供应商测试，不代表允许安装第二种 IDE、修改既有配置或读取客户端认证。
+2026-10-12 环境准备观察：现有 PyCharm Community 2023.2.1（232.9559.58）不能运行已审核的 1.19 插件，没有升级或覆盖它。当次授权范围为一个独立 Rider 和隔离供应商测试；既有 IDE 配置及客户端认证保持不动。
 
 | 项目 | 本次观察 | 证据边界 |
 | --- | --- | --- |
-| Rider | 2026.2.3.1 / 262.10968.170 官方 Windows ZIP，2764086883 字节 | SHA-256 与官方 sidecar 一致；不是请求验收 |
+| Rider | 2026.2.3.1 / 262.10968.170 官方 Windows ZIP，2764086883 字节 | SHA-256 与官方 sidecar 一致 |
 | 压缩包 SHA-256 | `be76e18122e3042c1e4498cf6bb09e4fb6c25c5100f8ed8434d76b021301aae8` | 来自官方发布 API 对应资产的 `.sha256` |
-| Rider 启动器 | Windows Authenticode `Valid`，签署者 JetBrains s.r.o. | 证明下载的启动器签名，不证明账号或插件请求 |
-| Copilot 插件 | 固定更新 1190136 / 1.19.0-261-windows-x64，放入隔离插件目录 | 更新 API 的 since 为 261.0、until 为空；声明兼容不等于实际模型可用 |
-| 首次启动 | 保留未指定区域，按安装授权接受普通使用协议；曾停在“数据共享”页，随后观察到欢迎页及“管理许可证”窗口、Windows 防火墙网络权限提示 | 没有代点系统安全权限；许可使用性质和官方登录仍需用户完成，没有模型选择器或请求通过结论 |
-| 多 IDE | 未完成 | 单个 Rider 或两个 Rider 配置实例不等于两种 IDE 产品通过 |
+| Rider 启动器 | Windows Authenticode `Valid`，签署者 JetBrains s.r.o. | 启动器签名校验通过 |
+| Copilot 插件 | 固定更新 1190136 / 1.19.0-261-windows-x64，放入隔离插件目录 | 更新 API 的 since 为 261.0、until 为空；模型可用性待验收 |
+| 首次启动 | 保留未指定区域，按安装授权接受普通使用协议；曾停在“数据共享”页，随后观察到欢迎页及“管理许可证”窗口、Windows 防火墙网络权限提示 | 没有代点系统安全权限；许可使用性质和官方登录仍需用户完成，模型选择器和请求待验收 |
+| 多 IDE | 未完成 | 两种 IDE 产品分别验收 |
 
 准备来源：[Rider 官方发布 API](https://data.services.jetbrains.com/products/releases?code=RD&latest=true&type=release)、[固定 Rider ZIP](https://download.jetbrains.com/rider/JetBrains.Rider-2026.2.3.1.win.zip)、[官方校验和](https://download.jetbrains.com/rider/JetBrains.Rider-2026.2.3.1.win.zip.sha256)、[固定插件更新 API](https://plugins.jetbrains.com/api/updates/1190136)。自动测试仍只使用固定脱敏夹具，不依赖实时 latest 或真实供应商。
 
@@ -145,7 +145,7 @@ ProviderSetup 会检查真实部署状态及 Copilot app 的手动确认；它�
 1. 下载、校验后解压到新建的 `<validation-root>`，不替换现有程序。通过子进程专用 `RIDER_PROPERTIES` / `RIDER_VM_OPTIONS` 设置独立 config、system、plugins、log 和 user.home；APPDATA、LOCALAPPDATA、USERPROFILE 也只在该子进程内改向。`XDG_CONFIG_HOME=<validation-root>/runtime` 使 BYOK 目标固定为 `<validation-root>/runtime/github-copilot/byok.json`。不修改全局环境变量。目录及覆盖方式见 [Rider 官方高级配置](https://www.jetbrains.com/help/rider/Tuning_the_IDE.html)。
 2. 用户在隔离窗口完成首次设置、许可证/隐私确认及 Copilot 官方登录，打开不含现有项目内容的空白测试项目。代理不操作认证页面，也不读写真实 IDE XML、Password Safe 或既有认证/会话文件。
 3. 复用供应商必须取得具体文件去向和请求范围的单独确认。只读供应商管理器当前供应商配置，密钥只在内存及获批 BYOK 目标使用；不进入命令参数、聊天、截图、报告、日志或 Git。没有授权时不写密钥、不发送请求；不能自动新建或换用其他供应商。
-4. 关闭隔离 IDE，在获批目标准备配置，再用相同隔离环境重开。记录 picker 是否显示精确模型 ID、能否选择及组织策略影响。不把目录接口成功或文件存在计为推理成功。
+4. 关闭隔离 IDE，在获批目标准备配置，再用相同隔离环境重开。记录 picker 是否显示精确模型 ID、能否选择及组织策略影响。
 5. 在 Copilot Chat 中对选定 BYOK 模型发送获批的单条无项目内容短消息，记录实际响应或脱敏错误分类。若登录、许可证、策略或模型不可用，记 BLOCKED；不要更换用户指定的端点/模型或重试计费请求来制造通过。
 6. 第二个 IDE 需要另行授权或使用已有兼容安装。使用相同 BYOK 根、独立 IDE 配置，并逐个重新登录、选用和验证。只有两个实例的 picker 和实际请求都核对后，才能报告两实例共享；两产品兼容性必须用两种产品单独证明。
 
@@ -153,7 +153,7 @@ ProviderSetup 会检查真实部署状态及 Copilot app 的手动确认；它�
 
 同日代码与界面收尾回归：`npm run check:web` 41 项通过，默认 Rust 267 项通过，fmt 与严格 Clippy 通过，验证工具 12 项通过；隔离浏览器覆盖浅色弹窗/输入框/账号授权面板的文字对比度（至少 4.5:1）、中文状态、未知与零值、安全确认及旧布局兼容。NativeIsolated 的 `ui-closeout-20261012-935e61a9-r3` 中 B00–B32 全部通过，进程与端口清理及源码稳定性通过；报告保留在仓库外。前两次失败报告同样保留，分别记录旧测试误把临时推导选择当成已保存偏好、以及未展开新“更多”导航；没有通过删断言来处理失败。
 
-这些 2026-10-12 结果只证明当时源码的代码及隔离原生集成，不证明 Rider 的模型可见性或真实供应商请求。当时真实请求为 BLOCKED，尚未写入获批供应商密钥；观察到 Windows 防火墙网络权限提示与管理许可证窗口。随后维护者明确要求暂不处理 Rider，当前记录为 deferred，不能自行恢复 IDE 操作或把准备完成改记为请求通过。恢复时先核对隔离环境和许可/登录状态，再按已授权范围接续；不操作系统安全权限或读取客户端认证材料来绕过阻塞。
+当时真实请求为 BLOCKED，尚未写入获批供应商密钥；观察到 Windows 防火墙网络权限提示与管理许可证窗口。随后维护者明确要求暂不处理 Rider，当前记录为 deferred，等待维护者恢复工作。恢复时先核对隔离环境和许可/登录状态，再按已授权范围接续；不操作系统安全权限或读取客户端认证材料来绕过阻塞。
 
 ## 报告与清理
 

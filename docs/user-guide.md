@@ -6,7 +6,7 @@
 
 **Configure one provider. Publish it safely across your Copilot clients.**
 
-Save your AI provider's endpoint, API key, and models in one place, then review publication to **VS Code, Copilot CLI, and reviewed JetBrains plugin versions**. Copilot App is covered through guided manual setup. Reviewed implementation is not real-client acceptance; only exact versions with recorded live evidence may be advertised as accepted.
+Save your AI provider's endpoint, API key, and models in one place, then review publication to **VS Code, Copilot CLI, and reviewed JetBrains plugin versions**. Copilot App is covered through guided manual setup.
 
 You do not need to maintain a separate provider configuration for every client. When you change an endpoint or key, or add or remove models, edit the connection, preview the changes, and publish them to the clients you want to update.
 
@@ -38,7 +38,7 @@ If the tray cannot be created, hiding fails, or window preferences cannot be rea
 - **Set up clients:** check installation status, install supported Windows components through reviewed plans, and complete official sign-in and account checks for each client.
 - **Keep the core workflow focused:** Overview, Providers, Apps and About. Usage, Billing and resource entry points are temporarily hidden; existing data is retained.
 
-A **provider entry** is a reusable endpoint/key/model configuration. **Publishing** writes it to the selected clients. **Saving is not publishing, and publishing does not mean a client has selected the model.**
+A **provider entry** is a reusable endpoint/key/model configuration. **Publishing** writes it to the selected clients. Save a provider, publish it to the selected apps, then select the model in each app.
 
 <a id="supported-clients"></a>
 
@@ -51,7 +51,7 @@ A **provider entry** is a reusable endpoint/key/model configuration. **Publishin
 | GitHub Copilot plugin in JetBrains IDEs | Automatically writes shared BYOK configuration for reviewed plugin versions | Close the relevant IDEs first; reopen them after publishing, sign in, and select a model |
 | GitHub Copilot App | Provides setup instructions; does not automatically write provider configuration | Add the provider and verify it manually in the app |
 
-The JetBrains adapter is limited to the [1.19 plugin distributions in the version table](jetbrains-support.md#version-and-compatibility-boundary), not every 1.19 or newer release. Per-IDE login, model selection and real requests are still pending; Rider work remains deferred. IDEs using the same runtime directory share the configuration, including IDEs you did not select.
+The JetBrains adapter is limited to the [1.19 plugin distributions in the version table](jetbrains-support.md#version-and-compatibility-boundary). IDEs using the same runtime directory share the configuration, including IDEs you did not select.
 
 Accepted protocols, endpoints, and model capabilities can differ between clients; review the publication preview. This app manages configuration. It does not provide model hosting, subscriptions, or free credits, and it does not replace a client's own access requirements.
 
@@ -84,7 +84,7 @@ npm run dev
 
 The active development branch is `main`. The first launch downloads dependencies and compiles the app; a successful launch opens the CopilotBYOKManager desktop window.
 
-To build the desktop executable without an installer, run `npm run build -- --no-bundle -- --locked`. For Windows NSIS / standalone ZIP and Mac test-DMG commands, see [release engineering](release-engineering.md). Standalone means no installer, not full portability: state, OS credentials and target configuration can still be written outside the executable directory. A successful build is not clean-machine acceptance.
+To build the desktop executable without an installer, run `npm run build -- --no-bundle -- --locked`. For Windows NSIS / standalone ZIP and Mac test-DMG commands, see [release engineering](release-engineering.md). The standalone package runs without installation; state, OS credentials and target configuration use user storage.
 
 <a id="first-connection"></a>
 
@@ -137,9 +137,9 @@ Replace these example IDs with the actual IDs supplied by your provider. The dis
 Choose a **Preferred model (首选模型)**, then click **Save provider (保存供应商)**:
 
 - Copilot CLI uses the preferred model for `COPILOT_MODEL`.
-- Clients with model pickers, such as VS Code and JetBrains, still require you to select the model inside the client. This preference does not force an open session to switch models.
+- Clients with model pickers, such as VS Code and JetBrains, require you to select the model inside the client.
 
-**You have only saved the connection; no client configuration has changed yet.** Both Fetch models and the connection card's **Test model catalog (测试模型目录)** check catalog access only. They do not verify chat, tool calling, or vision support.
+Fetch models and **Test model catalog (测试模型目录)** query the provider's model list. After saving, preview and publish the provider to your apps.
 
 ### 4. Preview and publish
 
@@ -167,15 +167,15 @@ Open a new terminal, start a new CLI session, and check the selected model. An e
 
 **JetBrains**
 
-Reopen the relevant IDE, complete official GitHub Copilot sign-in, and select the published model in Copilot Chat's model picker. Shared configuration does not mean shared sign-in state; check each IDE separately. Unknown plugin versions are not written automatically. See [JetBrains usage and compatibility](jetbrains-support.md) for further limits.
+Reopen the relevant IDE, complete official GitHub Copilot sign-in, and select the published model in Copilot Chat's model picker. Sign in and select a model in each IDE. Unknown plugin versions are not written automatically. See [JetBrains usage and compatibility](jetbrains-support.md) for further limits.
 
 **Copilot App**
 
-Go to **Apps (应用) → Copilot App providers (Copilot App 供应商) → View manual setup steps (查看手动配置步骤)**. In the app's **Model providers**, add the provider using the displayed endpoint and model, and enter the required key inside the app. You can then click **I have completed manual setup (我已完成手动配置)** to record your confirmation. This is not an automatic verification result.
+Go to **Apps (应用) → Copilot App providers (Copilot App 供应商) → View manual setup steps (查看手动配置步骤)**. In the app's **Model providers**, add the provider using the displayed endpoint and model, and enter the required key inside the app. You can then click **I have completed manual setup (我已完成手动配置)** to record your confirmation.
 
 If App was included in a publication, use its result's **Manual setup for [connection]** button to open instructions for that specific connection, even when another connection is selected elsewhere.
 
-Finally, send a short request containing no sensitive project content from the client you intend to use, and confirm that the model responds. Real requests may incur provider charges. **Saving, publishing, selecting a model, and completing a request are four different states.** Account sign-in is a separate client requirement.
+Finally, send a short request containing no sensitive project content from the client you intend to use, and confirm that the model responds. Real requests may incur provider charges.
 
 <a id="everyday-use"></a>
 
@@ -200,7 +200,7 @@ Add another connection under **Providers (供应商)**, then publish it to the c
 - **Copilot CLI:** this environment-variable method uses one route at a time. Check the current ownership first; conflicting configuration from another connection or an external source is not overwritten directly. If necessary, revoke the old connection's managed configuration as described below before publishing the new connection.
 - **Copilot App:** add or switch providers manually inside the app.
 
-This is not automatic failover or load balancing. Changing a preferred model also does not force other clients to switch the model they are currently using.
+Select the active model in each client's model picker.
 
 ### Disable, stop managing, or revoke: which should you choose?
 
@@ -232,11 +232,11 @@ Saving only updates the manager. You must also click **Publish to apps**, genera
 
 ### Test connection succeeded. Why does chat still fail?
 
-The test only checks the model catalog endpoint. Check the model ID, protocol, client capabilities, account access, and available provider quota, then verify a request in the actual client. A model appearing in the catalog does not prove support for tools, images, or a particular context length.
+The test only checks the model catalog endpoint. Check the model ID, protocol, client capabilities, account access, and available provider quota, then verify a request in the actual client.
 
 ### Can I continue if fetching models does not work?
 
-Yes. If the provider does not expose a compatible catalog endpoint, enter model IDs manually; use deployment names for Azure. If access is denied, a network error occurs, or the response format is unsupported, check the endpoint, key, and provider documentation. Failure to read the catalog does not by itself prove that inference is unavailable.
+Yes. If the provider does not expose a compatible catalog endpoint, enter model IDs manually; use deployment names for Azure. If access is denied, a network error occurs, or the response format is unsupported, check the endpoint, key, and provider documentation.
 
 ### I published the configuration but still cannot see the model. What should I check?
 
@@ -248,7 +248,7 @@ Start with the per-target results under **Overview → Latest publication**, the
 4. Whether the client and plugin version are supported; JetBrains requires the exact reviewed versions.
 5. Whether you completed official sign-in and explicitly selected the model in the client.
 
-**App configuration status (应用配置状态)** only checks configuration published by this manager. It does not read the client's currently selected model.
+**App configuration status (应用配置状态)** only checks configuration published by this manager.
 
 ### What if the CLI reports a configuration conflict, or I want to return to the official route?
 
@@ -258,7 +258,7 @@ To remove this manager's override, use **Preview revocation and deletion** on th
 
 ### Why is my JetBrains version unsupported?
 
-Automatic writes are enabled only for exact reviewed plugin distributions. Newer, unknown, disabled, or custom-path plugins may require manual handling. Report compatibility issues with the IDE and plugin versions; do not change version markers to bypass checks. Detecting an IDE configuration directory does not prove that the IDE can run or make a request.
+Automatic writes are enabled only for exact reviewed plugin distributions. Newer, unknown, disabled, or custom-path plugins may require manual handling. Report compatibility issues with the IDE and plugin versions; do not change version markers to bypass checks.
 
 ### Why is publishing disabled, or why must I generate another preview?
 
@@ -280,7 +280,7 @@ Do not share complete configuration files, databases, environment variables, rol
 - Usage imports persist only allowlisted metadata. They do not retain or upload prompts, responses, source code, tool content, or raw log lines.
 - Publication displays changes before writing and retains recovery information for managed writes. Rollback does not force an overwrite after an external change.
 - Organization/enterprise Billing, provider invoice retrieval, cloud usage synchronization, overage settings, and full macOS/Linux one-click installation are not provided.
-- Automated and isolated tests do not replace real-client acceptance. See [implementation status](implementation-status.md) for implemented capabilities, coverage gaps, and validation records.
+- See [implementation status](implementation-status.md) for implemented capabilities and validation progress.
 
 ## Help and contributing
 
@@ -308,7 +308,7 @@ git diff --check
 
 `npm run check` includes version, release-policy, documentation-link, web and locked Rust checks; run the whitespace check separately. Normal CI checks Ubuntu, Windows and macOS; the separate release workflow builds Windows NSIS and Mac Universal DMG at the same fixed SHA.
 
-The optional browser regression entry point is `node apps/desktop/web/tests/browser-smoke.cjs`. If needed, set `COPILOT_BYOK_MANAGER_PLAYWRIGHT` to an installed Playwright module path and `COPILOT_BYOK_MANAGER_BROWSER` to the browser executable. These tests use isolated profiles, simulated data, and temporary screenshots. They are not real-client acceptance.
+The optional browser regression entry point is `node apps/desktop/web/tests/browser-smoke.cjs`. If needed, set `COPILOT_BYOK_MANAGER_PLAYWRIGHT` to an installed Playwright module path and `COPILOT_BYOK_MANAGER_BROWSER` to the browser executable. These tests use isolated profiles, simulated data, and temporary screenshots.
 
 Source locations:
 

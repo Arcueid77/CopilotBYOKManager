@@ -45,11 +45,11 @@ The checked-in implementation is a pre-release desktop application with connecte
 - the approved lightweight manager UI, shared dialog focus/draft/error handling, progressive usage filters and persistent per-target publication next steps;
 - a browser fallback for reviewing the frontend without native writes.
 
-The maintainer requires automatic JetBrains GitHub Copilot BYOK deployment, not only manual runbooks. The adapter observes public IDE/profile metadata and projects reviewed plugin versions into the official runtime's dedicated `github-copilot/byok.json` namespace through normal native-held plans, ownership, journals and rollback. Shared writes are deduplicated. Only CopilotBYOKManager's own provider keys may be materialized; never read/copy GitHub login credentials, Password Safe, authentication files or conversations. Unknown plugin versions remain unsupported pending verification. Publication is not proof of running/authenticated IDEs or successful provider requests. See `docs/jetbrains-support.md`; JetBrains is not a mandatory installation dependency of the original three-surface setup.
+The maintainer requires automatic JetBrains GitHub Copilot BYOK deployment, not only manual runbooks. The adapter observes public IDE/profile metadata and projects reviewed plugin versions into the official runtime's dedicated `github-copilot/byok.json` namespace through normal native-held plans, ownership, journals and rollback. Shared writes are deduplicated. Only CopilotBYOKManager's own provider keys may be materialized; never read/copy GitHub login credentials, Password Safe, authentication files or conversations. Unknown plugin versions remain unsupported pending verification. See `docs/jetbrains-support.md`; JetBrains is not a mandatory installation dependency of the original three-surface setup.
 
-This is not a completed MVP or release-acceptance claim. Core clean-Windows/Mac installation, native desktop behavior and real-client/request acceptance remain open. Resource-consumption/usage/Billing acceptance and the unimplemented direct Copilot app asset-download fallback belong to the retained extended milestone; they do not block v0.1. Unsupported upstream interfaces remain explicit limitations. Rider runtime work is deferred by maintainer direction.
+Core clean-Windows/Mac installation, native desktop behavior and real-client/request acceptance remain open. Resource-consumption/usage/Billing acceptance and the unimplemented direct Copilot app asset-download fallback belong to the retained extended milestone; they do not block v0.1. Unsupported upstream interfaces remain explicit limitations. Rider runtime work is deferred by maintainer direction.
 
-The 2026-10-13 UX changes passed web/Rust and isolated browser checks. NativeIsolated B00–B32 last passed on the earlier 2026-10-12 closeout source; the changed suite was only syntax-checked for `3791283`. Do not reuse that older run as fresh native acceptance. See `docs/implementation-status.md` and `docs/local-validation-plan.md`.
+The 2026-10-13 UX changes passed web/Rust and isolated browser checks. NativeIsolated B00–B32 last passed on the earlier 2026-10-12 closeout source; the changed suite was only syntax-checked for `3791283`. See `docs/implementation-status.md` and `docs/local-validation-plan.md`.
 
 ## Required scope boundary
 
@@ -103,7 +103,7 @@ CopilotBYOKManager's GitHub API authorization is a separate least-privilege secr
 - Installation strategy kinds, package IDs, repositories, asset policies, executable paths, and arguments are backend-owned allowlisted data.
 - Never execute remote command strings, `curl | sh`, `Invoke-Expression`, concatenated `cmd /c`, or equivalent shell pipelines.
 - Verify architecture, bounded size, SHA-256 when authoritative metadata exists, and expected Windows publisher before launching a downloaded GitHub Copilot app asset.
-- Re-detect the actual component after installation; an exit code is not proof of success.
+- Record installation success only after re-detecting the actual component.
 - Do not automatically uninstall or downgrade applications as rollback.
 
 ### Preserve unknown values
@@ -149,6 +149,8 @@ The deployment/persistence foundation and connected feature slices above already
 Use the core and extended remaining-work sections in `docs/implementation-status.md` to choose the next slice. Preserve `state.json` and Usage DB migrations, native plan/ownership/recovery invariants, exact decimals, unknown/partial states and existing regression coverage. Tests must remain isolated. Real client/account/installation acceptance must use the documented dedicated environment and the maintainer's current scope; deferred Rider work is not an automatic next action.
 
 ## Coding conventions
+
+- Keep interface and repository copy concise: state the result, then give a concrete next action when needed. Put validation progress in the relevant status record. Reserve warnings for meaningful risks such as overwrites, deletion, credential handling and charges; avoid repeated defensive disclaimers.
 
 - User-facing copy belongs in `apps/desktop/web/i18n-messages.js` with both Simplified Chinese and English. Use explicit `tr` calls, preserve parameter escaping, and never translate user data or diagnostic payloads by matching their contents. Run `npm run check:i18n`; use the active UI locale for dates. Language changes must not persist native data, trigger client/account actions or discard an active form or deployment review. The bounded tray-locale command may update fixed native menu labels in memory only.
 

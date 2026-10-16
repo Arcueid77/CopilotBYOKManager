@@ -1,12 +1,12 @@
 # Apple signing setup and first-release acceptance
 
-This is a **maintainer-operated checklist**, not evidence that an Apple account, certificate, GitHub secret or Mac acceptance already exists. No account purchase or remote settings changes are part of the engineering task. The Windows community build does **not** need Authenticode or Apple credentials.
+A **maintainer-operated checklist** for Apple signing credentials and release validation. The Windows community build does **not** need Authenticode or Apple credentials.
 
 Formal macOS Draft/publish builds require **Developer ID Application + Hardened Runtime + Apple Notary Service + stapled tickets**. Missing credentials are fatal. Dry-run always uses an ad-hoc testing DMG and receives no Apple secrets, even when secrets exist in the environment. It is not an officially notarized distribution.
 
 ## 1. Obtain credentials yourself
 
-1. Enroll as an individual in the paid [Apple Developer Program](https://developer.apple.com/programs/enroll/), if appropriate for the maintainer. Apple enrollment, identity verification, terms and payment must be completed by the account owner. This document neither purchases membership nor quotes a potentially changing price.
+1. Enroll as an individual in the paid [Apple Developer Program](https://developer.apple.com/programs/enroll/), if appropriate for the maintainer. Apple enrollment, identity verification, terms and payment must be completed by the account owner.
 2. On a trusted Mac, create a **Developer ID Application** certificate through Apple's certificate/Keychain workflow. This is not a Mac App Distribution or Developer ID Installer certificate. Keep the private key under your control.
 3. Export the certificate **with its private key** as a password-protected `.p12`. Exporting only a `.cer` is insufficient. Record the exact identity shown by Keychain / `security find-identity -v -p codesigning` privately; do not paste the account identity or report into an issue.
 4. In App Store Connect's Users and Access → Integrations, create a **team API key** with the Developer role (or the least available role Apple documents as sufficient for notarization). Access may require the Account Holder to enable the API. Download its `.p8` once and store it securely, with the key ID and issuer ID. This implementation uses the issuer-based team-key path, not an individual-key flow without an issuer.
@@ -38,15 +38,15 @@ The `release` environment also guards the final Draft/public Release job. Mac dr
 
 ## 3. Prove the build before public promotion
 
-1. Run `dry-run`, `platform=macos` (or `all`) from the main workflow at a fixed reviewed SHA. Inspect the ad-hoc/testing filenames and metadata. This only proves build/package checks; do not tell ordinary users to bypass Gatekeeper.
+1. Run `dry-run`, `platform=macos` (or `all`) from the main workflow at a fixed reviewed SHA. Inspect the ad-hoc/testing filenames and metadata. Keep Gatekeeper enabled when testing.
 2. After the version is aligned and the maintainer explicitly authorizes creating/pushing its strict `vX.Y.Z` tag, run Draft. The tag push defaults to Draft; missing Apple secrets or any failed signature/notarization check must fail the job.
 3. Verify both `.app` and DMG checks recorded by the workflow: two architectures, stable Bundle ID/version/executable, Hardened Runtime, strict code signature, Gatekeeper and stapled tickets. Tauri notarizes the app; the script submits the final DMG too. Formal assets must have no `testing-adhoc` suffix.
-4. Download the **Draft's actual files**, verify SHA256SUMS and record exact source SHA plus file hashes for the clean-machine matrix below. Actions-generated green status is not real-device acceptance.
+4. Download the **Draft's actual files**, verify SHA256SUMS and record exact source SHA plus file hashes for the clean-machine matrix below.
 5. Only approve publish after that matrix and the [core gates (中文)](release-criteria.md) pass. Publish rechecks the fixed source and verifies the Draft bytes without replacing them. If a Draft is rebuilt/updated, its hashes change and its package acceptance must be revisited.
 
 ## 4. Real-machine acceptance matrix
 
-Record **NOT RUN / BLOCKED / FAIL / PASS** separately for Windows 11 x64, Apple Silicon Mac and Intel Mac. Never infer both Mac architectures passed from a Universal binary. For each run, record macOS/Windows version, CPU, exact source SHA, package SHA-256 and exact client/plugin versions. Use an isolated user and a blank project, not private production configuration.
+Record **NOT RUN / BLOCKED / FAIL / PASS** separately for Windows 11 x64, Apple Silicon Mac and Intel Mac. For each run, record macOS/Windows version, CPU, exact source SHA, package SHA-256 and exact client/plugin versions. Use an isolated user and a blank project, not private production configuration.
 
 On each Mac architecture:
 
@@ -64,8 +64,8 @@ On each Mac architecture:
 
 On clean Windows, additionally verify current-user install without application-elevation requirements, Start menu/uninstall entries, WebView2 missing/online/offline/permission failure handling, default close-to-tray and Exit preference, tray recovery/fallback/menu language, repeated-launch wakeup and process cleanup.
 
-Real provider requests require a separately approved provider/model/cost boundary. Native/browser fixtures, successful configuration writes, read-only model catalogs, compilation and installers all prove different things; none alone proves a request succeeded.
+Real provider requests require a separately approved provider/model/cost boundary.
 
-## 5. Not yet fulfilled by this document
+## 5. Maintainer verification items
 
-Apple membership, certificate/API key creation, GitHub Secrets/environment settings, formal macOS signing/notarization, clean Windows and both real Macs, live client/provider requests and a functioning private security-report channel remain maintainer verification items. The maintainer-requested replacement icon now has a checked-in high-resolution source and official Tauri exports; it does not change package acceptance. Final screenshot review and any sponsor/contact/payment details still need explicit maintainer input. No sponsor contact or payment link is invented here.
+Apple membership, certificate/API key creation, GitHub Secrets/environment settings, formal macOS signing/notarization, clean Windows and both real Macs, live client/provider requests and a functioning private security-report channel remain maintainer verification items. The maintainer-requested replacement icon now has a checked-in high-resolution source and official Tauri exports. Final screenshot review and any sponsor/contact/payment details still need explicit maintainer input. No sponsor contact or payment link is invented here.

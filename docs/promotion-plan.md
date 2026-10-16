@@ -8,7 +8,7 @@
 
 ## 1. 先服务谁
 
-首批目标是交替使用 VS Code、Copilot CLI 和经过实际验收的固定 JetBrains 版本的个人开发者。他们已有自己的模型供应商，反复维护端点、密钥与模型列表，希望集中管理又不破坏已有客户端配置。Windows/Mac 招募分别以对应安装及客户端验收为前提；不能只凭 Universal 编译成功就推广双架构支持。
+首批目标是交替使用 VS Code、Copilot CLI 和经过实际验收的固定 JetBrains 版本的个人开发者。他们已有自己的模型供应商，反复维护端点、密钥与模型列表，希望集中管理又不破坏已有客户端配置。Windows/Mac 招募分别以对应安装及客户端验收为前提。
 
 第二批是帮助同事配置开发环境的开源维护者和小团队技术负责人。产品仍是本机、单用户工具，不承诺团队同步、统一账号授权、组织账单或企业管理。
 
@@ -22,7 +22,7 @@ English positioning: **Configure one provider. Publish it safely across your Cop
 
 必要副说明：管理端点、密钥和模型，预览后发布到 VS Code、Copilot CLI 与已审核版本的 JetBrains。Copilot App 使用手动指引。各客户端仍需自己的官方登录和模型选用。
 
-保存 Provider、发布配置、客户端选中模型、实际请求成功是四个状态。JetBrains 已审核适配实现不等于实际验收；当前真实 IDE/请求仍待验证，不作为成功案例。截图使用本轮[六张当前浏览器预览](images/README.md)，均为虚构数据，不是原生验收证据。
+当前验证进度见[实现状态](implementation-status.md)。截图使用[六张当前浏览器预览](images/README.md)，均为虚构数据。
 
 | 主张 | 展示证据 | 不得暗示 |
 | --- | --- | --- |
@@ -46,7 +46,7 @@ English positioning: **Configure one provider. Publish it safely across your Cop
 | FAQ | 为什么 CLI 要新终端、App 为什么手动、未知 JetBrains 版本怎么办、写入成功为何仍需选模型、如何停止管理或安全撤销 |
 | 反馈模板 | 版本/系统/客户端与插件版本、卡住的步骤、预期与实际结果、脱敏错误；绝不要求密钥、原始日志或完整数据库 |
 
-所有素材使用同一个候选版本生成。浏览器演示只用于理解界面，不能替代实际自动发布证据。记录素材版本，功能变更后同步更新中英文。
+所有素材使用同一个候选版本生成。记录素材版本，功能变更后同步更新中英文。
 
 ## 4. 分阶段执行
 
@@ -99,4 +99,4 @@ English positioning: **Configure one provider. Publish it safely across your Cop
 
 出现密钥风险、错误写入、数据丢失、安装阻塞或明显误导，立即暂停推广，按[发布标准](release-criteria.md#4-缺陷与停止条件)处理。支持能力不足时缩小招募规模，不继续扩大曝光。
 
-规则核对日期：2026-10-13。候选渠道、指标和阶段安排是本项目的执行建议，不表示已经获得平台许可或已经上线。
+规则核对日期：2026-10-13。发布前复核候选渠道的最新规则。

@@ -28,4 +28,4 @@ User-authored names, model identifiers, URLs, filesystem paths and original nati
 - `npm run check:i18n` uses the development-only Acorn parser to check real JavaScript syntax, explicit catalog keys, placeholder parity and untranslated Chinese literals/templates. Acorn is not shipped or loaded by the app. English-only additions and translation quality also require review.
 - `npm run check:web` includes locale selection/storage, prototype-safe lookup, non-recursive substitution, exact-money/unknown semantics, hostile input escaping and allowlisted draft preservation. The isolated browser suite additionally checks both languages, page navigation, form/plan guards, preference persistence and responsive layout.
 
-To add another language, extend the bounded locale list and catalog schema, language selector, system fallback tests, static checker and browser scenarios together. A translated README alone does not constitute UI language support.
+To add another language, extend the bounded locale list and catalog schema, language selector, system fallback tests, static checker and browser scenarios together.

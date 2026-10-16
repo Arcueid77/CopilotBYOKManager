@@ -1,6 +1,6 @@
 # CopilotBYOKManager usage adapters: provenance, schemas and coverage
 
-Verified against official sources on 2026-09-09. These are implementation contracts, not proof that a real installed client/account has passed release acceptance. All fixtures are synthetic, sanitized reductions of the listed schemas. No developer session or credential data was used.
+Verified against official sources on 2026-09-09. All fixtures are synthetic, sanitized reductions of the listed schemas. No developer session or credential data was used.
 
 Documentation reconciled with the 2026-10-13 application state; source-specific verification dates and parser versions below are unchanged. See [implementation status](implementation-status.md) for current test evidence and remaining acceptance.
 
@@ -94,7 +94,7 @@ Fixtures: `vscode-otel-v1.json` and `vscode-explicit-zero-cache-write.json`. The
 - [Model/pricing reference](https://openrouter.ai/docs/guides/overview/models)
 - Fixed source URL: [OpenRouter model catalog](https://openrouter.ai/api/v1/models)
 
-The adapter fetches only this fixed HTTPS REST source, with no redirects, an 8 MiB limit and a 25-second timeout. Input is a current OpenRouter published minimum-provider catalog-price comparison for **text tokens only**, not a direct-provider invoice, a GitHub charge, or proof of historical effective rates. Non-token fees are excluded and are disclosed in the UI.
+The adapter fetches only this fixed HTTPS REST source, with no redirects, an 8 MiB limit and a 25-second timeout. Input is the current OpenRouter minimum-provider catalog-price comparison for **text tokens only**. Non-token fees are excluded and are disclosed in the UI.
 
 Rates are decimal strings denominated in USD/token. Conversion to USD/million and the estimate formula use checked exact decimal operations. Zero/free prices are valid. Models with dynamic/negative or unknown tier schemas are explicitly unsupported. Required prices missing for a positive token bucket leave the estimate unavailable. Context overrides require per-request total-input evidence; cumulative session aggregates cannot choose a cheaper tier. Cache retention ambiguity between 5-minute and 1-hour writes also leaves the estimate unavailable.
 

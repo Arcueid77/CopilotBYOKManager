@@ -32,7 +32,7 @@ test('all local filters remain available through progressive disclosure and boun
   const defaults = usage.query(); assert.equal(defaults.model, null); assert.equal(defaults.route, null); assert.equal(defaults.page, 0); assert.equal(defaults.pageSize, 50);
 });
 
-test('publication guidance is specific to the applied client and never implies a successful request', () => {
+test('publication guidance provides next steps for the applied client', () => {
   const connection = snapshot.connections[0];
   assert.doesNotMatch(manager.publicationSteps({ status: 'applied', targetKind: 'vs-code-copilot' }, connection).join(''), /JetBrains|终端/);
   assert.match(manager.publicationSteps({ status: 'applied', targetKind: 'copilot-cli' }, connection).join(''), /新开终端和 CLI 会话/);
@@ -44,5 +44,5 @@ test('publication guidance is specific to the applied client and never implies a
 test('latest operation keeps failure and manual states, escapes targets, and scopes legacy batches', () => {
   const records = [{ targetId: '<bad>', connectionId: 'c', targetKind: 'copilot-cli', status: 'failed', detail: '<diagnostic>', createdAt: '2026-10-13T00:00:00Z' }, { connectionId: 'c', targetKind: 'jetbrains-copilot', status: 'applied', createdAt: '2026-10-12T00:00:00Z' }];
   const html = manager.lastResult({ ...snapshot, deployments: records }, true);
-  assert.match(html, /失败，请核对|不证明已登录/); assert.match(html, /&lt;bad&gt;|&lt;diagnostic&gt;/); assert.doesNotMatch(html, /重启此 IDE|新开终端|<bad>|<diagnostic>/);
+  assert.match(html, /失败，请核对/); assert.match(html, /&lt;bad&gt;|&lt;diagnostic&gt;/); assert.doesNotMatch(html, /重启此 IDE|新开终端|<bad>|<diagnostic>/);
 });

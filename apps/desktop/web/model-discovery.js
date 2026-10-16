@@ -52,7 +52,7 @@
 
   function statusText(status) {
     return {
-      available: tr("模型目录可访问；不代表已验证推理能力。"),
+      available: tr("模型目录可访问。"),
       empty: tr("模型目录接口已响应，但列表为空。可手动填写模型 ID。"),
       partial: tr("仅获取了部分模型目录，可添加已返回模型或稍后重试。"),
       unsupported: tr("该端点不支持此模型目录接口；Azure 请手动填写部署名称。"),
@@ -74,7 +74,7 @@
         providerKind: connection.providerKind, protocol: connection.protocol,
         headers: connection.headers ?? {}, apiKey: null, clearSecret: false,
       } });
-      // Do not retain catalog entries / remote detail or imply successful inference.
+      // Return a fixed catalog status without retaining entries or remote detail.
       return { status: result.status, detail: statusText(result.status) };
     } catch { return { status: "networkError", detail: statusText("networkError") }; }
   }

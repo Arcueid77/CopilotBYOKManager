@@ -12,7 +12,7 @@ The checked-in code contains connected native deployment/recovery, installation,
 
 ## 2. Product goal
 
-For v0.1, configure a provider's endpoint/key/models once, fetch or manually enter models, choose apps, review native-held changes, publish, inspect results, revoke owned configuration and recover safely. Saving a provider, publishing configuration, selecting a model in the client and completing a request remain four distinct states. English/Chinese and Light/Dark/System are included; desktop behaviors require platform-specific acceptance. Copilot App is manual-only; reviewed JetBrains versions are not advertised as runtime-accepted without real evidence. The core promise is: **Configure one provider. Publish it safely across your Copilot clients.**
+For v0.1, configure a provider's endpoint/key/models once, fetch or manually enter models, choose apps, review native-held changes, publish, inspect results, revoke owned configuration and recover safely. Saving a provider, publishing configuration, selecting a model in the client and completing a request remain four distinct states. English/Chinese and Light/Dark/System are included; desktop behaviors require platform-specific acceptance. Copilot App is manual-only; JetBrains compatibility records identify the exact plugin version and completed validation. The core promise is: **Configure one provider. Publish it safely across your Copilot clients.**
 
 The retained extended milestone additionally targets this clean Windows 11 x64 flow:
 
@@ -214,14 +214,14 @@ At minimum:
 - concrete target identity;
 - last deployed fingerprint/version.
 
-A marker string alone does not prove ownership. Foreign-owner, unmanaged, legacy, and ambiguous state must be Conflict/ActionRequired.
+Ownership validation requires the persisted evidence listed above. Foreign-owner, unmanaged, legacy, and ambiguous state must be Conflict/ActionRequired.
 
 ### 6.8 Deletion
 
 Expose two explicit operations:
 
 - **Revoke from supported targets and delete**: reviewed transactional revocation followed by state/secret cleanup.
-- **Stop managing/detach only**: removes CopilotBYOKManager state without claiming to clean existing client configuration.
+- **Stop managing/detach only**: removes CopilotBYOKManager state while retaining existing client configuration.
 
 Secret-cleanup warnings must not make a completed state deletion look wholly unsuccessful. Orphan-secret cleanup must not expose secret values.
 
@@ -849,9 +849,9 @@ Show real native data in this order:
 - a concise provider summary and links to provider editing/publication;
 - the latest per-target publication result with persistent client-specific next steps.
 
-Provider editing belongs on Providers; component/account state and per-app provider selection belong on Apps. Overview summarizes providers instead of duplicating editable cards. Publication/revocation history is expandable within Providers and Apps. Recovery is visible on every core page; required next steps must not target hidden Settings or Activity. A published source is evidence of owned configuration, never proof of selected models, authentication or a successful request. Disabling a Connection blocks new publication without silently revoking existing sources.
+Provider editing belongs on Providers; component/account state and per-app provider selection belong on Apps. Overview summarizes providers instead of duplicating editable cards. Publication/revocation history is expandable within Providers and Apps. Recovery is visible on every core page; required next steps must not target hidden Settings or Activity. Published-source status reports the manager-owned configuration; next steps guide model selection in each client. Disabling a Connection blocks new publication without silently revoking existing sources.
 
-Core refresh must not query hidden Usage/Billing/pricing/Resources or separate authorization modules, or mount their UI. Preserve native implementation/data and regressions. Light/Dark/System is a bounded saved presentation preference; changing it does not redraw an editor or consume a plan. Windows close-to-tray follows the reviewed CC Switch interaction: default close-to-tray, a saved Tray/Exit preference on About, left-click restore, right-click fixed menu and existing-instance wakeup on a repeated launch. Hide only with a readable Tray preference, available tray and successful hide; otherwise allow normal close. Damaged preference files must remain intact. Ordinary minimize remains taskbar minimization. Tray text follows the interface locale through a typed presentation-only command with no persistent write or client operation. Browser/unsupported platforms never claim tray availability. Secondary launch payloads must not become deployment, URL-opening or account commands.
+Core refresh must not query hidden Usage/Billing/pricing/Resources or separate authorization modules, or mount their UI. Preserve native implementation/data and regressions. Light/Dark/System is a bounded saved presentation preference; changing it does not redraw an editor or consume a plan. Windows close-to-tray follows the reviewed CC Switch interaction: default close-to-tray, a saved Tray/Exit preference on About, left-click restore, right-click fixed menu and existing-instance wakeup on a repeated launch. Hide only with a readable Tray preference, available tray and successful hide; otherwise allow normal close. Damaged preference files must remain intact. Ordinary minimize remains taskbar minimization. Tray text follows the interface locale through a typed presentation-only command with no persistent write or client operation. Report tray as unavailable in browsers and unsupported platforms. Secondary launch payloads must not become deployment, URL-opening or account commands.
 
 No static success rate, resource count, or token value.
 
@@ -1075,7 +1075,7 @@ CI must run relevant checks on Windows, macOS, and Linux; Windows must also perf
 An evaluator must verify the final package and exact source SHA, not a prototype or another commit:
 
 1. Install the current-user Windows x64 NSIS package on a clean Windows 11 user/VM; check WebView2 handling, start menu, uninstall registration, startup, reopen and uninstall without deleting client configuration.
-2. Install the macOS Universal DMG through Applications; verify Developer ID Application, Hardened Runtime, notarization and stapled tickets. Test Intel and Apple Silicon separately before claiming both accepted. The conservative candidate floor is macOS 15, matching the selected CI runner, not a claim of real-Mac acceptance.
+2. Install the macOS Universal DMG through Applications; verify Developer ID Application, Hardened Runtime, notarization and stapled tickets. Test Intel and Apple Silicon separately, starting at macOS 15 to match the selected CI runner.
 3. Verify only Overview / Providers / Apps / About are exposed. Hidden services must not be queried automatically or delete retained data; keep their native security/migration regressions.
 4. Add one provider, save/read/update/delete its OS-held key, fetch or enter models, and preserve unknown capability states.
 5. Review explicit targets through native-held expiring one-shot plans, publish, inspect persistent results, select the model in each advertised real client and send an authorized minimal request. Record all four states separately.
@@ -1085,7 +1085,7 @@ An evaluator must verify the final package and exact source SHA, not a prototype
 9. Pass locked builds, automated checks and final native integration checks at the same SHA. No secrets, raw conversations or private recovery data in diagnostic/release artifacts.
 10. Validate strict `vX.Y.Z` version agreement, Windows Setup + formal Mac DMG + SHA256SUMS, source metadata, signing disclosures and bilingual docs. Windows Authenticode is not required: label **Unsigned community build**. Ad-hoc Mac artifacts are testing-only, never formal releases. Publish only after all core gates and explicit maintainer approval.
 
-Detailed evidence and GO / NO-GO criteria are in [release criteria](release-criteria.md); build/signing operations are in [release engineering](release-engineering.md). Core acceptance does not imply the full extended milestone below passed. No store listing, updater or Linux/Windows ARM64/MSI release is required or introduced.
+Detailed evidence and GO / NO-GO criteria are in [release criteria](release-criteria.md); build/signing operations are in [release engineering](release-engineering.md). No store listing, updater or Linux/Windows ARM64/MSI release is required or introduced.
 
 ### 21.2 Retained extended milestone (not v0.1 gates)
 

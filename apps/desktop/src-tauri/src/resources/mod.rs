@@ -250,8 +250,14 @@ fn targets_at(
         .iter()
         .filter(|c| c.kind == ClientKind::JetBrainsCopilot && c.path.is_some())
     {
-        result.push(Target { id: client.id.clone(), label: client.name.clone(), path: None, mcp_key: None,
-            supported: false, detail: "Manual: review resources in this IDE's Copilot customizations UI. No stable external personal resource-write schema is verified; VS Code/CLI deployment does not prove JetBrains synchronization".into() });
+        result.push(Target {
+            id: client.id.clone(),
+            label: client.name.clone(),
+            path: None,
+            mcp_key: None,
+            supported: false,
+            detail: "Manual: manage resources in this IDE's Copilot customizations UI.".into(),
+        });
     }
     result
 }

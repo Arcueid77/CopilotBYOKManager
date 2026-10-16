@@ -24,14 +24,14 @@
 - 机制：用户环境变量 `COPILOT_PROVIDER_BASE_URL` / `COPILOT_PROVIDER_TYPE` / `COPILOT_PROVIDER_API_KEY`（或 `COPILOT_PROVIDER_BEARER_TOKEN`）/ `COPILOT_PROVIDER_WIRE_API` / `COPILOT_PROVIDER_HEADERS` + `COPILOT_MODEL`（必填）。
 - 已在本机 `copilot help providers`（CLI 1.0.81-3）验证；与仓库现有的"用户环境变量激活"实现一致。
 - 排他：自定义供应商生效期间 GitHub 官方模型路由不可用；**重启终端会话后生效**。预览中必须用醒目文案说明这两点。
-- 发布目标中 CLI 默认不勾选，卡片提前说明排他范围；结果保留“新终端 + 新 CLI 会话”的下一步。这描述本版适配器，不代表当前 CLI 所有接口都不支持供应商共存。
+- 发布目标中 CLI 默认不勾选，卡片提前说明排他范围；结果保留“新终端 + 新 CLI 会话”的下一步。
 - `~/.copilot/providers.json`：官方配置目录参考里提到（providers/models 键、优先于环境变量），但**无公开字段级 schema**，本版不使用，列为后续调研项。
 
 ### 1.3 JetBrains 是两层存储（2026-10-12 发布包复核修正）
 
 - **供应商配置层共享**：已审核的 GitHub Copilot 1.19 语言服务器以 `byok` 命名空间保存供应商密钥、端点、协议及模型配置。Windows 默认目标为 `%USERPROFILE%\AppData\Local\github-copilot\byok.json`；绝对 `XDG_CONFIG_HOME` 可改变根路径。同一用户、同一配置根路径的 IDE 共用该文件，继续去重写入，不能改成逐 IDE 重复保存密钥。
-- **IDE 偏好层独立**：各 IDE 的 `options/github-copilot.xml` 保存 `CopilotBYOKGroupNames`、`CopilotBYOKProviderLabels`、`CopilotModelEnabledState`、`CopilotContextWindows` 和 `CopilotReasoningEfforts` 等偏好。它不是完整供应商配置文件，也不证明每个 IDE 的 BYOK 端点互相隔离。
-- 插件通过语言服务器的 `listCustomProviderConfigs` 获取供应商组名，并协调 IDE 本地分组。保留各 IDE 的官方登录、重启、模型可见性和请求验收，不把写入共享文件当作全部 IDE 已选用模型。
+- **IDE 偏好层独立**：各 IDE 的 `options/github-copilot.xml` 保存 `CopilotBYOKGroupNames`、`CopilotBYOKProviderLabels`、`CopilotModelEnabledState`、`CopilotContextWindows` 和 `CopilotReasoningEfforts` 等偏好。供应商端点与密钥由上方共享运行时配置管理。
+- 插件通过语言服务器的 `listCustomProviderConfigs` 获取供应商组名，并协调 IDE 本地分组。保留各 IDE 的官方登录、重启、模型可见性和请求验收。
 - 本轮**不读写真实 IDE XML、认证材料或对话**，不重置用户的启用/显示偏好。未知版本保持不支持。静态证据见 `docs/jetbrains-support.md`；隔离真机验收见 `docs/local-validation-plan.md` 的“JetBrains 隔离真机验收”章节。
 
 ### 1.4 Copilot App 保持手动边界（已调研定案）

@@ -2,7 +2,7 @@
 
 This document records hostile inputs, failure modes, ambiguity, and privacy cases that shape CopilotBYOKManager's required implementation. The normative behavior is in `docs/mvp-implementation-spec.md`.
 
-Sections below describe required mitigations. They are not claims that every item has passed real-client acceptance. Consult [implementation status](implementation-status.md) for current behavior and dated evidence.
+Sections below describe required mitigations. Consult [implementation status](implementation-status.md) for current behavior and dated evidence.
 
 ## Threat model
 
@@ -12,8 +12,8 @@ Sections below describe required mitigations. They are not claims that every ite
 - Bound directories, public descriptor JAR candidates, total bytes, ZIP entries/central directory, XML size/depth/events and identity fields. Do not mistake numerous official dependency JARs for descriptor candidates. Reject ZIP64/multipart/ambiguous layouts, duplicate identities, external/custom XML entities, malformed metadata, linked/junction parents and oversized content. Discovery never extracts or executes archives.
 - Standard profiles may survive uninstallation and custom/portable paths may be missed. Report these limitations, disabled plugins, and scan errors; do not manufacture readiness.
 - Automatic writes require an exact reviewed version; a forged writable flag cannot bypass native metadata. Only the dedicated BYOK namespace is projected. Bound JSON size/depth/keys/strings and reject duplicates without echoing raw values. Preserve unknown fields/decimal precision. Replacing the three owned provider keys requires matching durable owner/Connection/resource/projection proof, not markers alone. Missing/foreign/modified/per-model overriding keys conflict. Shared IDE targets get one physical write. Include BYOK in stale checks, prepare-all, private journals, post-write verification and conditional rollback; interrupted recovery still works after plugin removal.
-- One IDE's account check is not proof for another; adding/changing observed profiles invalidates aggregate manual confirmation. The Copilot app provider confirmation belongs only to that app.
-- Materialize only CopilotBYOKManager's own BYOK key after confirmation. Never read Password Safe, authentication settings/databases or conversation/debug logs to infer accounts/costs. BYOK JSON and rollback snapshots are native-only secret-bearing data. Catalog publication is not an open chat's selected model, sign-in or provider execution. CLI/shared-runtime records must not be relabeled JetBrains without authoritative evidence.
+- Verify each IDE account separately; adding/changing observed profiles invalidates aggregate manual confirmation. The Copilot app provider confirmation belongs only to that app.
+- Materialize only CopilotBYOKManager's own BYOK key after confirmation. Never read Password Safe, authentication settings/databases or conversation/debug logs to infer accounts/costs. BYOK JSON and rollback snapshots are native-only secret-bearing data. CLI/shared-runtime records must not be relabeled JetBrains without authoritative evidence.
 
 CopilotBYOKManager runs as the local user and intentionally modifies developer-tool configuration. It may launch installers, open official authentication flows, read local usage metadata, query GitHub personal-usage endpoints, and calculate monetary estimates.
 
@@ -241,7 +241,7 @@ Required mitigation:
 
 ### False success
 
-VS Code's GUI executable is not its noninteractive CLI. Calling it directly with `--list-extensions` can open user windows and an empty capture cannot prove absence. Use the validated launcher layout with child-local Electron Node mode, check bundled Copilot manifests separately, preserve Unknown on failures, and reject installation plans for Unknown observations. Regression acceptance must monitor new VS Code windows across normal startup and repeated discovery.
+VS Code's GUI executable is not its noninteractive CLI. Calling it directly with `--list-extensions` can open user windows. Treat empty captures as Unknown. Use the validated launcher layout with child-local Electron Node mode, check bundled Copilot manifests separately, preserve Unknown on failures, and reject installation plans for Unknown observations. Regression acceptance must monitor new VS Code windows across normal startup and repeated discovery.
 
 Installer exit code zero may not mean the client is usable.
 
@@ -555,7 +555,7 @@ Required mitigation:
 
 ### Hidden-window lifetime and tray availability
 
-Close-to-tray must not trap a hidden app. Only intercept the main close with a readable Tray preference, native tray creation and successful hide; otherwise retain normal close. Corrupt/newer/unreadable window preferences use Exit and must not be overwritten. Window preference writes are bounded, private, atomic, cross-process excluded and bound to prior bytes. Save failure keeps the live choice unchanged. Native restore/Exit never touches providers or credentials. The only locale command accepts two enum values and replaces fixed menu text in memory; it cannot remove actions or change their meaning. Do not grant unrestricted WebView menu/tray mutation permissions. Unknown observations remain unknown, not a normal-exit claim.
+Close-to-tray must not trap a hidden app. Only intercept the main close with a readable Tray preference, native tray creation and successful hide; otherwise retain normal close. Corrupt/newer/unreadable window preferences use Exit and must not be overwritten. Window preference writes are bounded, private, atomic, cross-process excluded and bound to prior bytes. Save failure keeps the live choice unchanged. Native restore/Exit never touches providers or credentials. The only locale command accepts two enum values and replaces fixed menu text in memory; it cannot remove actions or change their meaning. Do not grant unrestricted WebView menu/tray mutation permissions. Return Unknown when observations are unavailable.
 
 Register the official single-instance plugin before store recovery: a duplicate launch must not recover another running process's jobs. Ignore secondary argument/cwd payloads, including apparent deployment commands and URLs; restore only. Production and isolated roots must have distinct instance identifiers. Tests cover absent tray, explicit exit, hide/save failure, strict preference parsing and reopen, external changes, native write exclusion, bounded locale/identifiers, DTO serialization and restricted capabilities. Actual close/restore/Exit and repeated-launch behavior still need Windows interaction verification.
 
@@ -576,7 +576,7 @@ Required mitigation:
 - require explicit selection of the legacy exclusive CLI route by default;
 - keep official quota/Billing outside local-usage filter state, preserving unknown/partial values and exact decimals.
 
-The isolated browser suite covers these behaviors, including replacement attempts and failure recovery. Its synthetic data does not prove native IPC or real-client readiness.
+The isolated browser suite covers these behaviors, including replacement attempts and failure recovery.
 
 ### Mock data presented as native data
 

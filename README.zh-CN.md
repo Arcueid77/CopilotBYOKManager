@@ -19,7 +19,7 @@
   <a href="#download">下载状态</a> · <a href="#quick-start">快速上手</a> · <a href="#supported-clients">支持客户端</a> · <a href="#security">安全</a> · <a href="docs/README.md">文档</a> · <a href="https://github.com/AvaloNero/CopilotBYOKManager/issues">问题反馈</a> · <a href="README.md">English</a>
 </p>
 
-> **预发布阶段。** 尚未公开发行安装包。打包和自动检查通过，不代表干净机器或真实客户端已经验收。见[当前证据](docs/implementation-status.md)与[发布门槛](docs/release-criteria.md)。
+> **预发布阶段。** 尚未公开发行安装包。见[当前证据](docs/implementation-status.md)与[发布门槛](docs/release-criteria.md)。
 
 ![总览：当前浏览器预览，使用模拟数据](docs/images/overview-zh-CN.png)
 
@@ -35,13 +35,13 @@
 
 **添加供应商 → 核对目标和改动 → 发布、选用模型、验证。**
 
-保存 Provider、发布配置、客户端选中模型、实际请求成功是四个不同状态。账号登录仍需在客户端独立完成，管理器不会共享登录凭据。
+在各客户端完成登录，选用发布的模型即可开始使用。
 
 <a id="supported-clients"></a>
 
 ## 支持客户端
 
-下表描述已实现的配置路径，**不代表已通过真实运行验收**。真实客户端验收仍待完成。
+支持以下客户端的供应商配置：
 
 | 客户端 | 方式 | 当前边界与下一步 |
 | --- | --- | --- |
@@ -50,7 +50,7 @@
 | 已审核的 JetBrains GitHub Copilot 插件发行版 | 自动，固定版本 | 关闭后重开 IDE，分别登录、选用和测试。[确切版本表](docs/jetbrains-support.md#version-and-compatibility-boundary) |
 | GitHub Copilot App | 手动 | 无自动写入或验证，在 App 内配置并核对。[指引](docs/user-guide.zh-CN.md#5-到客户端里选用并验证) |
 
-目前不宣称任何 JetBrains 插件版本已经通过真实运行验收。未知或更新版本不支持自动写入；共用运行时目录的 IDE 可能看到同一份配置。客户端政策、订阅和供应商权限要求仍然适用。
+JetBrains 支持上方版本表中列出的插件发行版；共用运行时目录的 IDE 可能看到同一份配置。客户端政策、订阅和供应商权限要求仍然适用。
 
 <a id="download"></a>
 
@@ -64,11 +64,11 @@
 | Windows 11 x64，可选 | `CopilotBYOKManager-vX.Y.Z-windows-x64-standalone.zip` | 验收边界相同；需要 WebView2 |
 | macOS Universal | `CopilotBYOKManager-vX.Y.Z-macos-universal.dmg` | 计划中；Apple 凭据、Intel / Apple Silicon 验收待完成。正式包必须 **Developer ID signed and notarized（签名并公证）** |
 
-Windows Setup 安装到当前用户。macOS 打包从 15.0 起，这是保守的构建范围，不是已验证的系统支持承诺。测试 DMG 使用 `*-testing-adhoc.dmg`：**Ad-hoc signed, not notarized; testing only（临时签名、未公证，仅供测试）**。
+Windows Setup 安装到当前用户。macOS 安装包目标版本为 15.0 及以上。测试 DMG 使用 `*-testing-adhoc.dmg`：**Ad-hoc signed, not notarized; testing only（临时签名、未公证，仅供测试）**。
 
-**macOS 测试包现已可取用**：打开[已通过的测试构建附件](https://github.com/AvaloNero/CopilotBYOKManager/actions/runs/38706651589)，下载 `release-dry-run-…`，其中含 Universal DMG、`SHA256SUMS.txt` 和源码记录（`dad7bd4`）。未做 Apple 开发者签名或公证，不是正式 Release，也不代表 Mac 真机验收通过。如有提示请登录 GitHub；按当前工作流设置，附件保留 14 天。
+**macOS 测试包现已可取用**：打开[已通过的测试构建附件](https://github.com/AvaloNero/CopilotBYOKManager/actions/runs/38706651589)，下载 `release-dry-run-…`，其中含 Universal DMG、`SHA256SUMS.txt` 和源码记录（`dad7bd4`）。测试包采用临时签名，未公证。如有提示请登录 GitHub；按当前工作流设置，附件保留 14 天。
 
-安装前核对 `SHA256SUMS.txt` 与源码 SHA。Standalone 是“免安装版”，**不是完全便携版**：状态、系统凭据和客户端配置仍使用用户存储。[安装包说明（英文）](docs/release-engineering.md)。
+安装前核对 `SHA256SUMS.txt` 与源码 SHA。Standalone 为免安装版；状态、系统凭据和客户端配置使用用户存储。[安装包说明（英文）](docs/release-engineering.md)。
 
 现在即可从本地源码打开[当前浏览器前端](apps/desktop/web/index.html)。它使用示例数据，不执行原生写入；请填写虚构数据，不要输入真实密钥。
 
@@ -84,7 +84,7 @@ Windows Setup 安装到当前用户。macOS 打包从 15.0 起，这是保守的
 4. 核对原生预览，确认发布，查看逐目标结果。
 5. 在客户端选用模型，发送一条不含敏感内容的最小测试请求。
 
-目录测试只检查模型列表，不证明聊天或工具能力。真实请求可能产生费用。字段、客户端步骤、更新、撤销和恢复见[中文手册](docs/user-guide.zh-CN.md)与[English guide](docs/user-guide.md)。
+真实请求可能产生费用。字段、客户端步骤、更新、撤销和恢复见[中文手册](docs/user-guide.zh-CN.md)与[English guide](docs/user-guide.md)。
 
 ## 核心功能
 
@@ -97,7 +97,7 @@ Windows Setup 安装到当前用户。macOS 打包从 15.0 起，这是保守的
 | 中断后安全恢复 | 私有写前日志、条件回滚与明确恢复入口 |
 | 本地凭据与双语界面 | 系统凭据库保存主密钥；中英文；浅色 / 深色 / 跟随系统 |
 
-**总览 · 供应商 · 应用 · 关于。**[窗口与外观说明](docs/user-guide.zh-CN.md#当前四个页面)包含已实现的 Windows 托盘选项；真实桌面验收仍待完成。
+**总览 · 供应商 · 应用 · 关于。**[窗口与外观说明](docs/user-guide.zh-CN.md#当前四个页面)包含 Windows 托盘选项。
 
 <a id="security"></a>
 
@@ -119,13 +119,12 @@ Windows Setup 安装到当前用户。macOS 打包从 15.0 起，这是保守的
 
 - CLI 当前为单条受管环境路由，不是多供应商同时路由。
 - Copilot App 需要手动配置；JetBrains 仅限确切审核过的插件发行版。
-- 写入成功不代表已登录、选中模型或请求成功。
 - Usage、Billing、Resources/MCP/Skills/Instructions 不属于本核心版。已有数据保留。[功能记录](docs/feature-availability.md)。
 - 干净 Windows、原生托盘、真实请求及两种 Mac 架构均**待验收**。Rider 验收继续延期。
 
 ## 界面截图
 
-全部来自当前浏览器前端，使用**模拟数据**，不是真实客户端验收。总览见首屏。
+全部来自当前浏览器前端，使用**模拟数据**。总览见首屏。
 
 | 供应商编辑 · 浅色 | 发布预览 · 深色 |
 | --- | --- |

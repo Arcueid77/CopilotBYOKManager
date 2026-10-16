@@ -10,7 +10,7 @@ const target = { id: "jb-idea", kind: "jetbrains-copilot", name: "IntelliJ IDEA 
 
 test("JetBrains guide includes real configuration steps but not credentials or completion controls", () => {
   const html = guide(connection, target, { description: "Manual only", changes: ["Enable model: allowed-model"] });
-  for (const text of ["Manage Models", "Add Models", "Login to GitHub", "OpenAI 兼容", "example.invalid/v1", "allowed-model", "Password Safe"]) assert.ok(html.includes(text));
+  for (const text of ["Manage Models", "Add Models", "Login to GitHub", "OpenAI 兼容", "example.invalid/v1", "allowed-model"]) assert.ok(html.includes(text));
   assert.doesNotMatch(html, /SENSITIVE|disabled-model|confirm-manual|apply-deployment|<input/);
   assert.match(html, /仅在 IDE 中配置其界面支持的字段/);
   assert.doesNotMatch(html, /确认发布后仅在原生 BYOK 配置中写入/);
@@ -29,7 +29,7 @@ test("writable JetBrains review exposes real automatic fields without showing se
   assert.match(html, /重新打开 IDE/);
   assert.match(html, /无需在 Manage Models 中重新输入/);
   assert.match(html, /独立 XML/);
-  assert.match(html, /配置写入不等于登录或请求成功/);
+  assert.match(html, /请在每个 IDE 中通过 Tools > GitHub Copilot > Login to GitHub 登录并核对账号。/);
   assert.doesNotMatch(html, /保存并启用模型/);
   assert.doesNotMatch(html, /SENSITIVE|disabled-model|<input/);
   const data = { setup: { manualConfirmed: true, preferences: { connectionId: "c" }, targets: [{ targetId: "jb-idea", state: "notDeployed" }] } };
@@ -53,7 +53,6 @@ test("app manual confirmation never covers JetBrains, which is optional for core
 });
 test("JetBrains coverage is unavailable rather than fabricated zero or CLI attribution", () => {
   const html = usage.render({ connections: [connection], clients: [target] }, { errors: {} }, true);
-  assert.match(html, /JetBrains 用量：未覆盖/);
-  assert.match(html, /未知，不是零/);
+  assert.match(html, /JetBrains 用量：暂未支持。/);
   assert.doesNotMatch(html, /data-source-id="jetbrains/);
 });

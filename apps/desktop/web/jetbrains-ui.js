@@ -23,7 +23,7 @@
         <ul>${connection.models.filter(m => m.enabled).map(m => `<li>${tr("模型：")}<code>${e(m.modelId)}</code></li>`).join("")}</ul>
         ${connection.headers && Object.keys(connection.headers).length ? `<p>${tr("不显示请求头值；{0}", automatic ? tr("确认发布后仅在原生 BYOK 配置中写入。") : tr("请仅在 IDE 中配置其界面支持的字段。"))}</p>` : ""}` : `<p>${tr("请先添加连接，再核对端点和模型。")}</p>`}
       ${operation ? `<details><summary>${tr("原生写入明细 · {0}", automatic ? tr("支持自动发布") : tr("不支持自动写入"))}</summary><p>${e(operation.description)}</p><ul>${operation.changes.map(c => `<li>${e(c)}</li>`).join("")}</ul></details>` : ""}
-      <details><summary>${tr("安全边界与登录")}</summary><p>${tr("查看指引不写入配置、不显示密钥。支持的自动部署在确认发布后，会在专用 BYOK 文件和私有回滚数据中保存供应商密钥。")}</p><p>${tr("不读取 Password Safe、登录凭据或会话。配置写入不等于登录或请求成功；如未登录，请自行完成官方 Login to GitHub 流程。App 的确认不能覆盖此 IDE。")}</p></details>
+      <details><summary>${tr("安全边界与登录")}</summary><p>${tr("查看指引不写入配置、不显示密钥。支持的自动部署在确认发布后，会在专用 BYOK 文件和私有回滚数据中保存供应商密钥。")}</p><p>${tr("请在每个 IDE 中通过 Tools > GitHub Copilot > Login to GitHub 登录并核对账号。")}</p></details>
       <p><a href="https://plugins.jetbrains.com/plugin/17718-github-copilot" target="_blank" rel="noreferrer">${tr("官方插件")}</a> · <a href="https://github.blog/changelog/2026-07-14-github-copilot-for-jetbrains-expands-byok-capabilities/" target="_blank" rel="noreferrer">${tr("官方自定义端点说明")}</a></p>`;
   }
   return { guide };

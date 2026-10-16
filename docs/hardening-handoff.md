@@ -1,8 +1,8 @@
 # CopilotBYOKManager deployment, Resources, installation, and account hardening
 
-This document records implemented behavior as of 2026-10-02. The [MVP specification](mvp-implementation-spec.md) remains normative. This is not a clean-machine release acceptance claim.
+This document records implemented behavior as of 2026-10-02. The [MVP specification](mvp-implementation-spec.md) remains normative.
 
-For later JetBrains and UI work, read [implementation status](implementation-status.md), [JetBrains support](jetbrains-support.md) and [architecture](architecture.md). The package versions and upstream inspection dates below remain fixed provenance; the 2026-10-13 documentation refresh does not claim a new upstream or clean-machine verification.
+For later JetBrains and UI work, read [implementation status](implementation-status.md), [JetBrains support](jetbrains-support.md) and [architecture](architecture.md). The package versions and upstream inspection dates below remain fixed provenance.
 
 ## Implemented native behavior
 
@@ -12,7 +12,7 @@ For later JetBrains and UI work, read [implementation status](implementation-sta
 - Delete offers two explicit workflows: detach local metadata only, or review/revoke all proven owned projections and then delete. Journal, rollback, post-write verification, ownership/audit commit, and credential cleanup have distinct failure outcomes. A detach-only action leaves materialized credentials/client configuration intact.
 - Resources have real native CRUD and publication. Saving is local-only. MCP, Markdown-only Skills, and Instructions use native-held expiring one-shot plans; all supported targets are prepared before mutation. Review shows the concrete destination, create/update/remove/no-op status, and only the owned projected content; unrelated MCP entries or credentials never enter preview DTOs. MCP preserves unknown root fields/user entries. Owned Markdown refuses external changes. Revocation removes only proven projections and retains bounded identity-only recovery tombstones.
 - Installation history is prepared before launching anything and stores only typed status/result metadata. Scoped cancellation terminates CopilotBYOKManager-owned captured children; completed installations are not removed. Timeout, partial, failed verification, cancellation, and interruption remain distinct.
-- Installation binds native-discovered executable bytes and a monotonic deadline. Unknown identity never authorizes replacement. VS Code uses its supported CLI layout/metadata, CLI uses a bounded version-only probe, and the app uses bounded PE version/product data without launching its GUI. Version resources are not claimed as cryptographic publisher proof.
+- Installation binds native-discovered executable bytes and a monotonic deadline. Unknown identity never authorizes replacement. VS Code uses its supported CLI layout/metadata, CLI uses a bounded version-only probe, and the app uses bounded PE version/product data without launching its GUI. Publisher verification uses OS Authenticode.
 - CLI login follow-up uses only reviewed read-only `connect`/`auth.getStatus`, supported github.com user/gh-cli authentication modes, and bounded login metadata. Matching identity, conflict, missing/unsupported evidence, timeout, and cancellation are distinct. VS Code/app accounts remain client-specific manual checks. Opening a flow is never login success.
 
 ## Reviewed package policy

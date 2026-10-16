@@ -45,6 +45,8 @@ async function nativeFixture() {
   connection.enabled = true;
   const connections = [connection], publications = [], deployments = [];
   const resources = [], delayed = new Map();
+  let catalogStatus = "available";
+  window.__setCatalogStatus = status => { catalogStatus = status; };
   let resourcePlan = null;
   window.__delayCommand = cmd => delayed.set(cmd, {});
   window.__releaseCommand = (cmd, fail = false) => { const pending = delayed.get(cmd); delayed.delete(cmd); if (fail) pending.reject?.(Error("Synthetic isolated operation failure")); else pending.resolve?.(); };
@@ -122,7 +124,7 @@ async function nativeFixture() {
       if (saved) Object.assign(saved, value); else connections.push(value);
       revision++; return structuredClone(value);
     }
-    if (cmd === "discover_connection_models") return { status: "available", detail: "Fixture catalog, not inference", models: [{ modelId: "gpt-5", name: "GPT-5" }, { modelId: "fixture-new", name: "New model" }, { modelId: "fixture-unselected", name: "Do not auto-add" }], parserVersion: 1 };
+    if (cmd === "discover_connection_models") return { status: catalogStatus, detail: "Untrusted fixture catalog detail", models: [{ modelId: "gpt-5", name: "GPT-5" }, { modelId: "fixture-new", name: "New model" }, { modelId: "fixture-unselected", name: "Do not auto-add" }], parserVersion: 1 };
     if (cmd === "get_installation_status") return components;
     if (cmd === "get_setup_status") return structuredClone(setup);
     if (cmd === "get_github_authorization_status") return authorization;
@@ -152,7 +154,7 @@ async function nativeFixture() {
     if (cmd === "apply_deployment_plan") {
       assertNative(activePlan && previewRevision === revision && args.planId === "reviewed-plan" && args.confirmed === true && Object.keys(args).length === 2); activePlan = false;
       const selected = connections.find(c => c.id === window.__planConnection), planId = `fixture-${deployments.length}`;
-      const records = reviewedTargets.map(id => ({ planId, connectionId: selected.id, targetId: id, targetKind: clients.find(c => c.id === id).kind, status: clients.find(c => c.id === id).supportsWrite ? "applied" : "skipped", createdAt: new Date().toISOString(), detail: "Fixture publication, not live consumption" }));
+      const records = reviewedTargets.map(id => ({ planId, connectionId: selected.id, targetId: id, targetKind: clients.find(c => c.id === id).kind, status: clients.find(c => c.id === id).supportsWrite ? "applied" : "skipped", createdAt: new Date().toISOString(), detail: "Fixture publication" }));
       setup.targets.forEach(t => { if (reviewedTargets.includes(t.targetId) && clients.find(c => c.id === t.targetId).supportsWrite) t.state = "inSync"; });
       for (const record of records.filter(record => record.status === "applied")) {
         for (let i = publications.length - 1; i >= 0; i--) if (publications[i].targetId === record.targetId && (record.targetKind === "copilot-cli" || publications[i].connectionId === selected.id)) publications.splice(i, 1);
@@ -337,6 +339,31 @@ async function checkPublication(browser, url, errors) {
   assert.equal(await page.evaluate(() => document.activeElement.dataset.clientId), "app");
   await page.close();
 }
+async function checkCatalogCopy(browser, url, errors) {
+  for (const [locale, success, failure] of [
+    ["zh-CN", "模型目录可访问。", "目录访问被拒绝，请检查密钥权限。"],
+    ["en", "Model catalog available.", "Catalog access denied. Check key permissions."],
+  ]) {
+    const page = await fixturePage(browser, url, errors, locale);
+    await page.locator('[data-appearance-select]').first().selectOption("dark");
+    await route(page, "connections");
+    const button = page.locator('[data-action="test-connection"]');
+    const status = page.locator('[data-probe-id="connection"]');
+    for (const [value, expected] of [["available", success], ["unauthorized", failure]]) {
+      await page.evaluate(value => window.__setCatalogStatus(value), value);
+      const before = await page.evaluate(() => window.__calls.length);
+      await button.click();
+      await page.waitForFunction(text => document.querySelector('[data-probe-id="connection"]')?.textContent === text, expected);
+      assert.equal(await status.innerText(), expected);
+      const calls = await page.evaluate(start => window.__calls.slice(start), before);
+      assert.deepEqual(calls.map(call => call.cmd), ["discover_connection_models"]);
+      assert.equal(calls[0].args.input.connectionId, "connection");
+      assert.doesNotMatch(await page.locator("#content").innerText(), /Untrusted fixture|不代表|不证明|not verified|does not prove/);
+      if (value === "available") await page.screenshot({ path: path.join(output, `catalog-result-${locale}.png`), fullPage: true });
+    }
+    await page.close();
+  }
+}
 async function checkRecovery(browser, url, errors) {
   const page = await fixturePage(browser, url, errors);
   await page.evaluate(() => window.__setRecovery({ conflictCount: 1 }));
@@ -405,6 +432,7 @@ async function checkTrayLocale(browser, url, errors) {
     await checkShell(browser, url, errors);
     await checkEditor(browser, url, errors);
     await checkPublication(browser, url, errors);
+    await checkCatalogCopy(browser, url, errors);
     await checkRecovery(browser, url, errors);
     await checkWindowPreferences(browser, url, errors);
     await checkTrayLocale(browser, url, errors);
@@ -414,6 +442,6 @@ async function checkTrayLocale(browser, url, errors) {
     for (const name of routes) { await route(preview, name); assert.ok(await preview.locator(".preview-banner").count()); }
     await preview.close();
     assert.deepEqual(errors, []);
-    console.log(JSON.stringify({ status: "passed", scenarios: ["four core routes", "Chinese and English", "light and dark contrast", "system appearance changes", "preference persistence", "no hidden feature queries", "unsupported route rejection", "draft/focus/save guards", "catalog check-save and invalidation", "app-specific provider publication", "busy/error/fresh-preview lifecycle", "manual app exact provider", "reviewed JetBrains fixture", "persistent history", "read-only/recovery visibility", "close preference success/failure/recovery", "bounded tray locale only", "browser preview boundaries"], output }));
+    console.log(JSON.stringify({ status: "passed", scenarios: ["four core routes", "Chinese and English", "light and dark contrast", "system appearance changes", "preference persistence", "no hidden feature queries", "unsupported route rejection", "draft/focus/save guards", "catalog check-save and invalidation", "concise bilingual catalog results and failure recovery", "app-specific provider publication", "busy/error/fresh-preview lifecycle", "manual app exact provider", "reviewed JetBrains fixture", "persistent history", "read-only/recovery visibility", "close preference success/failure/recovery", "bounded tray locale only", "browser preview boundaries"], output }));
   } finally { await browser.close(); server.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; server.close(); });

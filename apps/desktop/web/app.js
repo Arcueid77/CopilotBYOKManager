@@ -516,7 +516,6 @@
 
   function renderConnections() {
     return `
-      <p class="manager-boundary provider-security-note">${tr("密钥保存在系统凭据库，不回读到界面。测试连接仅查询模型目录，不验证推理能力。")}</p>
       ${snapshot.connections.length ? `<div class="card-grid">${snapshot.connections.map(connectionCard).join("")}</div>` : emptyConnections()}
       <section class="manager-section manager-publication"><h2 id="publication-result-title">${tr("最近配置操作")}</h2>${window.CopilotBYOKManagerManager.lastResult(snapshot, isDesktop)}</section>
       ${window.CopilotBYOKManagerCore.history(snapshot)}
@@ -693,7 +692,7 @@
           <div class="form-field full model-discovery" id="model-discovery">
             <div class="model-discovery-actions"><strong>${tr("获取模型目录")}</strong><button type="button" class="button ghost small" data-model-fetch>${tr("获取模型")}</button></div>
             <small data-model-status role="status" aria-live="polite"></small>
-            <small>${tr("只读取当前端点的模型目录，不发送对话请求。勾选即加入草稿，不会自动全选。")}</small>
+            <small>${tr("获取供应商的模型列表，勾选需要的模型即可加入草稿。")}</small>
             <div data-model-results hidden>
               <input type="search" data-model-search aria-label="${tr("筛选模型")}" placeholder="${tr("按模型名称或 ID 筛选")}" />
               <div class="discovered-models" data-model-list></div>
@@ -928,7 +927,7 @@
     if (!isDesktop || !data.setup) return;
     const evidenceFingerprint = data.setup.evidenceFingerprint;
     openModal({ title: tr("核对同一 GitHub 账号"), body: `
-      <p>${tr("逐个检查客户端显示的账号。这只记录你的确认，不代替自动验证。")}</p>
+      <p>${tr("核对每个客户端显示的账号后，保存你的确认。")}</p>
       <label class="setup-select">${tr("GitHub 用户名")}<input id="confirmed-login" maxlength="39" value="${escapeHtml(data.setup.target?.login ?? "")}" placeholder="${tr("github.com 用户名")}" /></label>
       <p class="muted">${tr("通过 GitHub 公开用户接口解析账号 ID，不需要账单授权。")}</p>
       <label class="account-confirmation"><input type="checkbox" id="confirm-all-accounts" /><span>${tr("我已逐个核对所有列出的客户端，包括每个检测到的 JetBrains IDE 配置，均显示同一个 github.com 账号。")}</span></label>`,
@@ -954,7 +953,7 @@
       <p class="manager-meta">${escapeHtml(window.CopilotBYOKManagerManager.policy("github-copilot-app"))}</p>
       <ol class="manual-steps"><li>${tr("在 Copilot App 中打开")} <strong>Model providers</strong> ${tr("设置。")}</li>
       <li>${tr("添加")} <strong>${escapeHtml(connection.name)}</strong>${tr("，端点")} <code>${escapeHtml(connection.baseUrl)}</code>${tr("，推荐模型")} <code>${escapeHtml(connection.models.find((m) => m.enabled)?.modelId ?? tr("未配置"))}</code>${tr("。如需密钥，请在 App 内输入。")}</li>
-      <li>${tr("在 App 内选择供应商和模型，并验证请求。")}</li></ol><p>${tr("这里记录你的手动确认，不读取或验证 App 的私有供应商配置。")}</p>`,
+      <li>${tr("在 App 内选择供应商和模型，并验证请求。")}</li></ol><p>${tr("完成 App 内配置后，保存你的确认。")}</p>`,
       footer: `<button class="button ghost" data-modal-close>${tr("关闭")}</button><button class="button primary" id="confirm-manual" ${!isDesktop || snapshot.stateRecovery || snapshot.deploymentRecovery ? "disabled" : ""}>${tr("我已完成手动配置")}</button>`,
       onOpen(root) { root.querySelector("#confirm-manual").addEventListener("click", async (event) => {
         event.target.disabled = true;
@@ -991,7 +990,7 @@
       openModal({
         title: keepCurrent ? tr("核对保留现有文件") : tr("核对中断后的恢复"),
         body: keepCurrent
-          ? `<p>${tr("保留全部 {0} 个记录中的资源，移除待恢复日志并解除发布写入阻塞。", plan.view.resourceCount)}</p><p><strong>${tr("此操作后，本软件将无法回滚尚未完成的变更。")}</strong> ${tr("这不代表配置正确或发布成功。再次发布前请核对客户端。")}</p><label><input id="confirm-recovery" type="checkbox" style="width:auto" />${tr("我确认保留现有文件，并丢弃待恢复的回滚数据。")}</label>`
+          ? `<p>${tr("保留全部 {0} 个记录中的资源，移除待恢复日志并解除发布写入阻塞。", plan.view.resourceCount)}</p><p><strong>${tr("此操作后，本软件将无法回滚尚未完成的变更。")}</strong> ${tr("再次发布前请核对客户端配置。")}</p><label><input id="confirm-recovery" type="checkbox" style="width:auto" />${tr("我确认保留现有文件，并丢弃待恢复的回滚数据。")}</label>`
           : `<p>${tr("记录了 {0} 个物理资源：{1} 个被外部修改，{2} 个无法定位，{3} 个无法安全读取。", plan.view.resourceCount, plan.view.conflictCount, plan.view.unknownResourceCount ?? 0, plan.view.unreadableResourceCount ?? 0)}</p><p>${plan.view.committed ? tr("审计已提交，仅清理完成的日志。") : blocked ? tr("自动恢复已阻塞。处理受影响目标后重新预览，或另行核对保留现有文件。") : tr("仅恢复没有外部改动的受管写入；再次发生外部改动时保留日志并停止恢复。")}</p><label><input id="confirm-recovery" type="checkbox" style="width:auto" ${blocked ? "disabled" : ""} />${tr("我已核对并同意执行此恢复操作。")}</label>`,
         footer: `<button class="button ghost" data-modal-close>${tr("取消")}</button>${!keepCurrent && !plan.view.committed ? `<button class="button ghost" id="review-keep-current">${tr("核对保留现有文件…")}</button>` : ""}<button class="button primary" id="apply-recovery" disabled>${keepCurrent ? tr("保留文件并结束恢复") : tr("恢复")}</button>`,
         onOpen(root) {

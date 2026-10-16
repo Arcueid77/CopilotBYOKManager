@@ -167,7 +167,6 @@ h1 { font-size: 26px; font-weight: 650; line-height: 1.25; margin-bottom: 8px; l
 .manager-model-chips { min-height: 31px; display: flex; align-items: flex-start; flex-wrap: wrap; gap: 6px; margin: 16px 0 20px; }
 .manager-model-chips small { color: var(--subtle); font-size: 10px; }
 .manager-card-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: auto; padding-top: 16px; border-top: 1px solid var(--border-soft); }
-.provider-security-note { margin: 0 0 20px; }
 .manager-remove { margin-left: auto; color: var(--subtle); }
 .manager-probe { color: var(--muted); font-size: 11px; line-height: 1.75; margin: 12px 0 0; }
 .manager-probe:empty { display: none; }

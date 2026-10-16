@@ -319,9 +319,23 @@ fn extension_observation(
     result: AppResult<Option<InstalledCopilot>>,
 ) -> InstallComponentObservation {
     let (status, detail, version) = match result {
-        Ok(Some(extension)) => (InstallComponentStatus::Ready, extension.detail, Some(extension.version)),
-        Ok(None) => (InstallComponentStatus::Missing, "Copilot was not found in the selected VS Code installation or its registered profiles".into(), None),
-        Err(_) => (InstallComponentStatus::Unknown, "Copilot installation could not be verified. Refresh after VS Code finishes updating; detection failure does not mean it is missing.".into(), None),
+        Ok(Some(extension)) => (
+            InstallComponentStatus::Ready,
+            extension.detail,
+            Some(extension.version),
+        ),
+        Ok(None) => (
+            InstallComponentStatus::Missing,
+            "Copilot was not found in the selected VS Code installation or its registered profiles"
+                .into(),
+            None,
+        ),
+        Err(_) => (
+            InstallComponentStatus::Unknown,
+            "Copilot installation status is unknown. Refresh after VS Code finishes updating."
+                .into(),
+            None,
+        ),
     };
     InstallComponentObservation {
         id: COMPONENT_VSCODE_COPILOT.into(),

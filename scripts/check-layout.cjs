@@ -186,6 +186,6 @@ async function checkEditor(page, locale) {
       await context.close();
     }
     assert.deepEqual(errors, []);
-    console.log(`Captured 20 screenshots with fictional, key-free data. ${captureOnly ? 'Baseline only; layout assertions not run.' : `${checks} page/locale/theme/viewport checks plus editor, long-name, preview and synthetic window-preference checks passed.`} Native acceptance is not covered.`);
+    console.log(`Captured 20 screenshots with fictional, key-free data. ${captureOnly ? 'Baseline only; layout assertions not run.' : `${checks} page/locale/theme/viewport checks plus editor, long-name, preview and synthetic window-preference checks passed.`}`);
   } finally { await browser.close(); server.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; server.close(); });

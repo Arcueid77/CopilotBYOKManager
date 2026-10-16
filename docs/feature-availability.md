@@ -1,6 +1,6 @@
 # CopilotBYOKManager feature availability
 
-Updated 2026-10-15. The **v0.1 release-candidate scope** is the core configuration edition with four pages: **Overview, Providers, Apps and About**. Configure one provider, review selected targets, publish safely, inspect results and revoke owned configuration. The product remains unreleased; scope approval is not acceptance or publication.
+Updated 2026-10-15. The **v0.1 release-candidate scope** is the core configuration edition with four pages: **Overview, Providers, Apps and About**. Configure one provider, review selected targets, publish safely, inspect results and revoke owned configuration. The product remains unreleased.
 
 ## Available in the current interface
 
@@ -10,11 +10,11 @@ Updated 2026-10-15. The **v0.1 release-candidate scope** is the core configurati
 - English and Simplified Chinese; Light, Dark and System appearance, with a bounded saved preference.
 - Windows close-to-tray by default, saved Tray/Exit choice on About, left-click restore, localized right-click Open main window / Exit menu and repeated-launch wakeup. Ordinary minimize stays on the taskbar. Unavailable tray, hide failure or unreadable preferences keep normal close. Browser preview and other platforms do not claim Windows tray behavior.
 
-Writing configuration is not proof of authentication, model selection or a successful request. See [implementation status](implementation-status.md) for the evidence attached to this source.
+See [implementation status](implementation-status.md) for the evidence attached to this source.
 
 ## Planned capabilities not offered in this edition
 
-These are retained extended-milestone plans, not v0.1 release gates or new product promises. There are no promised dates. Hiding a capability does not delete its implementation, tests, authorization metadata or imported records; the interface does not load or invoke it. Their unfinished live-account/resource acceptance stays deferred, not PASS.
+These capabilities belong to the extended milestone, with no scheduled release date. Hiding a capability does not delete its implementation, tests, authorization metadata or imported records; the interface does not load or invoke it. Live-account/resource acceptance is deferred.
 
 This is a frontend availability change, not removal of native services. Normal store opening, schema/recovery checks and the dashboard's database-health metadata remain; hidden feature queries and actions are not started by the four-page interface.
 
@@ -30,7 +30,7 @@ This is a frontend availability change, not removal of native services. Normal s
 
 ## Acceptance work is not another feature
 
-Windows x64 current-user NSIS and macOS Universal DMG are the required v0.1 delivery formats. Windows is an **Unsigned community build** (Authenticode is not required). Formal Mac packages require Developer ID, Hardened Runtime, notarization and stapled tickets; dry-run is explicitly ad-hoc testing only. Packaging scripts and the Draft-first workflow do not prove install/runtime acceptance. See [release engineering](release-engineering.md).
+Windows x64 current-user NSIS and macOS Universal DMG are the required v0.1 delivery formats. Windows is an **Unsigned community build** (Authenticode is not required). Formal Mac packages require Developer ID, Hardened Runtime, notarization and stapled tickets; dry-run is explicitly ad-hoc testing only. See [release engineering](release-engineering.md).
 
 Current-source native integration, Windows tray behavior, clean Windows installation and real app/provider requests require their own evidence. JetBrains/Rider runtime acceptance remains deferred until the maintainer resumes it. A browser fixture, passing unit test or compiled EXE cannot substitute for these checks.
 

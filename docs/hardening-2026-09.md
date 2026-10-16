@@ -24,7 +24,7 @@ This describes the code in this slice, not a claim that the complete MVP is fini
 - Persistent installation-owner evidence and conflict/adoption UX for legacy managed projections. This slice does not claim marker-only ownership is sufficient.
 - Official runtime quota/model discovery, local token import, immutable price ingestion/estimation and shared resource synchronization.
 - A guided last-good state restoration action. Last-good fallback is intentionally read-only and never silently overwrites the corrupt primary.
-- Real Windows client end-to-end testing. CI compilation is not proof that VS Code/Copilot consumes a generated configuration successfully.
+- Real Windows client end-to-end testing.
 
 Version-1 interrupted deployment journals are rejected for automatic recovery. They remain preserved for manual review. Journal data may include materialized credentials and must never be attached to public issues.
 

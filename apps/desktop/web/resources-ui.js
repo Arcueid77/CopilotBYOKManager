@@ -17,7 +17,7 @@
       ${blocked ? `<p class="inline-error">${tr("恢复期间暂停写入，请先核对恢复。")}</p>` : ""}
       ${overview?.detail ? `<p class="muted">${escape(overview.detail)}</p>` : ""}
       ${native && !overview ? `<p class="usage-empty">${tr("资源存储不可用，请核对恢复状态。")}</p>` : ""}
-      ${native && overview && records.length === 0 ? `<p class="usage-empty">${tr("尚无资源；保存不会自动发布。")}</p>` : ""}
+      ${native && overview && records.length === 0 ? `<p class="usage-empty">${tr("尚无资源。")}</p>` : ""}
       <div class="client-grid">${records.map((record) => {
         const bindings = (overview.bindings ?? []).filter((binding) => binding.resourceId === record.id);
         const unpublished = bindings.some((binding) => Date.parse(binding.deployedAt) < Date.parse(record.updatedAt));
@@ -38,7 +38,7 @@
     const native = context.native;
     if (!native) return;
     context.openModal({ title: record ? tr("编辑资源") : tr("添加资源"), wide: true,
-      body: `<form id="resource-form" novalidate><p id="resource-error" class="inline-error" role="alert" tabindex="-1" hidden></p><label class="field-label">${tr("名称")}<input class="text-input" name="name" maxlength="128" required value="${escape(record?.name)}"></label><label class="field-label">${tr("类型")}<select class="text-input" name="kind" ${record ? "disabled" : ""}>${["instructions", "skill", "mcp"].map((kind) => `<option value="${kind}" ${record?.kind === kind ? "selected" : ""}>${kindLabel(kind)}</option>`).join("")}</select></label><label class="field-label">${tr("内容或不含凭据的 HTTPS MCP 地址")}<textarea class="text-input" name="body" rows="12" maxlength="65536" required>${escape(record?.body)}</textarea></label><p class="muted">${tr("指令面向全部文件；技能填写 Markdown 正文，脚本与资源手动管理。MCP 不接受请求头、密钥或查询参数。保存不会发布。")}</p></form>`,
+      body: `<form id="resource-form" novalidate><p id="resource-error" class="inline-error" role="alert" tabindex="-1" hidden></p><label class="field-label">${tr("名称")}<input class="text-input" name="name" maxlength="128" required value="${escape(record?.name)}"></label><label class="field-label">${tr("类型")}<select class="text-input" name="kind" ${record ? "disabled" : ""}>${["instructions", "skill", "mcp"].map((kind) => `<option value="${kind}" ${record?.kind === kind ? "selected" : ""}>${kindLabel(kind)}</option>`).join("")}</select></label><label class="field-label">${tr("内容或不含凭据的 HTTPS MCP 地址")}<textarea class="text-input" name="body" rows="12" maxlength="65536" required>${escape(record?.body)}</textarea></label><p class="muted">${tr("指令面向全部文件；技能填写 Markdown 正文，脚本与资源手动管理。MCP 不接受请求头、密钥或查询参数。")}</p></form>`,
       footer: `<button class="button ghost" data-resource-close>${tr("取消")}</button><button class="button primary" id="save-resource" type="submit" form="resource-form">${tr("保存到本地")}</button>`,
       onOpen(root) {
         root.querySelector("[data-resource-close]").addEventListener("click", context.closeModal);
@@ -65,7 +65,7 @@
   function review(record, revokeAndDelete) {
     if (!context.native) return;
     context.openModal({ title: revokeAndDelete ? tr("核对资源撤销") : tr("核对资源发布"), wide: true,
-      body: `<p>${tr("{0}：写前会重检受管证明和目标指纹。预览 15 分钟有效，仅可使用一次。 {1}", escape(record.name), revokeAndDelete ? tr("仅移除已核验的受管配置，保留用户条目。") : tr("仅写入支持的目标，手动客户端不计为同步成功。"))}</p><div id="resource-plan" role="status">${tr("请生成预览，逐个核对目标。")}</div>`,
+      body: `<p>${tr("{0}：写前会重检受管证明和目标指纹。预览 15 分钟有效，仅可使用一次。 {1}", escape(record.name), revokeAndDelete ? tr("仅移除已核验的受管配置，保留用户条目。") : tr("写入支持的目标，其余客户端请按指引手动配置。"))}</p><div id="resource-plan" role="status">${tr("请生成预览，逐个核对目标。")}</div>`,
       footer: `<button class="button ghost" data-resource-close>${tr("取消")}</button><button class="button primary" id="review-resource">${tr("生成预览")}</button>`,
       onOpen(root) {
         root.querySelector("[data-resource-close]").addEventListener("click", context.closeModal);

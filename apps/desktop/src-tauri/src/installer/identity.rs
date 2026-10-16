@@ -1,5 +1,5 @@
-//! Bounded Windows identity observations. Version resources are data, not proof
-//! of a publisher; installer execution additionally requires OS Authenticode.
+//! Bounded Windows product/version observations. Publisher verification for
+//! installer execution additionally requires OS Authenticode.
 use crate::error::{AppError, AppResult};
 use std::path::{Path, PathBuf};
 

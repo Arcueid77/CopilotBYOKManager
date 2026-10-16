@@ -624,7 +624,7 @@ pub async fn preview_revoke_and_delete(
         store.ensure_writable().map_err(command_error)?;
         deployment::ensure_no_pending_journal(store.path()).map_err(command_error)?;
         let connection = store.connection(&connection_id).map_err(command_error)?;
-        // Pre-hardening audits do not prove that existing client data is ours.
+        // Pre-hardening audits lack the durable ownership required for managed writes.
         if store.deployments().iter().any(|record| record.connection_id == connection_id
             && record.status == DeploymentStatus::Applied && !record.ownership_tracked) {
             return Err("Legacy deployments have no durable ownership proof. Review their configuration manually, or choose Detach only; no client data was changed".into());
