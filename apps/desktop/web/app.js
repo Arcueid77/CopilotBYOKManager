@@ -516,7 +516,7 @@
 
   function renderConnections() {
     return `
-      <p class="manager-boundary" style="margin-bottom:18px">${tr("密钥保存在系统凭据库，不回读到界面。测试连接仅查询模型目录，不验证推理能力。")}</p>
+      <p class="manager-boundary provider-security-note">${tr("密钥保存在系统凭据库，不回读到界面。测试连接仅查询模型目录，不验证推理能力。")}</p>
       ${snapshot.connections.length ? `<div class="card-grid">${snapshot.connections.map(connectionCard).join("")}</div>` : emptyConnections()}
       <section class="manager-section manager-publication"><h2 id="publication-result-title">${tr("最近配置操作")}</h2>${window.CopilotBYOKManagerManager.lastResult(snapshot, isDesktop)}</section>
       ${window.CopilotBYOKManagerCore.history(snapshot)}
@@ -602,13 +602,14 @@
       <article class="client-card" data-client-id="${escapeHtml(client.id)}" tabindex="-1">
         <div class="client-header">
           <div class="client-icon">${escapeHtml(clientIcon(client.kind))}</div>
+          <h3>${escapeHtml(client.name)}</h3>
           <span class="status-pill ${escapeHtml(client.status)}">${escapeHtml(statusLabel(client.status))}</span>
         </div>
-        <h3>${escapeHtml(client.name)}</h3>
-        <p>${escapeHtml(client.detail)}</p>
-        ${client.detected ? `<label class="app-provider-field"><span>${tr("使用供应商")}</span><select class="app-provider-select" aria-label="${tr("{0} 使用的供应商", escapeHtml(client.name))}" ${!providers.length || snapshot.stateRecovery || snapshot.deploymentRecovery ? "disabled" : ""}><option value="" ${!providerId ? "selected" : ""}>${providers.length ? tr("请选择供应商") : tr("请先添加供应商")}</option>${providers.map(connection => `<option value="${escapeHtml(connection.id)}" ${connection.id === providerId ? "selected" : ""}>${escapeHtml(connection.name)}</option>`).join("")}</select></label><button class="button primary small" data-action="deploy-client" data-client-id="${escapeHtml(client.id)}" ${!providerId || snapshot.stateRecovery || snapshot.deploymentRecovery || (!client.supportsWrite && client.kind !== "github-copilot-app") ? "disabled" : ""}>${client.supportsWrite ? tr("预览配置") : tr("手动配置")}</button>` : ""}
-        <details class="app-details"><summary>${tr("应用信息")}</summary><div class="path-line" title="${escapeHtml(client.path ?? client.diagnostic ?? "")}">${escapeHtml(client.path ?? client.diagnostic ?? tr("未提供本地路径"))}</div></details>
+        <p class="client-description">${escapeHtml(client.detail)}</p>
+        <div class="app-configuration">${client.detected ? `<label class="app-provider-field"><span>${tr("使用供应商")}</span><select class="app-provider-select" aria-label="${tr("{0} 使用的供应商", escapeHtml(client.name))}" ${!providers.length || snapshot.stateRecovery || snapshot.deploymentRecovery ? "disabled" : ""}><option value="" ${!providerId ? "selected" : ""}>${providers.length ? tr("请选择供应商") : tr("请先添加供应商")}</option>${providers.map(connection => `<option value="${escapeHtml(connection.id)}" ${connection.id === providerId ? "selected" : ""}>${escapeHtml(connection.name)}</option>`).join("")}</select></label><button class="button primary small" data-action="deploy-client" data-client-id="${escapeHtml(client.id)}" ${!providerId || snapshot.stateRecovery || snapshot.deploymentRecovery || (!client.supportsWrite && client.kind !== "github-copilot-app") ? "disabled" : ""}>${client.supportsWrite ? tr("预览配置") : tr("手动配置")}</button>` : ""}</div>
+        <div class="app-card-footer"><details class="app-details"><summary>${tr("应用信息")}</summary><div class="path-line" title="${escapeHtml(client.path ?? client.diagnostic ?? "")}">${escapeHtml(client.path ?? client.diagnostic ?? tr("未提供本地路径"))}</div></details>
         ${client.kind === "jetbrains-copilot" && !client.supportsWrite ? `<button class="button ghost small" data-action="jetbrains-guide" data-id="${escapeHtml(client.id)}">${tr("配置指引")}</button>` : ""}
+        </div>
       </article>`;
   }
 

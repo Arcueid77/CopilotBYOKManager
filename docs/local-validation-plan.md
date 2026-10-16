@@ -11,6 +11,7 @@
 ## v0.1 当前核心验收入口
 
 - 源码：`npm ci`、`npm run check:version`、`npm run test:release`、`npm run check` 和差异检查；锁文件必须使用。Release 在同一固定 SHA 上独立重复检查。
+- 界面对齐：安装好的 Playwright/Chromium 路径按下文环境变量指定后，运行 `node scripts/check-layout.cjs`。覆盖四页、中英文、明暗主题及 960/1180/1440px 宽度，并检查长名称、不同长度卡片、弹窗滚动和草稿保存。截图目录由 `COPILOT_BYOK_MANAGER_CAPTURE_DIR` 指定；改动前可用 `--capture-only` 保留基线，但该模式不执行对齐断言。只用隔离假数据，不代表原生或客户端验收。
 - 包：新发行入口为 [package-windows.ps1](../scripts/package-windows.ps1)（current-user NSIS + 免安装 ZIP）和 [package-macos.mjs](../scripts/package-macos.mjs)（Universal DMG）；命令及校验和装配见[发行工程（英文）](release-engineering.md)。旧 `package-local.ps1` / PrepareLive 是隔离验收准备入口，不是公开发行附件生成器。
 - Windows：以最终 Draft 安装包和哈希，在干净用户验收 WebView2、无开发工具安装、开始菜单、卸载项、重开、托盘/退出及客户端配置不受卸载影响。未签名须明确披露，不以“可信发布者”作为本版硬门槛。
 - Mac：本 Windows 环境不能验证构建、公证或桌面行为。由 GitHub macOS runner 及真实 Intel/Apple Silicon 分别完成签名、DMG 安装、Finder 启动、Keychain CRUD、CLI 检测、模型发布/请求、关闭窗口和 Cmd+Q，详见[Apple 与真机清单（英文）](release-secrets.md)。

@@ -1,6 +1,6 @@
 # CopilotBYOKManager implementation status
 
-Updated 2026-10-15 for the maintainer-approved v0.1 four-page release scope, icon refresh and unsigned Mac preview. Initial release engineering started at `83a82db3555eb0defa278bd6e042b7c55a76088f`; current package source and evidence are recorded below. This is an implementation/evidence summary, not complete-MVP or release acceptance. The [specification §21](mvp-implementation-spec.md#21-final-acceptance) and [feature availability](feature-availability.md) separate core release gates from the retained extended milestone. The product has not had a public release.
+Updated 2026-10-16 for the four-page layout polish and Windows console-free release fix, on top of the maintainer-approved v0.1 scope, icon refresh and unsigned Mac preview. Initial release engineering started at `83a82db3555eb0defa278bd6e042b7c55a76088f`; current package source and evidence are recorded below. This is an implementation/evidence summary, not complete-MVP or release acceptance. The [specification §21](mvp-implementation-spec.md#21-final-acceptance) and [feature availability](feature-availability.md) separate core release gates from the retained extended milestone. The product has not had a public release.
 
 ## Current implementation
 
@@ -32,10 +32,30 @@ Technical detail: [architecture](architecture.md), [hardening](hardening-handoff
 - Publication: pending apply blocks navigation/refresh/dismissal, and failures retain guidance with a consumed preview. Closing an idle preview restores its opener; completion focuses persistent per-target results. VS Code/JetBrains model selection, CLI new-session guidance, and the exact Connection's App manual guide remain distinct. Disk publication never claims login, selection or successful provider execution.
 - Appearance/help: Light/Dark/System, early saved preference and live system following only in System mode. Changes are CSS-only, preserving drafts and previews without IPC. About includes manual/feedback links, an offline planned-feature record and local storage/recovery details.
 - Windows window lifetime: default close-to-tray with a saved Tray/Exit choice on About; left-click restore, localized right-click Open main window / Exit menu, and repeat-launch wakeup. Only a readable Tray preference, registered tray and successful hide retain background execution; other main close paths use normal Tauri exit. Ordinary minimize uses the taskbar. Preference damage keeps the original file and exits; unknown observations remain unknown. Unrestricted menu/tray permissions are excluded from the WebView.
+- Layout: shared header/content gutters and equal-height toolbar controls; bottom-aligned provider actions; app identity, status, provider selector/action and information footer use consistent rows. Overview has a grouped app-status panel and paired summary/result panels; About groups identity, preferences and help. Dialog headers/footers stay visible while the form body scrolls. The four routes, explicit selection and preview/confirm semantics are unchanged.
 
 ## Validation evidence
 
 Evidence must stay attached to the source and validation layer that produced it. Tests use temporary data and fake external services. Private runtime reports remain outside Git; the reviewed, synthetic README screenshots are checked in with [provenance](images/README.md) and are not runtime acceptance evidence.
+
+### Layout polish and console-free Windows launch — 2026-10-16
+
+Validation baseline: `0255a7d09e08fb8909907724645f2653a6959813` plus the then-local changes described here. This evidence was collected before the maintainer's subsequent commit/push request; it does not claim tag/publication or fresh hosted-workflow acceptance.
+
+The Windows preview's unexpected console was confirmed in its PE header (Console subsystem 3). The release entry point now selects Windows GUI subsystem 2; debug builds retain their console. Packaging and the Windows CI build validate the compiled x64/PE32+ GUI header, rejecting console, malformed and truncated payloads. Three new regression tests cover the header and build-path contract. Native tray behavior, stores, credentials, migrations and deployment logic are unchanged.
+
+Before the later layout edits, a local dirty-source Windows dry-run produced NSIS and standalone ZIP artifacts. The extracted payload passed the GUI-header check, rejected test-only startup flags and opened a responding `CopilotBYOKManager` main window without the old console. That package is a **console-fix preview, not a package of the later layout changes**. No installer was executed; tray close/restore/Quit, clean-user setup, Mac runtime and real client requests were not accepted by this launch.
+
+The layout changes use the real current frontend with fresh isolated browser contexts and fictional key-free providers. `scripts/check-layout.cjs` preserves before/after captures at 1180 × 860 and checks 48 combinations of four pages, two languages, two explicit themes and 960/1180/1440px widths (960 × 640 is the smallest window). Geometry checks cover header/content alignment, toolbar heights, card action rows and overflow; additional scenarios cover long names, modal-body scrolling, draft retention, fake-data save, publication preview and synthetic native-only window preferences. These browser checks are not native IPC or real-client acceptance. No real provider, account, IDE or key was read or modified.
+
+| Check | Result and limit |
+| --- | --- |
+| Source checks | `npm run check` passed: 10 version sources, 22 release tests, 69 web tests, 998 bilingual messages / 973 explicit keys, Rust fmt, 275 library + 6 integration tests, strict Clippy. The existing local link-privilege limitation is unchanged |
+| Existing browser regression | All 18 core scenario groups passed, including contrast, system theme, draft/focus/save guards, preview lifecycle, recovery and hidden-feature boundaries; native calls remain fixtures |
+| Layout regression | 48 page/locale/theme/viewport checks plus editor/long-name/preview/synthetic-window checks passed; before/after screenshots retained locally under ignored `target/ui-polish-20261016/` |
+| README images | Six current-browser screenshots recaptured and visually inspected; icon/header checks passed for 18 locale/theme/width combinations |
+
+Release gates remain separate: current native-isolated acceptance, clean Windows install/uninstall and real client/provider requests are still required. Rider remains deferred. The earlier hosted Mac artifact is not a build or acceptance result for these local changes.
 
 ### Icon refresh and unsigned Mac preview — 2026-10-15
 
