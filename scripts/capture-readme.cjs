@@ -25,7 +25,7 @@ function seedPreview() {
       { id: 'vscode:stable:default', kind: 'vs-code-copilot', name: 'VS Code · Default', detail: 'Simulated profile', path: 'Example VS Code profile', detected: true, supportsWrite: true, status: 'available' },
       { id: 'copilot-cli:user-environment', kind: 'copilot-cli', name: 'GitHub Copilot CLI', detail: 'Simulated environment route', path: 'Example CLI environment', detected: true, supportsWrite: true, status: 'available' },
       { id: 'github-copilot-app:local', kind: 'github-copilot-app', name: 'GitHub Copilot App', detail: 'Manual guidance only', path: 'Example App installation', detected: true, supportsWrite: false, status: 'read-only' },
-    ], deployments: [], publishedSources: [],
+    ], deployments: [], clientConfigurations: [],
   }));
 }
 (async () => {

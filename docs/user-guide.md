@@ -92,13 +92,13 @@ To build the desktop executable without an installer, run `npm run build -- --no
 
 ### 1. Check the clients you want to use
 
-Open **Apps (应用)** and review the detected apps and profiles. You only need the clients you intend to use, not every supported app.
+Open **Apps (应用)** to view detected apps and profiles. Each Overview row's **View app (查看应用)** opens the matching app. You only need the clients you intend to use; missing, unsupported or unavailable detection does not create an Overview task. Under **Installation and updates**, use **Detect again (重新检测)** to refresh status. Components with unavailable detection retain their reason and offer the same read-only action.
 
-- If an installed component's status is outdated, open **Installation and updates (安装与更新)** and click **Refresh status (刷新状态)**.
+- If an installed component's status is outdated, open **Installation and updates (安装与更新)** and click **Detect again (重新检测)**.
 - For a missing supported Windows component, click its **Install (安装)** button, review the plan, and confirm. Install clients without an automatic installation path yourself.
-- Expand **Official sign-in and account checks (官方登录与账号核对)** and follow the official sign-in steps in each client. The manager never copies one client's sign-in credentials to another.
+- Expand **Sign-in and account checks (optional) / 登录与账号检查（可选）** and follow the official sign-in steps in each client. The manager never copies one client's sign-in credentials to another.
 
-Use **Check the same GitHub account in each client (逐个核对同一 GitHub 账号)** to record your own confirmation. Manual confirmation and software-verified identity are shown separately. **Provider setup does not require granting this manager access to personal Billing.** Billing authorization is separate and is not offered in this core edition.
+Use **Record checked account (记录已核对的账号)** only after checking the clients yourself. This does not sign in or switch their accounts. Provider publication does not require account alignment. Manual confirmation and software-verified identity are shown separately. **Provider setup does not require granting this manager access to personal Billing.** Billing authorization is separate and is not offered in this core edition.
 
 ### 2. Add a provider
 
@@ -139,21 +139,21 @@ Choose a **Preferred model (首选模型)**, then click **Save provider (保存�
 - Copilot CLI uses the preferred model for `COPILOT_MODEL`.
 - Clients with model pickers, such as VS Code and JetBrains, require you to select the model inside the client.
 
-Fetch models and **Test model catalog (测试模型目录)** query the provider's model list. After saving, preview and publish the provider to your apps.
+Fetch models and **Test model catalog (测试模型目录)** query the provider's model list. After saving, publish the provider to your apps.
 
-### 4. Preview and publish
+### 4. Publish configuration
 
 1. On the connection card, click **Publish to apps (发布到应用)**.
 2. Review each target and uncheck any clients or profiles you do not want to update. **Copilot CLI is unchecked by default**; select it explicitly if you want its single-route environment configuration.
 3. If JetBrains is included, close the relevant IDEs using that shared configuration first.
-4. Click **Generate preview (生成预览)** and check how each target will be handled. Expand **Write details (写入明细)** when needed. Targets marked **Manual action required (需手动处理)** will not be configured automatically.
-5. When the preview is correct, click **Confirm publication (确认发布)**.
+4. Click **Publish configuration (发布配置)**. Ordinary publication checks and applies the selected targets, then shows the result. Use **View changes (查看变更)** first to review details. Targets marked **Manual action required (需手动处理)** remain manual.
+5. Replacing CLI configuration or removing a provider group stops at a preview. Check it, then click **Confirm publication (确认发布)**.
 
-Generate a new preview after changing the connection or targets, after the preview expires, or if another program changes the target configuration. Previews are valid for 15 minutes and can be used only once.
+Every publication uses a native plan valid for 15 minutes and usable once. Changed or expired plans are refused. Check any error and retry to obtain a fresh plan; CLI replacement and group removal require confirmation again.
 
 Afterward, check each target's result under **Overview (总览) → Latest publication (最近一次发布)** or **Providers (供应商) → Recent configuration operations (最近配置操作)**. Restart instructions, manual steps, and model-selection guidance remain visible after the notification disappears.
 
-Overview puts **Add your first provider** above environment reminders when no provider exists. **Choose a provider to publish** opens Providers. A row's **Review** focuses that exact app. Apps also lets you select a provider on each card and preview that target directly. Changing the selection invalidates an idle preview; language changes preserve it. During publication, navigation, refresh and dismissal are blocked. On failure or uncertainty, check publication/recovery and generate a fresh preview.
+Overview puts **Add your first provider** above environment reminders when no provider exists. **Choose a provider to publish** opens Providers. A row's **Review** focuses that exact app. Apps also lets you select a provider on each card and publish to that target directly. Supported configured apps sort first, followed by supported unconfigured apps. JetBrains cards show plugin support individually. Copilot Chat is the VS Code default profile; a built-in Agents profile sharing that catalog uses the same card and observed configuration. Changing the selection invalidates an idle preview; language changes preserve it. During publication, navigation, refresh and dismissal are blocked. On failure or uncertainty, check publication/recovery and generate a fresh preview.
 
 ### 5. Select and verify the model in each client
 
@@ -187,7 +187,7 @@ Find the provider under **Providers (供应商)** and click **Edit (编辑)**:
 
 1. Update the relevant fields. Leave an existing key blank to keep it, enter a new key to replace it, or check **Remove saved key (移除已保存的密钥)** to remove it.
 2. Click **Save provider (保存供应商)**.
-3. Use **Publish to clients → Generate preview → Confirm publication** again to update the intended targets.
+3. Use **Publish to apps → Publish configuration** again to update the intended targets; confirm CLI replacement or group removal when prompted.
 4. Reopen clients or create new sessions as instructed by the publication results.
 
 Editing a connection does not automatically synchronize it to all clients in the background. If fetching models asks for credentials after you change the endpoint, protocol, or headers, enter the key for the current endpoint again. Catalog discovery will not silently send the stored key to a changed destination.
@@ -212,7 +212,7 @@ Select the active model in each client's model picker.
 
 **To remove this configuration from clients, choose revocation and deletion rather than simply disabling the connection.** Review every target in the preview: revocation covers this connection's published managed configuration, not just one client.
 
-If a target has been changed externally, revocation or rollback refuses to overwrite it, and the connection may remain so you can resolve the issue. Check **Apps (应用) → Publication and revocation history (发布与撤销记录)** and the recovery status under **About → Local storage and security (本地存储与安全)** first. Do not delete configuration files or backups directly.
+Overview and Apps read the current configuration on refresh: manual edits appear immediately, deleted providers disappear, and read errors remain distinct from an empty catalog. Publishing or revoking an owned provider uses its current content. Changes after the plan is created stop the write; changes after a write stop rollback. Ownership conflicts still require review. Check **Apps (应用) → Publication and revocation history (发布与撤销记录)** and the recovery status under **About → Local storage and security (本地存储与安全)** first. Do not delete configuration files or backups directly.
 
 <a id="usage"></a>
 

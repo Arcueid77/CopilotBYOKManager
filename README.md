@@ -29,7 +29,7 @@
 
 - **One place for providers.** Maintain endpoint, key and models together, then choose where to publish them.
 - **Review across clients.** Inspect changes for every selected app or profile before writing.
-- **Respect existing configuration.** Manage only verified owned configuration; external changes block destructive replacement.
+- **Respect existing configuration.** Keep unrelated providers intact and recheck current configuration before each write.
 
 ## How it works
 
@@ -81,7 +81,7 @@ To explore now, open [the current browser frontend](apps/desktop/web/index.html)
 1. In **Providers**, add the provider endpoint and API key.
 2. Fetch models or enter model IDs manually; save the provider.
 3. Select your apps/profiles. CLI requires explicit selection.
-4. Review the native preview, confirm publication, and read each target's result.
+4. Click **Publish configuration** and read each target's result. **View changes** is optional; CLI replacement and removing a provider group require confirmation.
 5. Select the model in the client and send a minimal, non-sensitive test request.
 
 Requests may incur charges. See the [English user guide](docs/user-guide.md) or [中文手册](docs/user-guide.zh-CN.md) for fields, client steps, updates, revocation and recovery.
@@ -107,7 +107,7 @@ Requests may incur charges. See the [English user guide](docs/user-guide.md) or 
 - Stores provider master keys in the OS credential store.
 - Some client formats require provider keys in on-disk configuration.
 - Previews natively and rechecks targets before writing.
-- Refuses destructive overwrite, revocation or rollback after external changes.
+- Refuses changes made after plan creation and conflicts during rollback.
 - Recovery data may contain sensitive configuration: do not upload it.
 - No default telemetry or conversation upload.
 

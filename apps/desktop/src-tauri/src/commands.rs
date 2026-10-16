@@ -138,15 +138,13 @@ fn command_error(error: AppError) -> String {
 pub async fn get_dashboard(state: State<'_, ManagedState>) -> Result<DashboardSnapshot, String> {
     let state = state.inner().clone();
     native_job(move || {
-        let (state_path, mut connections, deployments, state_recovery, owner, ownership) = {
+        let (state_path, mut connections, deployments, state_recovery) = {
             let store = state.store().map_err(command_error)?;
             (
                 store.path().to_string_lossy().to_string(),
                 store.connections().to_vec(),
                 store.deployments().to_vec(),
                 store.recovery().map(str::to_string),
-                store.installation_owner_id().to_string(),
-                store.ownership().to_vec(),
             )
         };
         let credential_statuses = connections
@@ -177,14 +175,9 @@ pub async fn get_dashboard(state: State<'_, ManagedState>) -> Result<DashboardSn
                     .to_string()
             });
         let clients = adapters::discover_all();
-        let published_sources = deployment::publication::observe(
-            &clients,
-            &ownership,
-            &owner,
-            state_recovery.is_some() || deployment_recovery.is_some(),
-        );
+        let client_configurations = deployment::publication::observe(&clients, &connections);
         Ok(DashboardSnapshot {
-            published_sources,
+            client_configurations,
             credential_statuses,
             deployment_recovery,
             version: STATE_VERSION,

@@ -12,11 +12,18 @@ use std::path::Path;
 use std::path::PathBuf;
 use uuid::Uuid;
 
+mod current;
 #[cfg(any(windows, test))]
 mod env_snapshot;
 #[cfg(test)]
 mod ownership_tests;
 mod provider_registry;
+
+pub(crate) fn observe_current(
+    connections: &[Connection],
+) -> AppResult<Vec<crate::deployment::publication::ConfiguredSource>> {
+    current::observe(connections)
+}
 
 pub(crate) fn routing_fingerprint() -> AppResult<String> {
     provider_registry::routing_fingerprint()
@@ -324,13 +331,13 @@ fn finish_preparation(
     // regardless of who created it. Revocation still requires durable ownership.
     // The native plan retains these exact before bytes for stale checks/rollback.
     if revoke {
-        ownership::verify_projection(
+        ownership::verify_binding(
             proofs,
             owner_id,
             &connection.id,
             &ownership::cli_resource_id(),
-            &ownership::cli_projection(&writes, false)?,
         )?;
+        verify_current_owner(&writes, owner_id, &connection.id)?;
     }
     #[cfg(windows)]
     for write in &mut writes {
@@ -391,6 +398,64 @@ fn finish_preparation(
         }
     }
     Ok(writes)
+}
+
+fn verify_current_owner(
+    writes: &[crate::transaction::PreparedWrite],
+    owner: &str,
+    connection: &str,
+) -> AppResult<()> {
+    if writes.iter().all(|write| write.before.is_none()) {
+        return Ok(());
+    }
+    #[cfg(windows)]
+    for bytes in writes.iter().filter_map(|write| write.before.as_deref()) {
+        if bytes.len() < 4 || !matches!(u32::from_le_bytes(bytes[..4].try_into().unwrap()), 1 | 2) {
+            return Err(crate::deployment::ownership::conflict());
+        }
+    }
+    #[cfg(windows)]
+    for (field, expected) in [
+        ("COPILOT_BYOK_MANAGER_COPILOT_OWNER_ID", owner),
+        ("COPILOT_BYOK_MANAGER_COPILOT_CONNECTION_ID", connection),
+    ] {
+        let bytes = writes
+            .iter()
+            .find_map(|write| match &write.resource {
+                crate::transaction::Resource::UserEnvironment(name) if name == field => {
+                    write.before.as_deref()
+                }
+                _ => None,
+            })
+            .ok_or_else(crate::deployment::ownership::conflict)?;
+        if bytes.len() < 4
+            || current::decode(
+                u32::from_le_bytes(bytes[..4].try_into().unwrap()),
+                &bytes[4..],
+            )? != expected
+        {
+            return Err(crate::deployment::ownership::conflict());
+        }
+    }
+    #[cfg(unix)]
+    {
+        let marker = format!(
+            "# CopilotBYOKManager owner={owner} connection={}",
+            crate::fingerprint::bytes("cli-connection-marker-v1", Some(connection.as_bytes()))
+        );
+        for (index, write) in writes.iter().enumerate() {
+            if let Some(bytes) = &write.before {
+                let text = std::str::from_utf8(bytes)
+                    .map_err(|_| crate::deployment::ownership::conflict())?;
+                if (matches!(index, 0 | 1 | 5) || text.contains(BLOCK_START))
+                    && !text.lines().any(|line| line == marker)
+                {
+                    return Err(crate::deployment::ownership::conflict());
+                }
+            }
+        }
+    }
+    Ok(())
 }
 
 pub(crate) fn notify_environment() -> Option<String> {

@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [ValidateSet('Regression', 'NativeIsolated', 'PrepareLive', 'LiveAcceptance')][string]$Mode = 'Regression',
+    [ValidateSet('Regression', 'NativeCore', 'NativeIsolated', 'PrepareLive', 'LiveAcceptance')][string]$Mode = 'Regression',
     [ValidatePattern('^[a-zA-Z0-9-]{1,80}$')][string]$RunId,
     [ValidateSet('HostObserve', 'DedicatedUser')][string]$LiveTarget = 'HostObserve',
     [switch]$Resume,

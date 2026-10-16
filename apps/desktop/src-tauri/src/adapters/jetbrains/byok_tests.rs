@@ -129,7 +129,7 @@ fn proven_projection_is_noop_preserves_bytes_and_revoke_preserves_unmanaged_data
 }
 
 #[test]
-fn unproven_foreign_partial_changed_or_overriding_keys_are_conflicts() {
+fn ownership_conflicts_still_block_but_manual_edits_and_removal_do_not() {
     let root = tempfile::tempdir().unwrap();
     let path = root.path().join("byok.json");
     let connection = connection();
@@ -174,17 +174,17 @@ fn unproven_foreign_partial_changed_or_overriding_keys_are_conflicts() {
             }
         }
         fs::write(&path, serde_json::to_vec(&changed).unwrap()).unwrap();
-        assert!(prepare_at(
+        let result = prepare_at(
             &path,
             &connection,
             Some("secret"),
             "owner",
             std::slice::from_ref(&proof),
-            false
-        )
-        .is_err());
-        if mutation != 4 {
-            assert!(prepare_at(
+            false,
+        );
+        assert_eq!(result.is_ok(), matches!(mutation, 0 | 4));
+        assert_eq!(
+            prepare_at(
                 &path,
                 &connection,
                 None,
@@ -192,8 +192,9 @@ fn unproven_foreign_partial_changed_or_overriding_keys_are_conflicts() {
                 std::slice::from_ref(&proof),
                 true
             )
-            .is_err());
-        }
+            .is_ok(),
+            matches!(mutation, 0 | 4)
+        );
     }
 }
 
@@ -367,27 +368,32 @@ fn byok_recovery_refuses_to_overwrite_external_provider_changes() {
 }
 
 #[test]
-fn owned_source_observation_counts_published_models_without_returning_keys() {
+fn current_provider_observation_follows_manual_changes_without_keys_or_audit() {
     let root = tempfile::tempdir().unwrap();
     let path = root.path().join("byok.json");
-    let (write, hash) = prepare(&path, &connection(), &[], false);
+    let (write, _) = prepare(&path, &connection(), &[], false);
     write_after(&write);
-    let observed = observe_owned(&path, "owner").unwrap();
-    assert_eq!(observed.sources["fixture"], (hash.unwrap(), 1));
-    assert_eq!(
-        observed.resource_id,
-        ownership::resource_id(&write.resource)
-    );
-    assert!(observe_owned(&path, "foreign").unwrap().sources.is_empty());
-    let copied = root.path().join("copied.json");
-    fs::copy(&path, &copied).unwrap();
-    assert_ne!(
-        observe_owned(&copied, "owner").unwrap().resource_id,
-        observed.resource_id
-    );
+    let observed = observe_current(&path).unwrap();
+    assert_eq!(observed[0].model_count, 1);
     let mut external: Value = serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
     let owned = keys(&provider_name("owner", "fixture").unwrap());
+    external[&owned[1]]["groupName"] = json!("Changed locally");
+    external.as_object_mut().unwrap().insert(
+        "manual-provider-config".into(),
+        json!({"groupName":"Manual"}),
+    );
+    external
+        .as_object_mut()
+        .unwrap()
+        .insert("manual-models-config".into(), json!({"user-model":{}}));
+    fs::write(&path, serde_json::to_vec(&external).unwrap()).unwrap();
+    let current = observe_current(&path).unwrap();
+    assert_eq!(current.len(), 2);
+    assert_eq!(current[0].name, "Changed locally");
+    let public = serde_json::to_string(&current).unwrap();
+    assert!(!public.contains("synthetic"));
+    assert!(!public.contains("user-model"));
     external[&owned[1]][SCHEMA] = json!("unreviewed-schema");
-    fs::write(path.clone(), serde_json::to_vec(&external).unwrap()).unwrap();
-    assert!(observe_owned(&path, "owner").is_err());
+    fs::write(&path, serde_json::to_vec(&external).unwrap()).unwrap();
+    assert!(observe_current(&path).is_err());
 }

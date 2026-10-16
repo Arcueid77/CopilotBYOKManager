@@ -5,7 +5,7 @@ const manager = require("../manager-ui.js");
 const setup = require("../setup-ui.js");
 const discovery = require("../model-discovery.js");
 function fixture() {
-  return { connections: [{ id: "a", name: "供应商 A", enabled: true, baseUrl: "https://example.invalid/v1", models: [{ modelId: "one", name: "One", enabled: true }], hasSecret: true }, { id: "b", name: "供应商 B", enabled: false, models: [{ modelId: "two", name: "Two", enabled: true }] }], clients: [{ id: "vs", name: "VS Code", kind: "vs-code-copilot", detected: true, supportsWrite: true }], publishedSources: [{ targetId: "vs", connectionId: "a", state: "published", modelCount: 3 }, { targetId: "vs", connectionId: "b", state: "published", modelCount: 2 }], deployments: [] };
+  return { connections: [{ id: "a", name: "供应商 A", enabled: true, baseUrl: "https://example.invalid/v1", models: [{ modelId: "one", name: "One", enabled: true }], hasSecret: true }, { id: "b", name: "供应商 B", enabled: false, models: [{ modelId: "two", name: "Two", enabled: true }] }], clients: [{ id: "vs", name: "VS Code", kind: "vs-code-copilot", detected: true, supportsWrite: true }], clientConfigurations: [{ targetId: "vs", state: "available", sources: [{ connectionId: "a", name: "供应商 A", modelCount: 3 }, { connectionId: "b", name: "供应商 B", modelCount: 2 }] }], deployments: [] };
 }
 const data = { setup: { alignment: "verifiedSameAccount" }, components: [{ status: "ready" }], errors: {} };
 test("Home uses approved section order, hides disabled cards but retains published sources", () => {
@@ -17,6 +17,12 @@ test("Home uses approved section order, hides disabled cards but retains publish
   assert.match(html, /供应商 B · 2 个模型 · 已停用，配置保留/);
   assert.doesNotMatch(html, /data-connection-id="b"/);
   assert.match(html, /应用配置状态/);
+  assert.match(html, />查看应用<\/button>/);
+  for (const status of ["missing", "broken", "unsupported", "unknown", "ready"]) {
+    const observed = { ...data, components: [{ status }] };
+    assert.doesNotMatch(manager.renderHome(snapshot, observed, true), /manager-pending|有事项需要核对|核对客户端/);
+  }
+  assert.doesNotMatch(manager.renderHome(snapshot, { errors: { setup: "unavailable", components: "unavailable" } }, true), /manager-pending|核对客户端/);
   assert.doesNotMatch(html, /当前使用|已自动选用|setup-hero|setup-steps|<table/);
   assert.match(manager.renderHome(snapshot, data, false), /发布仅为模拟，不修改电脑/);
 });
@@ -29,15 +35,21 @@ test("state recovery disables editing, enablement, probes and publication with a
   const preview = manager.connectionCard(snapshot.connections[0], fixture(), false);
   assert.match(preview, /data-action="test-connection"[^>]*disabled/);
 });
-test("changed, inaccessible and omitted source observations never become zero or success", () => {
-  const snapshot = fixture(); snapshot.publishedSources[0].state = "changed"; snapshot.publishedSources[0].modelCount = null;
-  snapshot.publishedSources[1].state = "unavailable"; snapshot.publishedSources[1].modelCount = null;
-  const rows = manager.sourceRows(snapshot);
-  assert.match(rows, /外部改动，待核对/); assert.match(rows, /无法核验/);
-  assert.doesNotMatch(rows, /0 个模型|3 个模型|data-source-state="published"/);
-  delete snapshot.publishedSources;
-  assert.match(manager.sourceRows(snapshot), /发布状态暂不可用/);
+test("current configuration follows manual edits and deletion; read failures remain distinct", () => {
+  const snapshot = fixture();
+  snapshot.clientConfigurations[0].sources[0].name = "用户改过的名称";
+  snapshot.clientConfigurations[0].sources[0].modelCount = 5;
+  assert.match(manager.sourceRows(snapshot), /用户改过的名称 · 5 个模型/);
+  assert.doesNotMatch(manager.renderHome(snapshot, data, true), /外部改动|核对来源/);
+  snapshot.clientConfigurations[0].sources = [];
+  assert.match(manager.sourceRows(snapshot), /未配置供应商/);
+  snapshot.clientConfigurations[0].state = "unavailable";
+  assert.match(manager.sourceRows(snapshot), /配置读取失败/);
+  assert.doesNotMatch(manager.sourceRows(snapshot), /未配置供应商|0 个模型/);
+  delete snapshot.clientConfigurations;
+  assert.match(manager.sourceRows(snapshot), /配置读取失败/);
 });
+
 test("copy scopes the exclusive CLI environment projection, manual app boundary and model pickers", () => {
   assert.match(manager.policy("copilot-cli"), /确认后替换 CLI 当前.*环境配置.*首选模型/);
   assert.match(manager.policy("copilot-cli"), /新开终端/);
@@ -50,6 +62,7 @@ test("copy scopes the exclusive CLI environment projection, manual app boundary 
 });
 test("untrusted strings are escaped and no credential value is requested or rendered", () => {
   const snapshot = fixture(); snapshot.connections[0].name = '<img src=x onerror="bad">';
+  snapshot.clientConfigurations[0].sources[0].name = snapshot.connections[0].name;
   snapshot.connections[0].baseUrl = '<script>bad</script>';
   const html = manager.renderHome(snapshot, data, true);
   assert.doesNotMatch(html, /<script>|<img/); assert.match(html, /&lt;img/);
@@ -81,7 +94,8 @@ test("connection probe uses bound model-list input and returns a concise catalog
 test("first connection and publication actions are discoverable without removing recovery precedence", () => {
   const empty = { ...fixture(), connections: [] };
   const html = manager.renderHome(empty, { ...data, setup: { alignment: "partiallyVerified" } }, true);
-  assert.ok(html.indexOf('添加第一个供应商') < html.indexOf('待处理'));
+  assert.match(html, /添加第一个供应商/);
+  assert.doesNotMatch(html, /账号尚未对齐|data-action="setup-accounts"/);
   assert.doesNotMatch(manager.renderHome({ ...empty, stateRecovery: 'Read only' }, data, true), /manager-start|添加第一个供应商/);
   assert.ok(manager.renderHome(fixture(), data, true).indexOf('data-action="jump-connections"') < manager.renderHome(fixture(), data, true).indexOf('应用配置状态'));
 });

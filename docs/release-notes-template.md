@@ -56,8 +56,8 @@ is linked there.
 - Provider master keys use the OS credential store. Some target formats materialize
   provider keys on disk. Do not upload target files, recovery snapshots or logs.
 - Client OAuth tokens, cookies, SecretStorage and Password Safe are never copied.
-  External edits block destructive overwrite/revoke/rollback. No default telemetry
-  or conversation upload is added.
+  Changes after planning block writes; rollback cannot overwrite subsequent edits.
+  No default telemetry or conversation upload is added.
 
 ## 中文摘要
 

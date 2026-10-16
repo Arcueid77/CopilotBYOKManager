@@ -308,6 +308,8 @@ impl Transaction {
     }
 
     pub fn apply(&mut self) -> AppResult<()> {
+        #[cfg(feature = "local-e2e")]
+        let mut written = 0;
         for index in 0..self.journal.writes.len() {
             let write = &self.journal.writes[index];
             if write.resource.read()? != write.before {
@@ -321,17 +323,22 @@ impl Transaction {
             self.journal.phase = Phase::Applying;
             self.persist()?;
             let write = &self.journal.writes[index];
-            #[cfg(feature = "local-e2e")]
-            if index == 1 {
-                crate::test_support::fault("second-write")?;
-            }
             if write.changed() {
+                #[cfg(feature = "local-e2e")]
+                if written == 1 {
+                    crate::test_support::fault("second-write")?;
+                }
                 write
                     .resource
                     .write(write.after.as_deref(), write.write_mode)?;
                 #[cfg(feature = "local-e2e")]
-                if index == 0 {
-                    crate::test_support::fault("first-write")?;
+                {
+                    // Faults target actual mutations, independent of the
+                    // number/order of unchanged resources in the journal.
+                    written += 1;
+                    if written == 1 {
+                        crate::test_support::fault("first-write")?;
+                    }
                 }
                 if write.resource.read()? != write.after {
                     return Err(AppError::Config("Post-write verification failed".into()));

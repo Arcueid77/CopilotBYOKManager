@@ -10,7 +10,7 @@ const [mode, runRoot, toolRoot, liveTarget, resume, completedAction] = process.a
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const release = process.env.COPILOT_BYOK_MANAGER_VALIDATION_RELEASE;
 if (release) { const end = Date.now() + 10000; while (!fs.existsSync(release) && Date.now() < end) await delay(25); if (!fs.existsSync(release)) throw new Error('Parent job assignment failed'); }
-if (!['Regression','NativeIsolated','PrepareLive','LiveAcceptance'].includes(mode) || !path.isAbsolute(runRoot) || !path.isAbsolute(toolRoot)) throw new Error('Invalid validation invocation');
+if (!['Regression','NativeCore','NativeIsolated','PrepareLive','LiveAcceptance'].includes(mode) || !path.isAbsolute(runRoot) || !path.isAbsolute(toolRoot)) throw new Error('Invalid validation invocation');
 fs.mkdirSync(runRoot, { recursive: true });
 const git = (...args) => execFileSync('git.exe', args, { cwd: repo, encoding: 'utf8', windowsHide: true }).trim();
 const treeHash = () => {
@@ -62,7 +62,7 @@ const node = (name, file, args = [], extra) => command(name, process.execPath, [
 const tauri = (name, args) => node(name, 'node_modules/@tauri-apps/cli/tauri.js', ['build','--config','apps/desktop/src-tauri/tauri.conf.json', ...args]);
 const cargo = (name, args) => command(name, 'cargo.exe', args);
 async function buildNative() {
-  await tauri('Build isolated native executable', ['--no-bundle','--features','local-e2e','--config','apps/desktop/src-tauri/tauri.local-e2e.conf.json']);
+  await tauri('Build isolated native executable', ['--no-bundle','--features','local-e2e','--config','apps/desktop/src-tauri/tauri.local-e2e.conf.json','--','--locked']);
   const dest = path.join(runRoot,'artifacts','isolated'); fs.mkdirSync(dest,{recursive:true});
   const application = path.join(dest,'copilot-byok-manager.exe'); fs.copyFileSync(path.join(repo,'target/release/copilot-byok-manager.exe'),application);
   record('Isolated artifact identity','PASS',{ features: ['local-e2e'], sha256: digest(fs.readFileSync(application)) }); return application;
@@ -116,7 +116,7 @@ async function drivers() {
     const bytes=Buffer.concat(chunks);
     const zip=path.join(directory,'driver.zip');fs.writeFileSync(zip,bytes);
     const ps="Expand-Archive -LiteralPath '"+zip.replaceAll("'","''")+"' -DestinationPath '"+directory.replaceAll("'","''")+"' -Force";
-    await command('Expand matching Edge driver','powershell.exe',['-NoProfile','-NonInteractive','-Command',ps]);
+    await command('Expand matching Edge driver','pwsh.exe',['-NoProfile','-NonInteractive','-Command',ps]);
   }
   const driverVersion=execFileSync(edgeDriver,['--version'],{encoding:'utf8',windowsHide:true}).trim();
   if(!driverVersion.includes(version))throw new Error('BLOCKED_DRIVER: Edge driver version mismatch');
@@ -145,10 +145,10 @@ try {
   if(Number(process.versions.node.split('.')[0])<24)throw new Error('Node.js 24 or later is required');
   await ensureDependencies();
   if(mode==='Regression') await regression();
-  else if(mode==='NativeIsolated') {
+  else if(mode==='NativeCore' || mode==='NativeIsolated') {
     const application=await buildNative();await isolatedGuards(application);const driverOptions=await drivers();
     const {nativeSuite}=await import('../tests/native-e2e/suite.mjs');
-    await nativeSuite({repo,privateRoot,evidenceRoot:runRoot,application,...driverOptions},record);
+    await nativeSuite({repo,privateRoot,evidenceRoot:runRoot,application,...driverOptions,coreOnly:mode==='NativeCore'},record);
   } else if(mode==='PrepareLive') {
     const artifact=await defaultBuild(true);const driverOptions=await drivers();
     const manifest={version:1,runId:path.basename(runRoot),target:liveTarget,artifact,driverOptions,preparedAt:new Date().toISOString(),

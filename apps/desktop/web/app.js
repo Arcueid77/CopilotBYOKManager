@@ -27,7 +27,7 @@
   const routes = {
     overview: {
       get title() { return tr("总览"); },
-      get subtitle() { return tr("管理连接，预览后发布。"); },
+      get subtitle() { return tr("管理连接并发布到应用。"); },
       add: false,
     },
     connections: {
@@ -189,7 +189,7 @@
         },
       ],
       deployments: [],
-      publishedSources: [],
+      clientConfigurations: [],
     };
   }
 
@@ -219,6 +219,12 @@
   function invokeMock(command, args) {
     switch (command) {
       case "get_dashboard":
+        demoState.clientConfigurations ??= [];
+        for (const client of demoState.clients) {
+          if (!demoState.clientConfigurations.some(item => item.targetId === client.id)) {
+            demoState.clientConfigurations.push({ targetId: client.id, state: client.detected && client.supportsWrite ? "available" : "unsupported", sources: [] });
+          }
+        }
         return structuredClone(demoState);
       case "get_install_runs":
         return [];
@@ -270,7 +276,7 @@
         demoState.deployments = demoState.deployments.filter(
           (item) => item.connectionId !== args.connectionId,
         );
-        demoState.publishedSources = (demoState.publishedSources ?? []).filter(item => item.connectionId !== args.connectionId);
+        for (const configuration of demoState.clientConfigurations ?? []) configuration.sources = configuration.sources.filter(item => item.connectionId !== args.connectionId);
         demoPlans.clear();
         saveDemoState();
         return true;
@@ -329,11 +335,13 @@
         }));
         demoState.deployments.unshift(...records);
         demoState.deployments = demoState.deployments.slice(0, 200);
-        demoState.publishedSources ??= [];
+        demoState.clientConfigurations ??= [];
         for (const record of records.filter(record => record.status === "applied")) {
-          demoState.publishedSources = demoState.publishedSources.filter(source => !(source.targetId === record.targetId && (record.targetKind === "copilot-cli" || source.connectionId === connection.id)));
+          let current = demoState.clientConfigurations.find(item => item.targetId === record.targetId);
+          if (!current) { current = { targetId: record.targetId, state: "available", sources: [] }; demoState.clientConfigurations.push(current); }
+          current.sources = current.sources.filter(source => record.targetKind !== "copilot-cli" && source.connectionId !== connection.id);
           const count = record.targetKind === "copilot-cli" ? 1 : connection.models.filter(model => model.enabled).length;
-          if (count) demoState.publishedSources.push({ targetId: record.targetId, connectionId: connection.id, state: "published", modelCount: count, publishedAt: record.createdAt });
+          if (count) current.sources.push({ connectionId: connection.id, name: connection.name, modelCount: count });
         }
         saveDemoState();
         return { planId: plan.id, records };
@@ -406,7 +414,8 @@
       available: tr("可用"),
       "not-installed": tr("未安装"),
       "read-only": tr("仅手动处理"),
-      error: tr("需核对"),
+      error: tr("检测不可用"),
+      unknown: tr("检测不可用"),
       applied: tr("已完成"),
       skipped: tr("未自动处理"),
       failed: tr("失败"),
@@ -523,9 +532,9 @@
   }
 
   function renderClients() {
-    return `<div class="client-grid">${snapshot.clients.map(clientCard).join("")}</div>
+    return `<div class="client-grid">${window.CopilotBYOKManagerClients.ordered(snapshot).map(clientCard).join("")}</div>
       <details class="manager-section" ${isDesktop && data.components?.some(component => ["missing", "broken", "unknown"].includes(component.status)) ? "open" : ""}><summary>${tr("安装与更新")}</summary><section id="installation-panel" class="install-panel"></section></details>
-      <details class="manager-section"><summary>${tr("官方登录与账号核对")}</summary><section id="account-panel" class="account-panel"></section><button class="button ghost small" data-action="setup-accounts" ${!isDesktop ? "disabled" : ""}>${tr("逐个核对同一 GitHub 账号")}</button></details>
+      <details class="manager-section"><summary>${tr("登录与账号检查（可选）")}</summary><p class="manager-meta">${tr("供应商发布不要求各应用使用同一账号。这里可以打开官方登录流程，或记录你已完成的账号核对。")}</p><section id="account-panel" class="account-panel"></section><button class="button ghost small" data-action="setup-accounts" ${!isDesktop ? "disabled" : ""}>${tr("记录已核对的账号")}</button></details>
       <section class="manager-section"><h2 id="publication-result-title">${tr("最近一次发布")}</h2>${window.CopilotBYOKManagerManager.lastResult(snapshot, isDesktop)}</section>
       ${window.CopilotBYOKManagerCore.history(snapshot)}
     `;
@@ -594,6 +603,9 @@
   }
 
   function clientCard(client) {
+    const clientName = window.CopilotBYOKManagerClients.name(client);
+    const capability = window.CopilotBYOKManagerClients.capability(client);
+    const published = window.CopilotBYOKManagerClients.sources(client, snapshot);
     const providers = snapshot.connections.filter(connection => connection.enabled !== false);
     const chosen = appProviderChoices.get(client.id);
     const providerId = appProviderChoices.has(client.id) ? (providers.some(provider => provider.id === chosen) ? chosen : "") : providers.length === 1 ? providers[0].id : "";
@@ -601,11 +613,13 @@
       <article class="client-card" data-client-id="${escapeHtml(client.id)}" tabindex="-1">
         <div class="client-header">
           <div class="client-icon">${escapeHtml(clientIcon(client.kind))}</div>
-          <h3>${escapeHtml(client.name)}</h3>
+          <h3>${escapeHtml(clientName)}</h3>
           <span class="status-pill ${escapeHtml(client.status)}">${escapeHtml(statusLabel(client.status))}</span>
         </div>
-        <p class="client-description">${escapeHtml(client.detail)}</p>
-        <div class="app-configuration">${client.detected ? `<label class="app-provider-field"><span>${tr("使用供应商")}</span><select class="app-provider-select" aria-label="${tr("{0} 使用的供应商", escapeHtml(client.name))}" ${!providers.length || snapshot.stateRecovery || snapshot.deploymentRecovery ? "disabled" : ""}><option value="" ${!providerId ? "selected" : ""}>${providers.length ? tr("请选择供应商") : tr("请先添加供应商")}</option>${providers.map(connection => `<option value="${escapeHtml(connection.id)}" ${connection.id === providerId ? "selected" : ""}>${escapeHtml(connection.name)}</option>`).join("")}</select></label><button class="button primary small" data-action="deploy-client" data-client-id="${escapeHtml(client.id)}" ${!providerId || snapshot.stateRecovery || snapshot.deploymentRecovery || (!client.supportsWrite && client.kind !== "github-copilot-app") ? "disabled" : ""}>${client.supportsWrite ? tr("预览配置") : tr("手动配置")}</button>` : ""}</div>
+        <p class="client-description">${escapeHtml(window.CopilotBYOKManagerClients.description(client))}</p>
+        ${capability ? `<p class="manager-meta">${escapeHtml(capability)}</p>` : ""}
+        ${published.length ? `<p class="manager-meta">${tr("已配置 {0} 个供应商", published.length)}</p>` : ""}
+        <div class="app-configuration">${client.detected ? `<label class="app-provider-field"><span>${tr("使用供应商")}</span><select class="app-provider-select" aria-label="${tr("{0} 使用的供应商", escapeHtml(clientName))}" ${!providers.length || snapshot.stateRecovery || snapshot.deploymentRecovery ? "disabled" : ""}><option value="" ${!providerId ? "selected" : ""}>${providers.length ? tr("请选择供应商") : tr("请先添加供应商")}</option>${providers.map(connection => `<option value="${escapeHtml(connection.id)}" ${connection.id === providerId ? "selected" : ""}>${escapeHtml(connection.name)}</option>`).join("")}</select></label><button class="button primary small" data-action="deploy-client" data-client-id="${escapeHtml(client.id)}" ${!providerId || snapshot.stateRecovery || snapshot.deploymentRecovery || (!client.supportsWrite && client.kind !== "github-copilot-app") ? "disabled" : ""}>${client.supportsWrite ? tr("发布配置") : tr("手动配置")}</button>` : ""}</div>
         <div class="app-card-footer"><details class="app-details"><summary>${tr("应用信息")}</summary><div class="path-line" title="${escapeHtml(client.path ?? client.diagnostic ?? "")}">${escapeHtml(client.path ?? client.diagnostic ?? tr("未提供本地路径"))}</div></details>
         ${client.kind === "jetbrains-copilot" && !client.supportsWrite ? `<button class="button ghost small" data-action="jetbrains-guide" data-id="${escapeHtml(client.id)}">${tr("配置指引")}</button>` : ""}
         </div>
@@ -621,7 +635,7 @@
       <div class="empty-state">
         <div class="empty-icon">◇</div>
         <h2>${tr("尚无连接")}</h2>
-        <p>${tr("添加供应商端点和模型，预览后发布到支持的客户端。")}</p>
+        <p>${tr("添加供应商端点和模型，发布到支持的客户端。")}</p>
         <button class="button primary" data-action="add-connection">${tr("添加连接")}</button>
       </div>`;
   }
@@ -898,7 +912,7 @@
     });
   }
 
-  function openDeployment(connection, selectedIds = null) {
+  function openDeployment(connection, selectedIds = null, autoPublish = false) {
     if (deploymentCleanup?.busy || dialogs.busy) return;
     if (snapshot.stateRecovery || snapshot.deploymentRecovery) {
       showToast(tr("只读恢复期间不能发布。"), "error");
@@ -907,8 +921,8 @@
     if (connection.enabled === false) { showToast(tr("请先启用连接再发布。"), "error"); return; }
     closeModal(); closeDeployment();
     deploymentCleanup = window.CopilotBYOKManagerInlineDeployment.mount({
-      container: content, connection, targets: snapshot.clients, selectedIds, invoke, native: isDesktop,
-      onError: error => showToast(error?.message ?? String(error), "error"),
+      container: content, connection, targets: window.CopilotBYOKManagerClients.ordered(snapshot), selectedIds, invoke, native: isDesktop, autoPublish,
+      onError: () => showToast(tr("发布未完成，请查看下方说明。"), "error"),
       onBusyChange: setDeploymentBusy,
       async onApplied(result) {
         const applied = result.records.filter(item => item.status === "applied");
@@ -926,8 +940,8 @@
   function openAccountConfirmation() {
     if (!isDesktop || !data.setup) return;
     const evidenceFingerprint = data.setup.evidenceFingerprint;
-    openModal({ title: tr("核对同一 GitHub 账号"), body: `
-      <p>${tr("核对每个客户端显示的账号后，保存你的确认。")}</p>
+    openModal({ title: tr("记录已核对的账号"), body: `
+      <p>${tr("这会保存你的人工核对记录，不会登录或切换任何应用的账号。未核对时可以关闭，供应商发布不受影响。")}</p>
       <label class="setup-select">${tr("GitHub 用户名")}<input id="confirmed-login" maxlength="39" value="${escapeHtml(data.setup.target?.login ?? "")}" placeholder="${tr("github.com 用户名")}" /></label>
       <p class="muted">${tr("通过 GitHub 公开用户接口解析账号 ID，不需要账单授权。")}</p>
       <label class="account-confirmation"><input type="checkbox" id="confirm-all-accounts" /><span>${tr("我已逐个核对所有列出的客户端，包括每个检测到的 JetBrains IDE 配置，均显示同一个 github.com 账号。")}</span></label>`,
@@ -1090,7 +1104,7 @@
         if (!selected || !client) break;
         appProviderChoices.set(client.id, selected.id);
         if (client.kind === "github-copilot-app") openManualSetup(selected.id);
-        else openDeployment(selected, [client.id]);
+        else openDeployment(selected, [client.id], true);
         break;
       }
       case "jetbrains-guide": openJetBrainsGuide(action.dataset.id).catch(error => showToast(error?.message ?? String(error), "error")); break;

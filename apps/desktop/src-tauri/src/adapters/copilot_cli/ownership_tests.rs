@@ -126,7 +126,7 @@ fn publication_accepts_unmanaged_foreign_legacy_and_changed_cli_projections() {
 }
 
 #[test]
-fn revocation_still_requires_this_connection_and_an_unchanged_owned_projection() {
+fn revocation_checks_current_owner_and_binding_instead_of_old_contents() {
     let (_root, writes) = fixture();
     let mut published = deploy(writes, &[]);
     for write in &mut published {
@@ -165,7 +165,42 @@ fn revocation_still_requires_this_connection_and_an_unchanged_owned_projection()
         invalid.owner_id = owner.into();
         invalid.connection_id = connection.into();
         invalid.projection_fingerprint = projection.into();
-        assert!(revoke(&[invalid], published.clone()).is_err());
+        assert_eq!(
+            revoke(&[invalid], published.clone()).is_ok(),
+            projection == "stale-projection"
+        );
+    }
+    #[cfg(windows)]
+    for (field, allowed) in [
+        ("COPILOT_PROVIDER_MODEL_ID", true),
+        ("COPILOT_BYOK_MANAGER_COPILOT_OWNER_ID", false),
+        ("COPILOT_BYOK_MANAGER_COPILOT_CONNECTION_ID", false),
+    ] {
+        use winreg::types::ToRegValue;
+        let mut edited = published.clone();
+        let write = edited
+            .iter_mut()
+            .find(
+                |write| matches!(&write.resource, Resource::UserEnvironment(name) if name == field),
+            )
+            .unwrap();
+        let mut bytes = 1_u32.to_le_bytes().to_vec();
+        bytes.extend("user-edited".to_reg_value().bytes);
+        write.before = Some(bytes);
+        assert_eq!(
+            revoke(std::slice::from_ref(&valid), edited).is_ok(),
+            allowed
+        );
+    }
+    #[cfg(unix)]
+    {
+        let mut edited = published.clone();
+        let text = std::str::from_utf8(edited[0].before.as_ref().unwrap()).unwrap();
+        edited[0].before = Some(
+            text.replace("owner=current-owner", "owner=foreign-owner")
+                .into_bytes(),
+        );
+        assert!(revoke(std::slice::from_ref(&valid), edited).is_err());
     }
     published[0].before = Some(b"external-change".to_vec());
     assert!(revoke(&[valid], published).is_err());
@@ -210,9 +245,11 @@ fn replacement_refuses_changes_after_review_before_write_and_before_rollback() {
     for stage in 0..3 {
         let (root, writes) = transaction_fixture();
         let journal = root.path().join("journal.json");
+        #[cfg(unix)]
+        let Resource::File(path) = &writes[0].resource;
+        #[cfg(windows)]
         let path = match &writes[0].resource {
             Resource::File(path) => path,
-            #[cfg(windows)]
             _ => unreachable!(),
         };
         if stage == 0 {

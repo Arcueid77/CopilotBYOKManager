@@ -148,13 +148,13 @@
           <p class="install-copy">${tr("先核对安装计划，再确认执行；安装来源由本地后端固定。")}</p>
         </div>
         <div class="install-panel-actions">
-          <button class="button ghost small" data-install-action="refresh" ${loading ? "disabled" : ""}>${loading ? tr("检查中…") : tr("刷新状态")}</button>
+          <button class="button ghost small" data-install-action="refresh" ${loading ? "disabled" : ""}>${loading ? tr("检查中…") : tr("重新检测")}</button>
           <button class="button primary small" data-install-action="install-all" ${loading || actionable.length === 0 ? "disabled" : ""}>${tr("安装缺失组件{0}", actionable.length ? ` (${actionable.length})` : "")}</button>
         </div>
       </div>
       <div class="install-summary" aria-label="${tr("安装摘要")}">
         <span><strong>${values.length ? readyCount : "—"}</strong> ${tr("已就绪")}</span>
-        <span><strong>${values.length ? actionable.length : "—"}</strong> ${tr("待处理")}</span>
+        <span><strong>${values.length ? actionable.length : "—"}</strong> ${tr("可安装或修复")}</span>
         <span><strong>${values.length ? unsupportedCount : "—"}</strong> ${tr("不支持")}</span>
         <span class="install-runtime">${isDesktop ? tr("支持的 Windows 组件可审核安装") : tr("浏览器试用，不执行安装")}</span>
       </div>
@@ -169,7 +169,7 @@
   function renderComponent(item) {
     const canInstall = ["missing", "broken"].includes(item.status);
     return `
-      <article class="install-card">
+      <article class="install-card" data-component-id="${escapeHtml(item.id)}">
         <div class="install-card-heading">
           <div class="install-component-icon" aria-hidden="true">${componentIcon(item.id)}</div>
           <span class="install-status ${statusClass(item.status)}">${escapeHtml(statusLabel(item.status))}</span>
@@ -178,6 +178,7 @@
         <p>${escapeHtml(item.detail)}</p>
         <div class="install-card-footer">
           <span>${item.version ? tr("版本 {0}", escapeHtml(item.version)) : tr("版本不可用")}</span>
+          ${item.status === "unknown" ? `<button class="button ghost small" data-install-action="refresh" ${loading ? "disabled" : ""}>${tr("重新检测")}</button>` : ""}
           ${canInstall ? `<button class="button ghost small" data-install-action="install-one" data-component-id="${escapeHtml(item.id)}" ${loading ? "disabled" : ""}>${item.status === "broken" ? tr("修复") : tr("安装")}</button>` : ""}
         </div>
       </article>

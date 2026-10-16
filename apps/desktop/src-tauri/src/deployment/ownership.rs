@@ -27,21 +27,21 @@ pub fn resource_id(resource: &transaction::Resource) -> String {
 }
 
 pub fn conflict() -> AppError {
-    AppError::Config("Configuration ownership is unproven, foreign, or externally changed. No target was written. Review the client configuration manually, or use Detach only to leave it untouched".into())
+    AppError::Config("Cannot confirm ownership of this provider configuration (missing, conflicting or foreign ownership metadata). No target was written".into())
 }
 
-pub fn verify_projection(
+/// Ownership identifies the group we may update; its old content is not an
+/// immutable baseline. The new plan separately binds current before bytes.
+pub fn verify_binding(
     records: &[TargetOwnership],
     owner_id: &str,
     connection_id: &str,
     resource: &str,
-    projection: &str,
 ) -> AppResult<()> {
     if records.iter().any(|record| {
         record.owner_id == owner_id
             && record.connection_id == connection_id
             && record.resource_id == resource
-            && record.projection_fingerprint == projection
     }) {
         Ok(())
     } else {
@@ -108,40 +108,33 @@ pub fn validate(
 mod tests {
     use super::*;
     #[test]
-    fn marker_without_matching_native_proof_is_not_owned() {
+    fn binding_requires_durable_identity_not_old_content() {
         let record = TargetOwnership {
             owner_id: "owner".into(),
             connection_id: "connection".into(),
             target_id: "target".into(),
             target_kind: ClientKind::VsCodeCopilot,
             resource_id: "resource".into(),
-            projection_fingerprint: "projection".into(),
-            target_fingerprint: "target-hash".into(),
+            projection_fingerprint: "old-content".into(),
+            target_fingerprint: "old-target".into(),
             deployed_at: Utc::now(),
         };
-        assert!(verify_projection(&[], "owner", "connection", "resource", "projection").is_err());
-        verify_projection(
+        assert!(verify_binding(&[], "owner", "connection", "resource").is_err());
+        verify_binding(
             std::slice::from_ref(&record),
             "owner",
             "connection",
             "resource",
-            "projection",
         )
         .unwrap();
-        for (owner, connection, resource, projection) in [
-            ("foreign", "connection", "resource", "projection"),
-            ("owner", "other", "resource", "projection"),
-            ("owner", "connection", "copied-resource", "projection"),
-            ("owner", "connection", "resource", "modified"),
+        for (owner, connection, resource) in [
+            ("foreign", "connection", "resource"),
+            ("owner", "other", "resource"),
+            ("owner", "connection", "copied"),
         ] {
-            assert!(verify_projection(
-                std::slice::from_ref(&record),
-                owner,
-                connection,
-                resource,
-                projection
-            )
-            .is_err());
+            assert!(
+                verify_binding(std::slice::from_ref(&record), owner, connection, resource).is_err()
+            );
         }
     }
 }

@@ -116,11 +116,12 @@ A third party can add a CopilotBYOKManager-looking marker to unrelated configura
 Required mitigation:
 
 - markers include `installation_owner_id` and `connection_id`;
-- persisted state keeps the last deployed target identity and fingerprint;
+- persisted state keeps the deployed provider target identity and historical fingerprint; provider authority checks the installation/Connection/physical-resource binding plus current markers, while current-plan fingerprints protect writes;
 - marker text alone is never sufficient ownership proof;
 - foreign-owner or ambiguous state is a conflict for other client/resource writes and every revocation;
 - CLI publication uses explicit reviewed replacement authority instead of prior ownership: snapshot unmanaged/foreign/changed configuration, require confirmation, recheck live bytes, and commit new ownership only after verified writes;
-- test that CLI replacement accepts unowned configuration while cancellation performs no write, stale reviews fail, rollback restores original bytes, and revocation still rejects foreign or externally changed state.
+- test that CLI replacement accepts unowned configuration while cancellation performs no write, stale reviews fail, rollback restores original bytes, and revocation rejects foreign or ambiguous ownership. Pre-existing edits to an owned provider are allowed; changes after plan creation or after application still block stale writes or rollback.
+- current status is a read-only observation of public configuration. Do not turn publication history or a field-order-sensitive digest into a current-state warning. Test edits, deletion, malformed data, bounded names/counts, credential redaction and shared catalogs.
 
 ### Rollback overwrites newer user work
 
@@ -572,7 +573,7 @@ Required mitigation:
 - record control identity and a dirty Boolean, never password/input values in a serialized draft;
 - freeze a pending save, keep failed input with a persistent error, and restore focus to a surviving control or safe fallback;
 - hold the actual dialog instance for async callbacks; resource preview/apply is busy until settled, and old responses cannot close a newly opened editor;
-- block navigation, refresh, edits and dismissal during publication, retain failure/uncertainty feedback, and require a fresh one-shot preview after failure;
+- block navigation, refresh, edits and dismissal during publication, retain failure/uncertainty feedback, and require a fresh one-shot preview after failure; direct-publication preflight also blocks duplicate submission and navigation, while CLI replacement and group removal still require review confirmation;
 - put catalog selections into the same saved draft; unchecking or endpoint invalidation may remove only unchanged checkbox-added lines, never original/manual models;
 - retain escaped per-target results and client-specific next steps beyond transient notifications;
 - require explicit selection of the legacy exclusive CLI route by default;

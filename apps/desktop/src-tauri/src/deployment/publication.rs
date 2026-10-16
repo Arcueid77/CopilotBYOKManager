@@ -1,34 +1,56 @@
-//! Public, owned model-source observations. Publication is not model selection,
-//! authentication, a running client, or a successful provider request.
-use super::ownership::TargetOwnership;
-use crate::domain::{ClientKind, ClientTarget};
+//! Current public configuration. Observations never grant write authority or
+//! claim model selection, authentication, or a successful provider request.
+use crate::domain::{ClientKind, ClientTarget, Connection};
 use crate::{adapters, error::AppResult};
-use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use std::collections::{BTreeMap, HashMap};
+use std::collections::HashMap;
 use std::path::Path;
 
-pub(crate) struct CatalogEvidence {
-    pub resource_id: String,
-    pub sources: BTreeMap<String, (String, u32)>,
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ConfiguredSource {
+    pub connection_id: Option<String>,
+    pub name: String,
+    pub model_count: u32,
+}
+
+impl ConfiguredSource {
+    pub(crate) fn new(
+        name: &str,
+        connection_id: Option<&str>,
+        model_count: usize,
+    ) -> AppResult<Self> {
+        if name.len() > 512 || model_count > 256 || name.chars().any(char::is_control) {
+            return Err(crate::error::AppError::Config(
+                "Unsupported provider display metadata".into(),
+            ));
+        }
+        Ok(Self {
+            name: crate::redact::redact_text(name),
+            connection_id: connection_id
+                .filter(|id| {
+                    id.len() <= 160 && id.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'-')
+                })
+                .map(str::to_owned),
+            model_count: model_count as u32,
+        })
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub enum PublicationState {
-    Published,
-    Changed,
+pub enum ConfigurationState {
+    Available,
     Unavailable,
+    Unsupported,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct PublishedSource {
+pub struct ClientConfiguration {
     pub target_id: String,
-    pub connection_id: String,
-    pub state: PublicationState,
-    pub model_count: Option<u32>,
-    pub published_at: DateTime<Utc>,
+    pub state: ConfigurationState,
+    pub sources: Vec<ConfiguredSource>,
 }
 
 pub fn selection_notice(kind: ClientKind) -> &'static str {
@@ -46,81 +68,58 @@ pub fn selection_notice(kind: ClientKind) -> &'static str {
     }
 }
 
-pub fn observe(
-    targets: &[ClientTarget],
-    proofs: &[TargetOwnership],
-    owner: &str,
-    read_only: bool,
-) -> Vec<PublishedSource> {
-    // Shared VS Code profiles / JetBrains runtimes are read once per physical
-    // catalog. No credential-store access, model-selection cache or IDE XML.
-    let mut catalogs: HashMap<(ClientKind, String), AppResult<CatalogEvidence>> = HashMap::new();
-    proofs
+pub fn observe(targets: &[ClientTarget], connections: &[Connection]) -> Vec<ClientConfiguration> {
+    // Read shared catalogs once. Audit/ownership fingerprints are not current state.
+    let mut catalogs: HashMap<(ClientKind, String), AppResult<Vec<ConfiguredSource>>> =
+        HashMap::new();
+    targets
         .iter()
-        .map(|proof| {
-            let observed = targets.iter().find(|target| {
-                target.id == proof.target_id
-                    && target.kind == proof.target_kind
-                    && target.detected
-                    && target.supports_write
-            });
-            let evidence = if read_only || proof.owner_id != owner {
-                None
-            } else if let Some(target) = observed {
-                match target.kind {
-                    ClientKind::VsCodeCopilot | ClientKind::JetBrainsCopilot => {
-                        let path = match target.kind {
-                            ClientKind::VsCodeCopilot => target.path.clone(),
-                            _ => adapters::jetbrains::byok::store_path()
-                                .ok()
-                                .map(|p| p.to_string_lossy().into_owned()),
-                        };
-                        path.and_then(|path| {
-                            let catalog = catalogs
-                                .entry((target.kind, path.clone()))
-                                .or_insert_with(|| match target.kind {
-                                    ClientKind::VsCodeCopilot => {
-                                        adapters::vscode::observe_owned(Path::new(&path), owner)
-                                    }
-                                    _ => adapters::jetbrains::byok::observe_owned(
-                                        Path::new(&path),
-                                        owner,
-                                    ),
-                                });
-                            catalog.as_ref().ok().map(|catalog| {
-                                catalog
-                                    .sources
-                                    .get(&proof.connection_id)
-                                    .filter(|(hash, _)| {
-                                        catalog.resource_id == proof.resource_id
-                                            && *hash == proof.projection_fingerprint
-                                    })
-                                    .map(|(_, count)| *count)
-                            })
-                        })
-                    }
-                    ClientKind::CopilotCli => super::fingerprint_target(target).ok().map(|live| {
-                        (proof.resource_id == super::ownership::cli_resource_id()
-                            && live == proof.target_fingerprint)
-                            .then_some(1)
-                    }),
-                    ClientKind::GithubCopilotApp => None,
-                }
-            } else {
-                None
+        .map(|target| {
+            let mut result = ClientConfiguration {
+                target_id: target.id.clone(),
+                state: ConfigurationState::Unsupported,
+                sources: Vec::new(),
             };
-            let (state, model_count) = match evidence {
-                Some(Some(count)) => (PublicationState::Published, Some(count)),
-                Some(None) => (PublicationState::Changed, None),
-                None => (PublicationState::Unavailable, None),
-            };
-            PublishedSource {
-                target_id: proof.target_id.clone(),
-                connection_id: proof.connection_id.clone(),
-                state,
-                model_count,
-                published_at: proof.deployed_at,
+            if !target.detected || !target.supports_write {
+                return result;
             }
+            let path = match target.kind {
+                ClientKind::VsCodeCopilot => target.path.clone(),
+                ClientKind::JetBrainsCopilot => adapters::jetbrains::byok::store_path()
+                    .ok()
+                    .map(|p| p.to_string_lossy().into_owned()),
+                ClientKind::CopilotCli => Some("user-environment".into()),
+                ClientKind::GithubCopilotApp => None,
+            };
+            result.state = ConfigurationState::Unavailable;
+            if let Some(path) = path {
+                let sources = catalogs
+                    .entry((target.kind, path.clone()))
+                    .or_insert_with(|| match target.kind {
+                        ClientKind::VsCodeCopilot => {
+                            adapters::vscode::observe_current(Path::new(&path))
+                        }
+                        ClientKind::JetBrainsCopilot => {
+                            adapters::jetbrains::byok::observe_current(Path::new(&path))
+                        }
+                        ClientKind::CopilotCli => {
+                            adapters::copilot_cli::observe_current(connections)
+                        }
+                        ClientKind::GithubCopilotApp => unreachable!(),
+                    });
+                if let Ok(sources) = sources {
+                    result.sources = sources.clone();
+                    for source in &mut result.sources {
+                        if !connections.iter().any(|connection| {
+                            source.connection_id.as_deref() == Some(connection.id.as_str())
+                        }) {
+                            source.connection_id = None;
+                        }
+                    }
+                    result.state = ConfigurationState::Available;
+                }
+            }
+            result
         })
         .collect()
 }

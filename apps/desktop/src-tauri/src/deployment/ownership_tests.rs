@@ -82,14 +82,14 @@ fn durable_owner_survives_reopen_and_secrets_are_not_in_proof() {
 }
 
 #[test]
-fn forged_legacy_foreign_modified_and_copied_groups_never_gain_ownership() {
+fn forged_legacy_foreign_and_copied_groups_never_gain_ownership() {
     let root = tempfile::tempdir().unwrap();
     let mut store = seed(root.path());
     let original = target(&root.path().join("models.json"));
     deploy(&mut store, &original);
     let original_bytes = fs::read(original.path.as_ref().unwrap()).unwrap();
     let mut value: serde_json::Value = serde_json::from_slice(&original_bytes).unwrap();
-    for mutation in ["legacy", "foreign", "modified"] {
+    for mutation in ["legacy", "foreign"] {
         let mut hostile = value.clone();
         match mutation {
             "legacy" => {
@@ -263,4 +263,60 @@ fn revoke_stale_preview_or_failed_state_commit_never_discards_connection() {
     assert_eq!(fs::read(target.path.as_ref().unwrap()).unwrap(), original);
     assert_eq!(store.connections().len(), 1);
     assert_eq!(store.ownership().len(), 1);
+}
+
+#[test]
+fn a_new_plan_accepts_manual_edits_but_retains_exact_rollback_and_stale_protection() {
+    let connection = connection();
+    let root = tempfile::tempdir().unwrap();
+    let mut store = seed(root.path());
+    let target = target(&root.path().join("models.json"));
+    deploy(&mut store, &target);
+    let path = target.path.as_ref().unwrap();
+    let mut groups: serde_json::Value = serde_json::from_slice(&fs::read(path).unwrap()).unwrap();
+    groups[0]["name"] = serde_json::json!("User edited");
+    groups[0]["models"][0]["id"] = serde_json::json!("user-model");
+    groups.as_array_mut().unwrap().push(serde_json::json!({"vendor":"customendpoint","name":"Keep manual provider","apiKey":"other-secret","models":[]}));
+    let edited = serde_json::to_vec(&groups).unwrap();
+    fs::write(path, &edited).unwrap();
+    let mut plans = PlanStore::default();
+    let preview = plans
+        .insert(
+            &connection,
+            Some("fixture-secret"),
+            plan(&connection, &target),
+            std::slice::from_ref(&target),
+            context(&store),
+        )
+        .unwrap();
+    let stored = plans.consume(&preview.id).unwrap();
+    assert!(stored
+        .writes
+        .iter()
+        .any(|write| write.before.as_deref() == Some(edited.as_slice())));
+    validate_plan(
+        &stored,
+        &connection,
+        std::slice::from_ref(&target),
+        &context(&store),
+    )
+    .unwrap();
+    fs::write(path, b"[]").unwrap();
+    assert!(validate_plan(
+        &stored,
+        &connection,
+        std::slice::from_ref(&target),
+        &context(&store)
+    )
+    .is_err());
+    fs::write(path, &edited).unwrap();
+    let mut tx =
+        transaction::Transaction::begin(journal_path(store.path()), &preview.id, stored.writes)
+            .unwrap();
+    tx.apply().unwrap();
+    let applied: serde_json::Value = serde_json::from_slice(&fs::read(path).unwrap()).unwrap();
+    assert_eq!(applied[0]["name"], "Keep manual provider");
+    tx.rollback().unwrap();
+    assert_eq!(fs::read(path).unwrap(), edited);
+    tx.complete().unwrap();
 }

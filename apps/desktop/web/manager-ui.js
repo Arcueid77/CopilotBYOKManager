@@ -6,6 +6,7 @@
   "use strict";
   const i18n = typeof module === "object" && module.exports ? require("./i18n.js") : globalThis.CopilotBYOKManagerI18n;
   const tr = i18n.t;
+  const clients = typeof module === "object" && module.exports ? require("./client-presentation.js") : globalThis.CopilotBYOKManagerClients;
   const escape = value => String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#039;");
   const frozen = snapshot => Boolean(snapshot.stateRecovery || snapshot.deploymentRecovery);
   const date = value => Number.isNaN(Date.parse(value)) ? tr("时间未知") : new Date(value).toLocaleString(i18n.locale(), { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
@@ -36,38 +37,31 @@
   }
 
   function sourceRows(snapshot) {
-    return snapshot.clients.map(client => {
-      const sources = (snapshot.publishedSources ?? []).filter(source => source.targetId === client.id);
-      let detail = tr("尚无受管供应商");
+    return clients.ordered(snapshot).map(client => {
+      const current = clients.configuration(client, snapshot);
+      const sources = clients.sources(client, snapshot);
+      let detail = tr("未配置供应商");
       if (!client.detected) detail = tr("未检测到客户端");
       else if (client.kind === "github-copilot-app") detail = tr("在 Copilot App 中手动添加供应商");
       else if (!client.supportsWrite) detail = tr("当前版本或配置不支持自动发布，请到客户端页核对");
-      else if (!Array.isArray(snapshot.publishedSources)) detail = tr("发布状态暂不可用");
+      else if (!current || current.state !== "available") detail = tr("配置读取失败");
       const chips = sources.map(source => {
         const connection = snapshot.connections.find(connection => connection.id === source.connectionId);
-        const state = source.state === "published" && Number.isInteger(source.modelCount) && source.modelCount >= 0 ? "published" : source.state === "changed" ? "changed" : "unavailable";
-        const text = state === "published" ? tr("{0} 个模型", source.modelCount) : state === "changed" ? tr("外部改动，待核对") : tr("无法核验");
-        return `<span class="manager-source" data-source-state="${state}">${escape(connection?.name ?? tr("已移除的连接"))} · ${text}${connection?.enabled === false ? tr(" · 已停用，配置保留") : ""}</span>`;
+        const text = Number.isInteger(source.modelCount) && source.modelCount >= 0 ? tr("{0} 个模型", source.modelCount) : tr("模型数量未知");
+        return `<span class="manager-source" data-source-state="configured">${escape(source.name || connection?.name || tr("供应商"))} · ${text}${connection?.enabled === false ? tr(" · 已停用，配置保留") : ""}</span>`;
+
       });
       const visible = chips.slice(0, 3).join("") + (chips.length > 3 ? `<details class="manager-extra-sources"><summary>${tr("另有 {0} 个来源", chips.length - 3)}</summary><div class="manager-sources">${chips.slice(3).join("")}</div></details>` : "");
-      return `<div class="manager-client-row" data-client-id="${escape(client.id)}"><div><strong>${escape(client.name)}</strong>${client.kind === "copilot-cli" ? `<small>${tr("单一环境路由")}</small>` : ""}</div><div class="manager-sources">${visible || `<span class="manager-meta">${detail}</span>`}</div><button class="button ghost small" data-action="route" data-route="clients" data-client-id="${escape(client.id)}">${tr("核对")}</button></div>`;
+      return `<div class="manager-client-row" data-client-id="${escape(client.id)}"><div><strong>${escape(clients.name(client))}</strong>${client.kind === "copilot-cli" ? `<small>${tr("单一环境路由")}</small>` : ""}</div><div class="manager-sources">${visible || `<span class="manager-meta">${detail}</span>`}</div><button class="button ghost small" data-action="route" data-route="clients" data-client-id="${escape(client.id)}">${tr("查看应用")}</button></div>`;
     }).join("");
   }
 
-  function pending(snapshot, data, native) {
+  function pending(snapshot, native) {
     const rows = [];
     const add = (text, action, label, route, disabled = false) => rows.push({ text, action, label, route, disabled });
     if (snapshot.stateRecovery) add(tr("连接存储进入只读恢复，暂不能修改或发布。"), "route", tr("查看恢复状态"), "about");
-    else if (snapshot.deploymentRecovery) add(tr("上次发布中断，请先核对恢复，再进行新的写入。"), "preview-recovery", tr("核对恢复"), null, !native);
-    if (native && (!data.setup || data.errors?.setup || !data.components || data.errors?.components)) add(tr("环境状态无法完整读取，需要核对客户端。"), "route", tr("核对客户端"), "clients");
-    else if (native) {
-      const missing = data.components.filter(component => ["missing", "broken"].includes(component.status));
-      if (missing.length) add(tr("有 {0} 个组件需要安装或修复。", missing.length), "route", tr("查看安装计划"), "clients");
-      else if (data.components.some(component => component.status === "unknown")) add(tr("部分组件状态未知，请重新检测。"), "route", tr("核对客户端"), "clients");
-      if (!frozen(snapshot) && !["verifiedSameAccount", "userConfirmedSameAccount"].includes(data.setup?.alignment)) add(tr("客户端账号尚未对齐，请完成官方登录并逐个核对。"), "setup-accounts", tr("核对账号"), null);
-    }
+    else if (snapshot.deploymentRecovery) add(tr("上次发布中断，请先处理恢复。"), "preview-recovery", tr("查看恢复选项"), null, !native);
     if (snapshot.connections.length && !snapshot.connections.some(connection => connection.enabled !== false)) add(tr("没有启用的连接，请添加连接或到连接页重新启用。"), "route", tr("管理连接"), "connections");
-    if ((snapshot.publishedSources ?? []).some(source => source.state !== "published")) add(tr("有已发布来源发生变化或无法核验，请先核对客户端。"), "route", tr("核对来源"), "clients");
     return rows;
   }
 
@@ -85,7 +79,7 @@
         const connection = snapshot.connections.find(connection => connection.id === record.connectionId);
         const steps = publicationSteps(record, connection);
         const manual = record.status === "skipped" && record.targetKind === "github-copilot-app" && connection;
-        return `<li><strong>${escape(client?.name ?? record.targetId ?? record.targetKind ?? tr("目标未知"))}</strong><span>${escape(statuses[record.status] ?? tr("状态需核对"))}</span>${steps.map(text => `<p>${escape(text)}</p>`).join("")}${manual ? `<button class="button ghost small manager-result-action" data-action="setup-manual" data-id="${escape(connection.id)}">${tr("查看 {0} 的手动配置步骤", escape(connection.name))}</button>` : ""}${record.status !== "applied" && record.detail ? `<details><summary>${tr("操作明细")}</summary><p>${escape(record.detail)}</p></details>` : ""}</li>`;
+        return `<li><strong>${escape(client ? clients.name(client) : record.targetId ?? record.targetKind ?? tr("目标未知"))}</strong><span>${escape(statuses[record.status] ?? tr("状态需核对"))}</span>${steps.map(text => `<p>${escape(text)}</p>`).join("")}${manual ? `<button class="button ghost small manager-result-action" data-action="setup-manual" data-id="${escape(connection.id)}">${tr("查看 {0} 的手动配置步骤", escape(connection.name))}</button>` : ""}${record.status !== "applied" && record.detail ? `<details><summary>${tr("操作明细")}</summary><p>${escape(record.detail)}</p></details>` : ""}</li>`;
       }).join("")}</ul>`;
   }
 
@@ -99,10 +93,10 @@
   }
 
   function renderHome(snapshot, data, native) {
-    const actions = pending(snapshot, data, native);
+    const actions = pending(snapshot, native);
     const connections = snapshot.connections.filter(connection => connection.enabled !== false);
     return `${!native ? `<div class="preview-banner">${tr("浏览器试用 · 示例数据 · 发布仅为模拟，不修改电脑")}</div>` : ""}
-      <div class="manager-health"><span class="manager-dot ${actions.length ? "attention" : ""}"></span><span>${actions.length ? tr("有事项需要核对") : tr("管理供应商并发布到应用")}</span>${!frozen(snapshot) && connections.length ? `<button class="button primary small" data-action="jump-connections">${tr("选择连接并发布")}</button>` : ""}</div>
+      <div class="manager-health"><span class="manager-dot ${actions.length ? "attention" : ""}"></span><span>${actions.length ? escape(actions[0].text) : tr("管理供应商并发布到应用")}</span>${!frozen(snapshot) && connections.length ? `<button class="button primary small" data-action="jump-connections">${tr("选择连接并发布")}</button>` : ""}</div>
       ${!frozen(snapshot) && !snapshot.connections.length ? `<section class="manager-start"><div><h2>${tr("配置一个供应商，用于多个 Copilot 客户端")}</h2><p>${tr("先添加端点、密钥与模型，再选择你要使用的客户端并预览发布。")}</p></div><button class="button primary" data-action="add-connection">${tr("添加第一个连接")}</button></section>` : ""}
       ${actions.length ? `<section class="manager-section manager-pending"><h2>${tr("待处理")}</h2>${actions.map(row => `<div class="manager-action-row"><span>${escape(row.text)}</span><button class="button ghost small" data-action="${row.action}" ${row.route ? `data-route="${row.route}"` : ""} ${row.disabled ? "disabled" : ""}>${row.label}</button></div>`).join("")}</section>` : ""}
       <section class="manager-section manager-surface"><div class="manager-section-head"><h2>${tr("客户端模型来源")}</h2><button class="button ghost small" data-action="route" data-route="clients">${tr("客户端管理")}</button></div>${sourceRows(snapshot)}</section>

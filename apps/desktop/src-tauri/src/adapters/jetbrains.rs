@@ -377,7 +377,7 @@ pub fn preview_revocation(connection: &Connection, target: &ClientTarget) -> Dep
     operation.supported = target.detected && target.supports_write;
     operation.requires_restart = operation.supported;
     operation.title = format!("Revoke owned BYOK configuration in {}", target.name);
-    operation.description = "Remove only configuration with a matching durable owner/Connection/projection proof. Current endpoint compatibility and provider key are not required for removal.".into();
+    operation.description = "Remove only configuration with a matching durable owner/Connection/resource binding and current ownership markers. Current endpoint compatibility and provider key are not required for removal.".into();
     operation.changes = vec!["Recheck the reviewed plugin schema and dedicated BYOK file; preserve all unmanaged providers".into()];
     operation
 }

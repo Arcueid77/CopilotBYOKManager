@@ -398,7 +398,7 @@ pub struct DashboardSnapshot {
     pub clients: Vec<ClientTarget>,
     pub deployments: Vec<DeploymentRecord>,
     #[serde(default)]
-    pub published_sources: Vec<crate::deployment::publication::PublishedSource>,
+    pub client_configurations: Vec<crate::deployment::publication::ClientConfiguration>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub state_recovery: Option<String>,
     pub usage_db: UsageDbStatus,

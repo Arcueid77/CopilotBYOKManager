@@ -256,16 +256,7 @@ pub(crate) fn prepare_owned(
         {
             return Err(ownership::conflict());
         }
-        let projection = crate::fingerprint::json("vscode-owned-group-v1", group)?;
-        ownership::verify_projection(proofs, owner_id, &connection.id, &resource_id, &projection)?;
-    }
-    if !revoke
-        && candidates.is_empty()
-        && proofs
-            .iter()
-            .any(|proof| proof.connection_id == connection.id && proof.resource_id == resource_id)
-    {
-        return Err(ownership::conflict());
+        ownership::verify_binding(proofs, owner_id, &connection.id, &resource_id)?;
     }
     let mut desired = groups.clone();
     desired.retain(|group| !is_owned_group(group, &connection.id));
@@ -308,41 +299,36 @@ pub(crate) fn original_backup(
     )?))
 }
 
-pub(crate) fn observe_owned(
+pub(crate) fn observe_current(
     path: &Path,
-    owner: &str,
-) -> AppResult<crate::deployment::publication::CatalogEvidence> {
-    use crate::deployment::{ownership, publication::CatalogEvidence};
-    let resource = crate::transaction::Resource::File(crate::safe_io::resource_path(path)?);
-    let mut sources = BTreeMap::new();
-    for group in read_groups(path)? {
-        let Some(id) = group.get(CONNECTION_ID_FIELD).and_then(Value::as_str) else {
-            continue;
-        };
-        if !is_owned_group(&group, id)
-            || group.get(OWNER_ID_FIELD).and_then(Value::as_str) != Some(owner)
-        {
+) -> AppResult<Vec<crate::deployment::publication::ConfiguredSource>> {
+    use crate::deployment::publication::ConfiguredSource;
+    let groups = read_groups(path)?;
+    if groups.len() > 256 {
+        return Err(crate::deployment::ownership::conflict());
+    }
+    let mut sources = Vec::new();
+    for group in groups {
+        if group.get("vendor").and_then(Value::as_str) != Some("customendpoint") {
             continue;
         }
         let models = group
             .get("models")
             .and_then(Value::as_array)
-            .ok_or_else(ownership::conflict)?;
-        if id.len() > 160 || models.len() > 128 {
-            return Err(ownership::conflict());
-        }
-        let hash = crate::fingerprint::json("vscode-owned-group-v1", &group)?;
-        if sources
-            .insert(id.to_owned(), (hash, models.len() as u32))
-            .is_some()
-        {
-            return Err(ownership::conflict());
-        }
+            .ok_or_else(crate::deployment::ownership::conflict)?;
+        let name = group
+            .get("name")
+            .and_then(Value::as_str)
+            .unwrap_or("Custom Endpoint");
+        let name =
+            crate::redact::redact_with_secret(name, group.get("apiKey").and_then(Value::as_str));
+        sources.push(ConfiguredSource::new(
+            &name,
+            group.get(CONNECTION_ID_FIELD).and_then(Value::as_str),
+            models.len(),
+        )?);
     }
-    Ok(CatalogEvidence {
-        resource_id: ownership::resource_id(&resource),
-        sources,
-    })
+    Ok(sources)
 }
 
 fn default_user_roots() -> Vec<(Edition, PathBuf)> {

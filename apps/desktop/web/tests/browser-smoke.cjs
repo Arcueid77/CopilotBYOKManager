@@ -44,6 +44,10 @@ async function nativeFixture() {
   const connection = { id: "connection", name: "Example provider", baseUrl: "https://example.invalid/v1", providerKind: "openai", protocol: "chat-completions", headers: {}, models: [{ id: "model", modelId: "gpt-5", name: "GPT-5", enabled: true, capabilities: {} }], secretRef: "fixture", hasSecret: true, createdAt: now, updatedAt: now };
   connection.enabled = true;
   const connections = [connection], publications = [], deployments = [];
+  const configurationErrors = new Set();
+  window.__configurationError = (id, value) => value ? configurationErrors.add(id) : configurationErrors.delete(id);
+  window.__editCurrentSource = (id, values) => Object.assign(publications.find(source => source.targetId === id), values);
+  window.__removeCurrentSources = id => { for (let i = publications.length - 1; i >= 0; i--) if (publications[i].targetId === id) publications.splice(i, 1); };
   const resources = [], delayed = new Map();
   let catalogStatus = "available";
   window.__setCatalogStatus = status => { catalogStatus = status; };
@@ -53,6 +57,7 @@ async function nativeFixture() {
   window.__emptyConnections = () => { connections.splice(0); publications.splice(0); };
   window.__addSecondConnection = () => connections.push({ ...structuredClone(connection), id: "connection-b", name: "Second provider", baseUrl: "https://second.invalid/v1", models: [{ id: "b-model", modelId: "b-model", name: "B model", enabled: true, capabilities: {} }] });
   window.__addDisabledModel = () => connection.models.push({ id: "disabled-id", modelId: "disabled-model", name: "Disabled model", enabled: false, capabilities: { vision: true } });
+  window.__disableAllModels = () => connection.models.forEach(model => { model.enabled = false; });
   window.__addResource = () => resources.push({ id: "fixture-resource", name: "Fixture instructions", kind: "instructions", body: "Synthetic test instructions only.", updatedAt: now });
   let revision = 0, previewRevision = 0, activePlan = false, delayPreview = false, releasePreview;
   window.__delayNextPreview = () => { delayPreview = true; };
@@ -62,7 +67,14 @@ async function nativeFixture() {
     { id: "cli", name: "Copilot CLI", kind: "copilot-cli", detected: true, supportsWrite: true, status: "available", detail: "Fixture runtime", path: "Fixture" },
     { id: "app", name: "Copilot app", kind: "github-copilot-app", detected: true, supportsWrite: false, status: "read-only", detail: "Manual configuration", path: "Fixture" },
   ];
+  window.__addSharedAgents = () => {
+    Object.assign(clients[0], { id: "vscode:stable:default", name: "Visual Studio Code · Default" });
+    clients.push({ ...clients[0], id: "vscode:stable:profile:builtin/agents", name: "Visual Studio Code · Agents" });
+    // Native tests independently verify this observation from a shared file.
+    for (const client of [clients[0], clients.at(-1)]) publications.push({ targetId: client.id, connectionId: connection.id, state: "published", modelCount: 1, publishedAt: now });
+  };
   const components = ["vscode", "vscode-copilot-extension", "copilot-cli", "github-copilot-app"].map((id) => ({ id, name: id, status: "ready", version: "fixture", detail: "Isolated UI fixture" }));
+  window.__setComponentState = (id, status, detail) => Object.assign(components.find(component => component.id === id), { status, detail });
   const identity = { login: "fixture", host: "github.com", userId: 1 };
   const accounts = { anchor: { state: "verified", identity, evidence: "Fake anchor", detail: "Fake API identity", observedAt: now }, surfaces: ["vsCodeCopilot", "copilotCli", "githubCopilotApp"].map((surface) => ({ surface, state: "actionRequired", identity: null, evidence: "Manual confirmation needed", detail: "Fixture", observedAt: now })), observedAt: now, loginRuns: [] };
   const setup = { scannedAt: now, target: identity, alignment: "partiallyVerified", evidenceFingerprint: "fixture-evidence", accounts, preferences: { connectionId: connection.id }, targets: clients.map((c) => ({ targetId: c.id, state: c.supportsWrite ? "notDeployed" : "manual", detail: "Fixture" })), manualConfirmed: false };
@@ -100,7 +112,7 @@ async function nativeFixture() {
     window.__calls.push({ cmd, args });
     const pending = delayed.get(cmd);
     if (pending) await new Promise((resolve, reject) => { pending.resolve = resolve; pending.reject = reject; });
-    if (cmd === "get_dashboard") return structuredClone({ version: 2, connections, clients, deployments, publishedSources: publications, stateRecovery, deploymentRecovery, statePath: "Fixture only", usageDb: { state: "available", schemaVersion: 2 } });
+    if (cmd === "get_dashboard") return structuredClone({ version: 2, connections, clients, deployments, clientConfigurations: clients.map(client => ({ targetId: client.id, state: configurationErrors.has(client.id) ? "unavailable" : client.supportsWrite ? "available" : "unsupported", sources: publications.filter(source => source.targetId === client.id).map(source => ({ connectionId: source.connectionId, name: source.name ?? connections.find(connection => connection.id === source.connectionId)?.name, modelCount: source.modelCount })) })), stateRecovery, deploymentRecovery, statePath: "Fixture only", usageDb: { state: "available", schemaVersion: 2 } });
     if (cmd === "get_install_runs") return [];
     if (cmd === "get_window_behavior") return structuredClone(windowBehavior);
     if (cmd === "set_close_action") {
@@ -297,15 +309,13 @@ async function checkCliReplacementConfirmation(browser, url, errors) {
     const applications = () => page.evaluate(() => window.__calls.filter(call => call.cmd === "apply_deployment_plan"));
     await open();
     assert.equal(await page.locator("#target-cli").isChecked(), true);
-    assert.equal(await page.locator("#apply-deployment").isDisabled(), true);
-    await page.locator("#preview-deployment").click();
     await page.locator(".manager-operation").waitFor();
     assert.match(await page.locator(".manager-operation").innerText(), locale === "en" ? /Confirm to replace the current CLI provider environment/ : /确认后替换 CLI 当前的供应商环境配置/);
     assert.equal((await applications()).length, 0, "Preview must not apply");
     await page.locator("[data-deployment-close]").click();
     assert.equal((await applications()).length, 0, "Closing review must not apply");
     await open();
-    await page.locator("#preview-deployment").click();
+    await page.locator(".manager-operation").waitFor();
     await page.locator("#apply-deployment").click();
     await page.waitForFunction(() => !document.querySelector("#inline-deployment"));
     assert.deepEqual((await applications()).map(call => call.args), [{ planId: "reviewed-plan", confirmed: true }]);
@@ -314,29 +324,32 @@ async function checkCliReplacementConfirmation(browser, url, errors) {
 }
 async function checkPublication(browser, url, errors) {
   const page = await fixturePage(browser, url, errors);
+  await page.evaluate(() => window.__delayCommand("apply_deployment_plan"));
   await route(page, "clients"); await page.locator('.client-card[data-client-id="vscode"] [data-action="deploy-client"]').click();
   assert.equal(await page.locator("#target-vscode").isChecked(), true);
   assert.equal(await page.locator("#target-cli").isChecked(), false);
   assert.equal(await page.locator("#target-app").isChecked(), false);
-  await page.locator("#preview-deployment").click(); await page.locator("#apply-deployment").waitFor({ state: "visible" });
+  await page.waitForFunction(() => window.__calls.some(call => call.cmd === "apply_deployment_plan"));
   await page.locator("#interface-theme").selectOption("dark");
-  assert.equal(await page.locator("#apply-deployment").isDisabled(), false, "Theme change preserves reviewed plan");
-  await page.evaluate(() => window.__delayCommand("apply_deployment_plan")); await page.locator("#apply-deployment").click();
+  assert.equal(await page.locator("#apply-deployment").isDisabled(), true, "Theme change preserves pending publication");
   await page.waitForFunction(() => document.querySelector("#inline-deployment")?.getAttribute("aria-busy") === "true");
   assert.equal(await page.locator("#refresh-button").isDisabled(), true);
   assert.equal(await page.locator("#interface-language").isDisabled(), true);
   await page.evaluate(() => {
     for (const selector of ['#primary-nav [data-route="connections"]', "#refresh-button", "[data-deployment-close]"]) document.querySelector(selector).dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    document.querySelector("#apply-deployment").dispatchEvent(new MouseEvent("click", { bubbles: true }));
   });
+  assert.equal(await page.evaluate(() => window.__calls.filter(call => call.cmd === "apply_deployment_plan").length), 1, "Repeated clicks cannot publish twice");
   assert.equal(await page.locator("#content").getAttribute("data-route"), "clients");
   assert.equal(await page.locator("#inline-deployment").count(), 1);
   await page.evaluate(() => window.__releaseCommand("apply_deployment_plan", true));
   await page.waitForFunction(() => document.querySelector("#inline-deployment")?.getAttribute("aria-busy") === "false");
-  assert.equal(await page.locator("#apply-deployment").isDisabled(), true);
-  assert.match(await page.locator("#deployment-preview").innerText(), /failed or the result is uncertain/);
+  assert.equal(await page.locator("#apply-deployment").isDisabled(), false);
+  assert.match(await page.locator("#deployment-preview").innerText(), /failed or its outcome is uncertain/);
   assert.equal(await page.evaluate(() => document.activeElement.id), "deployment-preview");
-  await page.locator("#preview-deployment").click(); await page.locator("#apply-deployment").click();
+  await page.locator("#apply-deployment").click();
   await page.waitForFunction(() => document.activeElement.id === "publication-result-title");
+  assert.equal(await page.evaluate(() => window.__calls.filter(call => call.cmd === "preview_deployment").length), 2, "Retry obtains a fresh native plan");
   const applied = await page.evaluate(() => window.__calls.filter(c => c.cmd === "apply_deployment_plan").at(-1).args);
   assert.deepEqual(applied, { planId: "reviewed-plan", confirmed: true });
   await page.locator('[data-action="view-publication-history"]').click();
@@ -355,13 +368,78 @@ async function checkPublication(browser, url, errors) {
   await page.locator("#refresh-button").click();
   await page.locator('.client-card[data-client-id="jb-idea"] .app-provider-select').selectOption("connection");
   await page.locator('.client-card[data-client-id="jb-idea"] [data-action="deploy-client"]').click();
-  await page.locator("#preview-deployment").click(); await page.locator("#apply-deployment").click();
   await page.waitForFunction(() => !document.querySelector("#inline-deployment"));
   assert.match(await page.locator(".manager-result-targets").first().innerText(), /restart this IDE/i);
   await route(page, "overview");
   await page.locator('.manager-client-row[data-client-id="app"] [data-action="route"]').click();
   assert.equal(await page.evaluate(() => document.activeElement.dataset.clientId), "app");
   await page.close();
+}
+async function checkPublicationGuardsAndSharedApps(browser, url, errors) {
+  const page = await fixturePage(browser, url, errors);
+  await page.evaluate(() => window.__delayCommand("preview_deployment"));
+  await route(page, "clients");
+  await page.locator('.client-card[data-client-id="vscode"] [data-action="deploy-client"]').click();
+  await page.waitForFunction(() => window.__calls.some(call => call.cmd === "preview_deployment"));
+  await page.evaluate(() => window.__releaseCommand("preview_deployment", true));
+  await page.waitForFunction(() => document.querySelector("#inline-deployment")?.getAttribute("aria-busy") === "false");
+  assert.equal(await page.evaluate(() => window.__calls.some(call => call.cmd === "apply_deployment_plan")), false, "Failed preflight cannot apply");
+  assert.equal(await page.locator("#deployment-preview details").getAttribute("open"), null);
+  assert.match(await page.locator(".toast").last().innerText(), /Publication did not complete/);
+  await page.locator("[data-deployment-close]").click();
+  await page.evaluate(() => window.__disableAllModels());
+  await page.locator("#refresh-button").click();
+  await page.locator('.client-card[data-client-id="vscode"] [data-action="deploy-client"]').click();
+  await page.locator(".manager-operation").waitFor();
+  assert.match(await page.locator(".manager-operation").innerText(), /empty model catalog/i);
+  assert.equal(await page.evaluate(() => window.__calls.some(call => call.cmd === "apply_deployment_plan")), false, "Removing a group requires confirmation");
+  await page.locator("#apply-deployment").click();
+  await page.waitForFunction(() => !document.querySelector("#inline-deployment"));
+  await page.close();
+
+  const shared = await fixturePage(browser, url, errors);
+  await shared.evaluate(() => window.__addSharedAgents());
+  await shared.locator("#refresh-button").click();
+  assert.equal(await shared.locator('.manager-client-row[data-client-id="vscode:stable:profile:builtin/agents"]').count(), 0);
+  const chat = shared.locator('.manager-client-row[data-client-id="vscode:stable:default"]');
+  assert.match(await chat.innerText(), /Copilot Chat · VS Code/);
+  assert.match(await chat.innerText(), /Example provider/);
+  await route(shared, "clients");
+  assert.equal(await shared.locator('.client-card[data-client-id="vscode:stable:profile:builtin/agents"]').count(), 0);
+  assert.equal(await shared.locator('.client-card').first().getAttribute("data-client-id"), "vscode:stable:default");
+  assert.match(await shared.locator("#content").innerText(), /account checks \(optional\)/i);
+  assert.equal(await shared.evaluate(() => window.__calls.some(call => call.cmd === "confirm_account_alignment")), false);
+  await shared.screenshot({ path: path.join(output, "apps-shared-chat.png"), fullPage: true });
+  await route(shared, "overview");
+  await shared.evaluate(() => window.__editCurrentSource("vscode:stable:default", { name: "Edited in the client", modelCount: 5 }));
+  await shared.locator("#refresh-button").click();
+  assert.match(await chat.innerText(), /Edited in the client.*Models: 5/);
+  assert.doesNotMatch(await shared.locator("#content").innerText(), /external change|source.*changed/i);
+  await shared.evaluate(() => window.__configurationError("vscode:stable:default", true));
+  await shared.locator("#refresh-button").click(); assert.match(await chat.innerText(), /Configuration could not be read/);
+  await shared.evaluate(() => { window.__configurationError("vscode:stable:default", false); window.__removeCurrentSources("vscode:stable:default"); });
+  await shared.locator("#refresh-button").click(); assert.match(await chat.innerText(), /No providers configured/);
+
+  await shared.evaluate(() => window.__setComponentState("vscode", "unknown", "Fixture version metadata unavailable"));
+  await shared.locator("#refresh-button").click();
+  assert.equal(await shared.locator(".manager-pending").count(), 0);
+  await chat.getByRole("button", { name: "View app", exact: true }).click();
+  assert.equal(await shared.evaluate(() => document.activeElement.dataset.clientId), "vscode:stable:default");
+  const component = shared.locator('.install-card[data-component-id="vscode"]');
+  await component.waitFor();
+  assert.match(await component.innerText(), /Fixture version metadata unavailable/);
+  assert.equal(await component.locator('[data-install-action="install-one"]').count(), 0);
+  const detections = await shared.evaluate(() => window.__calls.filter(call => call.cmd === "get_installation_status").length);
+  await component.getByRole("button", { name: "Detect again", exact: true }).click();
+  await shared.waitForFunction(count => window.__calls.filter(call => call.cmd === "get_installation_status").length > count, detections);
+  await shared.waitForFunction(() => !document.querySelector('.install-card[data-component-id="vscode"] [data-install-action="refresh"]').disabled);
+  assert.equal(await shared.evaluate(() => window.__calls.some(call => ["preview_install", "apply_install_plan"].includes(call.cmd))), false);
+  await shared.locator("#interface-language").selectOption("zh-CN");
+  assert.equal(await component.getByRole("button", { name: "重新检测", exact: true }).count(), 1);
+  await route(shared, "overview");
+  assert.equal(await chat.getByRole("button", { name: "查看应用", exact: true }).count(), 1);
+  assert.equal(await shared.locator(".manager-pending").count(), 0);
+  await shared.close();
 }
 async function checkCatalogCopy(browser, url, errors) {
   for (const [locale, success, failure] of [
@@ -457,16 +535,24 @@ async function checkTrayLocale(browser, url, errors) {
     await checkEditor(browser, url, errors);
     await checkPublication(browser, url, errors);
     await checkCliReplacementConfirmation(browser, url, errors);
+    await checkPublicationGuardsAndSharedApps(browser, url, errors);
     await checkCatalogCopy(browser, url, errors);
     await checkRecovery(browser, url, errors);
     await checkWindowPreferences(browser, url, errors);
     await checkTrayLocale(browser, url, errors);
     const preview = await browser.newPage({ locale: "zh-CN", viewport: { width: 1180, height: 760 } });
     preview.on("pageerror", error => errors.push(String(error)));
+    await preview.addInitScript(() => sessionStorage.setItem('copilot-byok-manager-demo', JSON.stringify({
+      connections: [{ id: 'old-demo', name: 'Existing browser provider', baseUrl: 'https://example.invalid/v1', providerKind: 'openai', protocol: 'chat-completions', models: [], headers: {}, enabled: true }],
+      clients: [{ id: 'vscode:stable:default', name: 'Visual Studio Code · Default', kind: 'vs-code-copilot', detected: true, supportsWrite: true, status: 'available' }],
+      deployments: [], publishedSources: [],
+    })));
     await preview.goto(url); await preview.locator(".preview-banner").waitFor();
     for (const name of routes) { await route(preview, name); assert.ok(await preview.locator(".preview-banner").count()); }
+    await route(preview, 'connections');
+    assert.equal(await preview.locator('.manager-connection h3').innerText(), 'Existing browser provider');
     await preview.close();
     assert.deepEqual(errors, []);
-    console.log(JSON.stringify({ status: "passed", scenarios: ["four core routes", "Chinese and English", "light and dark contrast", "system appearance changes", "preference persistence", "no hidden feature queries", "unsupported route rejection", "draft/focus/save guards", "catalog check-save and invalidation", "concise bilingual catalog results and failure recovery", "app-specific provider publication", "CLI replacement explicit confirmation in both languages", "busy/error/fresh-preview lifecycle", "manual app exact provider", "reviewed JetBrains fixture", "persistent history", "read-only/recovery visibility", "close preference success/failure/recovery", "bounded tray locale only", "browser preview boundaries"], output }));
+    console.log(JSON.stringify({ status: "passed", scenarios: ["four core routes", "Chinese and English", "light and dark contrast", "system appearance changes", "preference persistence", "no hidden feature queries", "unsupported route rejection", "draft/focus/save guards", "catalog check-save and invalidation", "concise bilingual catalog results and failure recovery", "one-click app publication", "failed preflight and empty-catalog confirmation", "shared Agents/Chat visibility and optional accounts", "CLI replacement explicit confirmation in both languages", "busy/error/fresh-preview lifecycle", "manual app exact provider", "reviewed JetBrains fixture", "persistent history", "read-only/recovery visibility", "close preference success/failure/recovery", "bounded tray locale only", "browser preview boundaries"], output }));
   } finally { await browser.close(); server.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; server.close(); });

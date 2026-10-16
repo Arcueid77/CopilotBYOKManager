@@ -34,7 +34,7 @@ function seedPreview() {
       { id: 'copilot-cli:user-environment', kind: 'copilot-cli', name: 'GitHub Copilot CLI', detail: 'Example single environment route.', path: 'Example CLI environment', detected: true, supportsWrite: true, status: 'available' },
       { id: 'github-copilot-app:local', kind: 'github-copilot-app', name: 'GitHub Copilot App', detail: 'Example installation. Provider setup is manual; no private application stores are accessed.', path: 'Example App installation', detected: true, supportsWrite: false, status: 'read-only' },
       { id: 'jetbrains:example', kind: 'jetbrains-copilot', name: 'JetBrains · Example Profile', detail: 'Example unavailable profile.', path: 'No real IDE is used in this preview', detected: false, supportsWrite: false, status: 'not-installed' },
-    ], deployments: [], publishedSources: [],
+    ], deployments: [], clientConfigurations: [],
   }));
 }
 
@@ -160,9 +160,7 @@ async function checkEditor(page, locale) {
       assert.equal(await page.locator('#api-key').inputValue(), '');
       await page.screenshot({ path: path.join(output, `editor-${locale}.png`), animations: 'disabled' });
       await page.keyboard.press('Escape');
-      await visit(page, 'clients');
-      await page.locator('.app-provider-select').first().selectOption('northstar');
-      await page.locator('[data-action="deploy-client"]').first().click();
+      await page.locator('.manager-connection[data-connection-id="northstar"] [data-action="deploy-connection"]').click();
       await page.locator('#preview-deployment').click();
       await page.locator('#deployment-preview .manager-operation').first().waitFor();
       await page.waitForFunction(() => !document.querySelector('#apply-deployment').disabled);

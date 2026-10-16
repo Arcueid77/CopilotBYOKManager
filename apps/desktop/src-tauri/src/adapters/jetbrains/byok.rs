@@ -249,54 +249,42 @@ fn projection(map: &Map<String, Value>, owned: &[String; 3]) -> AppResult<String
     fingerprint::json("jetbrains-owned-provider-v1", &values)
 }
 
-pub(crate) fn observe_owned(
+pub(crate) fn observe_current(
     path: &Path,
-    owner: &str,
-) -> AppResult<crate::deployment::publication::CatalogEvidence> {
-    use crate::deployment::publication::CatalogEvidence;
-    let resource = transaction::Resource::File(safe_io::resource_path(path)?);
+) -> AppResult<Vec<crate::deployment::publication::ConfiguredSource>> {
+    use crate::deployment::publication::ConfiguredSource;
     let map = parse(safe_io::read_optional(path, MAX_BYTES)?.as_deref())?;
-    let mut sources = BTreeMap::new();
+    let mut sources = Vec::new();
     for (key, config) in &map {
-        if !key.ends_with("-provider-config")
-            || config.get(OWNER).and_then(Value::as_str) != Some(owner)
-        {
-            continue;
-        }
-        let Some(id) = config.get(CONNECTION).and_then(Value::as_str) else {
+        let Some(provider) = key.strip_suffix("-provider-config") else {
             continue;
         };
-        if id.len() > 160
-            || config.get(MANAGED) != Some(&Value::Bool(true))
-            || config.get(SCHEMA).and_then(Value::as_str) != Some(SCHEMA_VERSION)
-        {
-            return Err(ownership::conflict());
-        }
-        let owned = keys(&provider_name(owner, id)?);
-        if key != &owned[1] || !map.contains_key(&owned[0]) {
-            return Err(ownership::conflict());
-        }
+        let owned = keys(provider);
         let models = map
             .get(&owned[2])
             .and_then(Value::as_object)
-            .ok_or_else(ownership::conflict)?;
-        if models.len() > 128 {
-            return Err(ownership::conflict());
+            .ok_or_else(|| invalid("Unsupported provider model catalog"))?;
+        if let Some(schema) = config.get(SCHEMA).and_then(Value::as_str) {
+            if schema != SCHEMA_VERSION {
+                return Err(invalid("Unsupported provider metadata schema"));
+            }
         }
-        if sources
-            .insert(
-                id.to_owned(),
-                (projection(&map, &owned)?, models.len() as u32),
-            )
-            .is_some()
-        {
-            return Err(ownership::conflict());
+        let name = config
+            .get("groupName")
+            .and_then(Value::as_str)
+            .unwrap_or(provider);
+        let name =
+            crate::redact::redact_with_secret(name, map.get(&owned[0]).and_then(Value::as_str));
+        sources.push(ConfiguredSource::new(
+            &name,
+            config.get(CONNECTION).and_then(Value::as_str),
+            models.len(),
+        )?);
+        if sources.len() > 256 {
+            return Err(invalid("Too many provider groups"));
         }
     }
-    Ok(CatalogEvidence {
-        resource_id: ownership::resource_id(&resource),
-        sources,
-    })
+    Ok(sources)
 }
 
 pub fn prepare_owned(
@@ -352,19 +340,7 @@ pub(super) fn prepare_at(
         {
             return Err(ownership::conflict());
         }
-        ownership::verify_projection(
-            proofs,
-            owner,
-            &connection.id,
-            &resource_id,
-            &projection(&original, &owned)?,
-        )?;
-    } else if !revoke
-        && proofs
-            .iter()
-            .any(|p| p.connection_id == connection.id && p.resource_id == resource_id)
-    {
-        return Err(ownership::conflict());
+        ownership::verify_binding(proofs, owner, &connection.id, &resource_id)?;
     }
     // Per-model keys for our provider would override our provider key upstream.
     if original

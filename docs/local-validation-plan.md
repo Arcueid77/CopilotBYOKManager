@@ -2,9 +2,9 @@
 
 本机入口已实现。A 是代码/浏览器回归，B 是隔离的真实 Windows WebView/IPC 集成测试，C1 使用现有环境观察真实能力，C2 为专用空白用户保留可接续验收入口。维护者本轮选择现有环境，未创建用户或 VM，未执行 C2 安装验收。各次实际结果以仓库外的报告为准。
 
-当前状态更新于 2026-10-13，见 [实现与验收状态](implementation-status.md)。下文注明日期的 HostObserve、NativeIsolated 与 Rider 记录属于各自源码和环境。当前程序和验证工具统一使用 CopilotBYOKManager 标识；下列命令与路径用于新执行，历史报告仍以各次运行的原始 manifest 为准。
+当前状态更新于 2026-10-17，见 [实现与验收状态](implementation-status.md)。下文注明日期的 HostObserve、NativeIsolated 与 Rider 记录属于各自源码和环境。当前程序和验证工具统一使用 CopilotBYOKManager 标识；下列命令与路径用于新执行，历史报告仍以各次运行的原始 manifest 为准。
 
-2026-10-14 核心配置版只开放总览、供应商、应用、关于。当前隔离浏览器入口针对四页、双语、双主题、表单/发布/恢复、关闭选项成功/失败/损坏、菜单语言合并更新及隐藏模块不加载进行回归，保留扩展模块的单元和原生后端测试。下方 B00–B32 的旧 UI 套件含已隐藏页面导航；重新执行前须适配当前页面。Windows 关闭至托盘/直接退出选项及重启保存、左键恢复、右键菜单及退出、菜单语言、重复启动唤回和退出后进程/托盘清理，另需隔离的真实系统交互检查。
+2026-10-14 核心配置版只开放总览、供应商、应用、关于。当前隔离浏览器入口针对四页、双语、双主题、表单/发布/恢复、关闭选项成功/失败/损坏、菜单语言合并更新及隐藏模块不加载进行回归，保留扩展模块的单元和原生后端测试。`NativeCore` 执行已适配四页的原生用例，扩展用例明确记为 SKIPPED；完整 `NativeIsolated` 仍含旧扩展页面导航，不能用作当前核心版验收。Windows 关闭至托盘/直接退出选项及重启保存、左键恢复、右键菜单及退出、菜单语言、重复启动唤回和退出后进程/托盘清理，另需隔离的真实系统交互检查。
 
 维护者于 2026-10-15 批准四页核心版为 v0.1 范围，按[实现规范 §21.1](mvp-implementation-spec.md#211-v01-core-configuration-release)及[发布标准](release-criteria.md)判定。旧 B/C2 中的 Resources 消费、Billing、独立授权和 Usage 新日志验收保留为扩展版待办。
 
@@ -15,7 +15,7 @@
 - 包：新发行入口为 [package-windows.ps1](../scripts/package-windows.ps1)（current-user NSIS + 免安装 ZIP）和 [package-macos.mjs](../scripts/package-macos.mjs)（Universal DMG）；命令及校验和装配见[发行工程（英文）](release-engineering.md)。旧 `package-local.ps1` / PrepareLive 是隔离验收准备入口，不是公开发行附件生成器。
 - Windows：以最终 Draft 安装包和哈希，在干净用户验收 WebView2、无开发工具安装、开始菜单、卸载项、重开、托盘/退出及客户端配置不受卸载影响。未签名须明确披露，不以“可信发布者”作为本版硬门槛。
 - Mac：本 Windows 环境不能验证构建、公证或桌面行为。由 GitHub macOS runner 及真实 Intel/Apple Silicon 分别完成签名、DMG 安装、Finder 启动、Keychain CRUD、CLI 检测、模型发布/请求、关闭窗口和 Cmd+Q，详见[Apple 与真机清单（英文）](release-secrets.md)。
-- 原生核心：适配 B00–B08、B19–B22、B26–B29、B31–B32 中与当前四页有关的路径，保留恢复/密钥/事务不变量；旧 B09–B18、B23–B25、B30 的扩展页面流程不得为过验收而重新开放。
+- 原生核心：`pwsh -NoProfile -File scripts/verify-local.ps1 -Mode NativeCore` 执行 B00–B08、B19–B22、B26–B29、B31–B32，保留恢复/密钥/事务不变量，并验证手动修改后的当前配置、读取失败、一键发布和受管撤销；B09–B18、B23–B25、B30 明确跳过，扩展页面不得为过验收而重新开放。
 - 真实客户端：精确版本、模型可见、选用、最小请求和安全撤销分别记录；只发经授权的不含项目内容的短消息。App 仍手动；JetBrains/Rider 未恢复授权前继续延期。
 
 下文为既有分层工具和历史记录。C1/完整 C2 会访问扩展配额/用量接口，不应不加筛选地作为本版核心验收执行。扩展项延期不减少安全回归，也不允许删已有数据。当前源自动/模拟检查、包生成、真实桌面、干净安装和真实请求是五种不同证据。
@@ -34,7 +34,7 @@ Rider 已按维护者要求暂缓。没有新增真实供应商请求、模型�
 
 ```powershell
 pwsh -NoProfile -File .\scripts\verify-local.ps1 -Mode Regression
-pwsh -NoProfile -File .\scripts\verify-local.ps1 -Mode NativeIsolated
+pwsh -NoProfile -File .\scripts\verify-local.ps1 -Mode NativeCore
 pwsh -NoProfile -File .\scripts\verify-local.ps1 -Mode PrepareLive -LiveTarget HostObserve
 pwsh -NoProfile -File .\scripts\verify-local.ps1 -Mode LiveAcceptance -LiveTarget HostObserve -RunId <上一步ID> -Resume
 ```

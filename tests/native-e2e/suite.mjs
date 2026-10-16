@@ -29,8 +29,19 @@ export async function nativeSuite(options, record) {
     await d.browser.$('#interface-language').selectByAttribute('value', 'zh-CN');
     assert.equal(await d.browser.$('html').getAttribute('lang'), 'zh-CN');
   };
-  const step = async (name, fn) => { const start = Date.now(); try { const value = await fn(); record(name, 'PASS', value ?? 'Verified through real native IPC', Date.now() - start); }
-    catch (e) { record(name, 'FAIL', e.message, Date.now() - start); throw e; } };
+  const extended = new Set(['B09','B10','B11','B12','B13','B14','B15','B16','B17','B18','B23','B24','B25','B30']);
+  const step = async (name, fn) => {
+    if (options.coreOnly && extended.has(name.slice(0,3))) {
+      record(name, 'SKIPPED', 'Deferred extended milestone; no hidden page was mounted or queried');
+      return;
+    }
+    const start = Date.now(); try { const value = await fn(); record(name, 'PASS', value ?? 'Verified through real native IPC', Date.now() - start); }
+    catch (e) {
+      if (options.evidenceRoot && d?.browser) {
+        try { await d.browser.saveScreenshot(path.join(options.evidenceRoot, `native-failure-${name.slice(0,3)}.png`)); } catch {}
+      }
+      record(name, 'FAIL', e.message, Date.now() - start); throw e;
+    } };
   let connection, targets, settings, original, knownPrice;
   const overview = extra => d.ipc('get_usage_overview', { query: { ...query, ...extra } });
   const preview = () => d.ipc('preview_deployment', { connectionId: connection.id, targetIds: targets });
@@ -42,13 +53,16 @@ export async function nativeSuite(options, record) {
       await restart();
       const status = await d.ipc('get_installation_status');
       assert.ok(status.every(c => c.status === 'missing'));
-      const sources = await d.ipc('get_usage_sources'); assert.ok(sources.every(s => !s.enabled));
+      if (!options.coreOnly) {
+        const sources = await d.ipc('get_usage_sources'); assert.ok(sources.every(s => !s.enabled));
+      }
       await d.browser.$('#content[data-route="overview"]').waitForExist();
       assert.equal(await d.browser.$('.preview-banner').isExisting(), false);
       assert.ok((await d.browser.$('.manager-health').getText()).length > 0);
-      assert.ok((await d.browser.$('.manager-pending').getText()).length > 0);
+      assert.equal(await d.browser.$('.manager-pending').isExisting(), false);
+      assert.deepEqual(await d.browser.execute(() => [...document.querySelectorAll('#primary-nav [data-route]')].map(el => el.dataset.route)), ['overview','connections','clients','about']);
       if (options.evidenceRoot) await d.browser.saveScreenshot(path.join(options.evidenceRoot,'native-home.png'));
-      return { capability: 'NativeIsolated', webviewVersion: d.browser.capabilities.browserVersion };
+      return { capability: options.coreOnly ? 'NativeCore' : 'NativeIsolated', webviewVersion: d.browser.capabilities.browserVersion };
     });
     await step('B02 Reviewed install, rediscovery and one-shot plans', async () => {
       await assert.rejects(d.ipc('apply_install_plan', { planId: randomUUID() }));
@@ -74,7 +88,7 @@ export async function nativeSuite(options, record) {
     });
     await step('B03 Connection UI to Rust validation and credential isolation', async () => {
       await d.click('#primary-nav [data-route="connections"]');
-      await d.click('[data-action="add-connection"]');
+      await d.click('#add-connection-button');
       for (const [selector, value] of [['#connection-name', 'Local validation'], ['#base-url', 'https://example.invalid/v1'], ['#api-key', 'sk-isolated-SENTINEL-123456789'], ['#models', 'gpt-5 | GPT-5']]) await d.browser.$(selector).setValue(value);
       await d.click('#save-connection');
       await until(async () => (await d.ipc('get_dashboard')).connections.length === 1, 'Connection did not persist');
@@ -373,7 +387,7 @@ export async function nativeSuite(options, record) {
     });
     await step('B27 Automatic provider model discovery, selection and saved credentials through real IPC', async () => {
       await d.click('#primary-nav [data-route="connections"]');
-      await d.click('[data-action="add-connection"]');
+      await d.click('#add-connection-button');
       for (const [selector,value] of [['#connection-name','Discovered connection'],['#base-url','https://models.example.invalid/v1'],['#api-key','fixture-discovery-key'],['#models','manual-model | Keep this name']]) await d.browser.$(selector).setValue(value);
       await until(async()=>await d.browser.$('#model-discovery').getAttribute('data-status')==='available','Automatic model discovery did not finish');
       assert.equal((await d.browser.$$('[data-model-list] label')).length,2);
@@ -412,11 +426,13 @@ export async function nativeSuite(options, record) {
       assert.equal(await d.browser.$('#model-discovery').getAttribute('data-status'),'idle');
       assert.equal(await d.browser.$('[data-model-results]').isDisplayed(),false);
       await d.click('.modal-header [data-modal-close]');
+      await d.click('[data-discard-editing]');
+      await until(async()=>!(await d.browser.$('.modal').isExisting()),'Discarded editor did not close');
       await d.ipc('delete_connection',{connectionId:saved.id});
       return {native:'WebView2 -> Tauri IPC -> Rust GET -> local HTTP fixtures',credentials:'synthetic only',requests:server.modelRequests.length};
     });
-    await step('B28 Home connection cards save locally and preview inline without global selection or automatic publication', async () => {
-      await d.click('#primary-nav [data-route="overview"]');
+    await step('B28 Provider cards save locally and optionally preview without global selection or automatic publication', async () => {
+      await d.click('#primary-nav [data-route="connections"]');
       const before=(await d.ipc('get_dashboard')).deployments.length;
       const savedPreferences=()=>{
         const sqlite=new DatabaseSync(file('config/CopilotBYOKManager/usage.sqlite3'),{readOnly:true});
@@ -426,7 +442,7 @@ export async function nativeSuite(options, record) {
       // get_setup_status derives a first-enabled fallback when no saved choice
       // exists. Check persisted preferences, not that compatibility-only DTO.
       const selectionBefore=savedPreferences();
-      await d.click('#content [data-action="add-connection"]');
+      await d.click('#add-connection-button');
       for(const [selector,value] of [['#connection-name','Home connection'],['#base-url','https://models.example.invalid/v1'],['#api-key','fixture-home-key'],['#models','home-model | Home Model']]) await d.browser.$(selector).setValue(value);
       await d.click('#save-connection');
       await until(async()=>(await d.ipc('get_dashboard')).connections.some(c=>c.name==='Home connection'),'Home connection did not save');
@@ -434,7 +450,7 @@ export async function nativeSuite(options, record) {
       assert.equal(savedPreferences(),selectionBefore);
       const card=`[data-connection-id="${current.id}"]`;
       await d.browser.$(card).waitForExist();
-      assert.equal(await d.browser.$('#content').getAttribute('data-route'),'overview');
+      assert.equal(await d.browser.$('#content').getAttribute('data-route'),'connections');
       await d.click(`${card} [data-action="edit-connection"]`);
       assert.equal(await d.browser.$('#base-url').getValue(),current.baseUrl);
       assert.equal(await d.browser.$('#api-key').getValue(),'');
@@ -447,9 +463,8 @@ export async function nativeSuite(options, record) {
       if(options.evidenceRoot) await d.browser.saveScreenshot(path.join(options.evidenceRoot,'native-home-connections.png'));
       await d.click(`${card} [data-action="deploy-connection"]`);
       assert.equal(await d.browser.$('#modal-root #deployment-preview').isExisting(),false);
-      assert.equal(await d.browser.$('#apply-deployment').isEnabled(),false);
-      // B08/B16 deliberately left externally changed, detached CLI state. It
-      // must not be adopted by this independent Home UI preview.
+      assert.equal(await d.browser.$('#apply-deployment').isEnabled(),true);
+      // Preview VS Code only; CLI replacement requires its own explicit selection.
       const vsTarget=(await d.ipc('get_dashboard')).clients.find(c=>c.kind==='vs-code-copilot'&&c.detected);
       for(const checkbox of await d.browser.$$('input[name="deployment-target"]')) {
         if(await checkbox.isEnabled() && await checkbox.isSelected() !== ((await checkbox.getValue())===vsTarget.id)) await checkbox.click();
@@ -551,11 +566,38 @@ export async function nativeSuite(options, record) {
       assert.ok((await d.ipc('get_account_status')).loginRuns.some(r=>r.id===manualRun.run.id&&r.status==='cancelled'));
       assert.doesNotMatch(fs.readFileSync(file('config/CopilotBYOKManager/login-runs.json'),'utf8'),/PRIVATE_TOKEN|SENTINEL/);
     });
-    await step('B32 Owned VS Code connection revoke deletes only proven projection', async () => {
+    await step('B32 Current configuration reads, direct publication and owned revoke after manual edits', async () => {
       const fresh = await put({id:null,name:'Reviewed revoke fixture'});
       const target=(await d.ipc('get_dashboard')).clients.find(c=>c.kind==='vs-code-copilot'&&c.detected);
       const deployment=await d.ipc('preview_deployment',{connectionId:fresh.id,targetIds:[target.id]});
       await d.ipc('apply_deployment_plan',{planId:deployment.id,confirmed:true});
+      const current = async () => (await d.ipc('get_dashboard')).clientConfigurations.find(c=>c.targetId===target.id);
+      assert.equal((await current()).sources.find(s=>s.connectionId===fresh.id).modelCount,1);
+      // A prior user edit is current state, not an ownership conflict. The new
+      // publication still obtains a native plan and binds the edited bytes.
+      const originalCatalog=fs.readFileSync(settings,'utf8');
+      const catalog=JSON.parse(originalCatalog);
+      const group=catalog.find(g=>g.name===fresh.name);
+      assert.ok(group);group.name='Manually renamed';group.models.push({...group.models[0],id:'manual-model'});
+      fs.writeFileSync(settings,JSON.stringify(catalog));
+      const manual=(await current()).sources.find(s=>s.connectionId===fresh.id);
+      assert.equal(manual.name,'Manually renamed');assert.equal(manual.modelCount,2);
+      await d.click('#primary-nav [data-route="overview"]');
+      await d.click('#refresh-button');
+      await until(async()=>(await d.browser.$(`.manager-client-row[data-client-id="${target.id}"]`).getText()).includes('Manually renamed'),'Current provider name did not refresh');
+      await d.click('#primary-nav [data-route="clients"]');
+      const card=`.client-card[data-client-id="${target.id}"]`;
+      await d.browser.$(`${card} .app-provider-select`).selectByAttribute('value',fresh.id);
+      await d.click(`${card} [data-action="deploy-client"]`);
+      await until(async()=> (await current()).sources.find(s=>s.connectionId===fresh.id)?.name===fresh.name,'One-click publication did not apply');
+      await until(async()=>!(await d.browser.$('#inline-deployment').isExisting()),'Publication did not finish');
+      fs.writeFileSync(settings,'{invalid');
+      assert.equal((await current()).state,'unavailable');
+      fs.writeFileSync(settings,originalCatalog);
+      const removed=JSON.parse(originalCatalog).filter(g=>g.name!==fresh.name);
+      fs.writeFileSync(settings,JSON.stringify(removed));
+      assert.ok(!(await current()).sources.some(s=>s.connectionId===fresh.id));
+      fs.writeFileSync(settings,originalCatalog);
       const revoke=await d.ipc('preview_revoke_and_delete',{connectionId:fresh.id});
       const result=await d.ipc('apply_deployment_plan',{planId:revoke.id,confirmed:true});
       assert.equal(result.connectionDeleted,true);

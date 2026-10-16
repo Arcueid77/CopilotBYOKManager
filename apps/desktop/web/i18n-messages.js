@@ -5,6 +5,39 @@
   if (typeof module === "object" && module.exports) module.exports = messages;
   else root.CopilotBYOKManagerMessages = messages;
 })(globalThis, () => ({
+  "未配置供应商": ["未配置供应商", "No providers configured"],
+  "配置读取失败": ["配置读取失败", "Configuration could not be read"],
+  "模型数量未知": ["模型数量未知", "Model count unavailable"],
+  "详细原因": ["详细原因", "Details"],
+  "查看应用": ["查看应用", "View app"],
+  "重新检测": ["重新检测", "Detect again"],
+  "可安装或修复": ["可安装或修复", "Can install or repair"],
+  "上次发布中断，请先处理恢复。": ["上次发布中断，请先处理恢复。", "The last publication was interrupted. Resolve recovery first."],
+  "查看恢复选项": ["查看恢复选项", "View recovery options"],
+  "发布未完成，请查看下方说明。": ["发布未完成，请查看下方说明。", "Publication did not complete. See the details below."],
+  "Copilot Chat · {0}": ["Copilot Chat · {0}", "Copilot Chat · {0}"],
+  "{0} Agents": ["{0} Agents", "{0} Agents"],
+  "Copilot Chat · {0} · {1}": ["Copilot Chat · {0} · {1}", "Copilot Chat · {0} · {1}"],
+  "使用 VS Code 默认配置档案的模型目录。": ["使用 VS Code 默认配置档案的模型目录。", "Uses the model catalog in VS Code's default profile."],
+  "Copilot 插件状态未知": ["Copilot 插件状态未知", "Copilot plugin status unknown"],
+  "Copilot 插件已停用": ["Copilot 插件已停用", "Copilot plugin disabled"],
+  "未检测到 Copilot 插件": ["未检测到 Copilot 插件", "Copilot plugin not detected"],
+  "Copilot 已安装 · 支持自动配置": ["Copilot 已安装 · 支持自动配置", "Copilot installed · Automatic configuration supported"],
+  "Copilot 已安装 · 当前版本不支持自动配置": ["Copilot 已安装 · 当前版本不支持自动配置", "Copilot installed · Automatic configuration unavailable for this version"],
+  "登录与账号检查（可选）": ["登录与账号检查（可选）", "Sign-in and account checks (optional)"],
+  "供应商发布不要求各应用使用同一账号。这里可以打开官方登录流程，或记录你已完成的账号核对。": ["供应商发布不要求各应用使用同一账号。这里可以打开官方登录流程，或记录你已完成的账号核对。", "Provider publication does not require the same account in every app. Open official sign-in flows here, or record an account check you have completed."],
+  "记录已核对的账号": ["记录已核对的账号", "Record checked account"],
+  "这会保存你的人工核对记录，不会登录或切换任何应用的账号。未核对时可以关闭，供应商发布不受影响。": ["这会保存你的人工核对记录，不会登录或切换任何应用的账号。未核对时可以关闭，供应商发布不受影响。", "This saves your manual check. It does not sign in or switch accounts in any app. You can close this without checking; provider publication remains available."],
+  "已配置 {0} 个供应商": ["已配置 {0} 个供应商","Configured providers: {0}"],
+  "发布配置": ["发布配置", "Publish configuration"],
+  "查看变更": ["查看变更", "View changes"],
+  "选择应用后发布，完成后显示结果。覆盖 CLI 环境配置或移除模型时会先请你确认。": ["选择应用后发布，完成后显示结果。覆盖 CLI 环境配置或移除模型时会先请你确认。", "Choose apps and publish to see the results. Replacing CLI environment configuration or removing models requires confirmation first."],
+  "选择应用后即可发布。": ["选择应用后即可发布。", "Choose apps to publish to."],
+  "目标已改变，发布时会重新检查。": ["目标已改变，发布时会重新检查。", "Targets changed. Publication will check them again."],
+  "正在发布配置…": ["正在发布配置…", "Publishing configuration…"],
+  "发布失败或结果不确定。请核对结果与恢复状态后重试。": ["发布失败或结果不确定。请核对结果与恢复状态后重试。", "Publication failed or its outcome is uncertain. Check the results and recovery status before retrying."],
+  "管理连接并发布到应用。": ["管理连接并发布到应用。", "Manage connections and publish to apps."],
+  "添加供应商端点和模型，发布到支持的客户端。": ["添加供应商端点和模型，发布到支持的客户端。", "Add provider endpoints and models, then publish to supported clients."],
   "供应商": ["供应商", "Providers"],
   "应用": ["应用", "Apps"],
   "外观": ["外观", "Appearance"],
@@ -88,10 +121,7 @@
   "配置一个供应商，用于多个 Copilot 客户端": [
     "配置一个供应商，用于多个 Copilot 应用", "One provider configuration, across Copilot apps"
   ],
-  "先添加端点、密钥与模型，再选择你要使用的客户端并预览发布。": [
-    "先添加端点、密钥与模型，再选择你要使用的应用并预览发布。",
-    "Add an endpoint, key and models, then select the apps you use and preview publication."
-  ],
+  "先添加端点、密钥与模型，再选择你要使用的客户端并预览发布。": ["先添加端点、密钥与模型，再选择应用并发布。","Add an endpoint, key and models, then choose apps and publish."],
   "添加第一个连接": ["添加第一个供应商", "Add your first provider"],
   "选择连接并发布": ["选择供应商并发布", "Choose a provider to publish"],
   "该连接已移除，请重新选择连接。": ["该连接已移除，请重新选择连接。", "This connection was removed. Choose another connection."],
@@ -936,10 +966,7 @@
     "发布仅模拟，数据保留在当前标签页。",
     "Deployment is simulated; data stays in this tab."
   ],
-  "配置写入须先预览并确认。": [
-    "配置写入须先预览并确认。",
-    "Configuration writes require preview and confirmation."
-  ],
+  "配置写入须先预览并确认。": ["发布前自动检查；覆盖 CLI 或移除模型时须确认。","Publication checks targets first. CLI replacement and model removal require confirmation."],
   "浏览器试用": [
     "浏览器试用",
     "Browser preview"
@@ -1124,10 +1151,7 @@
     "不修改电脑",
     "No changes to your computer"
   ],
-  "写入前须预览确认": [
-    "写入前须预览确认",
-    "Preview and confirm before writing"
-  ],
+  "写入前须预览确认": ["发布前自动检查","Automatic checks before publication"],
   "本地模式": [
     "本地模式",
     "Local mode"
@@ -1264,10 +1288,7 @@
     "用量",
     "Usage"
   ],
-  "安装、官方登录与发布能力，按客户端逐个核对。": [
-    "检测应用，选择供应商，预览后应用配置。",
-    "Check apps, choose a provider, then preview and apply configuration."
-  ],
+  "安装、官方登录与发布能力，按客户端逐个核对。": ["检测应用，选择供应商并发布配置。","Check apps, choose a provider and publish configuration."],
   "客户端": [
     "应用",
     "Apps"
