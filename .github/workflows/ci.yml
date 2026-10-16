@@ -78,7 +78,10 @@ jobs:
         run: cargo clippy --workspace --all-targets --locked -- -D warnings
       - name: Build native Tauri application
         if: runner.os == 'Windows'
-        run: npm run build -- --no-bundle -- --locked
+        run: |
+          npm run build -- --no-bundle -- --locked
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --input-type=module -e "import {assertWindowsGuiApplication} from './scripts/release-artifacts.mjs'; assertWindowsGuiApplication('target/release/copilot-byok-manager.exe');"
       - name: Check patch whitespace
         shell: bash
         run: git show --format= --check HEAD

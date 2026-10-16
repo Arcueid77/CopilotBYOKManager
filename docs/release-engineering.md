@@ -18,7 +18,7 @@ Mac dry-run uses `CopilotBYOKManager-vX.Y.Z-macos-universal-testing-adhoc.dmg` a
 
 Stable identities are unchanged: product `CopilotBYOKManager`, executable/package `copilot-byok-manager`, Bundle ID `io.github.avalonero.copilotbyokmanager`, configuration root `CopilotBYOKManager`, credential service `io.github.avalonero.copilotbyokmanager.connections`. No data migration, credential adoption, updater, Linux distribution, Windows ARM64/MSI or store publishing is introduced.
 
-Windows uses the official current-user NSIS template, start menu and uninstall registration, with no custom uninstall hook. Uninstall must not remove client configuration; verify this on a clean user. The WebView2 strategy downloads Microsoft's bootstrapper when required: missing network, denied permission or bootstrapper failure must be tested, not disguised as offline support. NSIS's bootstrap executable may be x86; the packaged application must be PE x64.
+Windows uses the official current-user NSIS template, start menu and uninstall registration, with no custom uninstall hook. Uninstall must not remove client configuration; verify this on a clean user. The WebView2 strategy downloads Microsoft's bootstrapper when required: missing network, denied permission or bootstrapper failure must be tested, not disguised as offline support. NSIS's bootstrap executable may be x86; the packaged application must be PE x64 with the **Windows GUI subsystem (2)**, not Console (3). The release entry point selects that subsystem while debug builds retain console diagnostics. Both ordinary Windows CI and packaging inspect the compiled payload's PE headers and reject console/malformed outputs before distribution. See the [Rust subsystem contract](https://doc.rust-lang.org/reference/runtime.html#the-windows_subsystem-attribute).
 
 Mac uses the standard Tauri `.app`/DMG layout and generated Info.plist. Minimum macOS is conservatively **15.0**, aligned with the selected official `macos-15` runner; this is a candidate floor, not proof of macOS 15 or both CPU families being accepted. Lowering it requires separate dependency and real-machine evidence. The replacement app icon is generated from the checked-in high-resolution transparent source with the locked official Tauri CLI, including a 1024px ICNS representation. See [icon provenance and generation prompt](../apps/desktop/src-tauri/icons/README.md).
 
@@ -70,7 +70,7 @@ On Windows x64 with PowerShell 7 and the Rust/MSVC toolchain:
 pwsh -NoProfile -File scripts/package-windows.ps1 -Mode dry-run
 ```
 
-The default output is `target/platform-assets/windows/`. Supply `-OutputDirectory` for another **empty** directory; existing output is not overwritten. The script uses `--target x86_64-pc-windows-msvc --bundles nsis -- --locked`, checks both ProductVersion fields, verifies x64 payload and unsigned status, then records sizes/hashes/toolchains. It never installs or launches the resulting application.
+The default output is `target/platform-assets/windows/`. Supply `-OutputDirectory` for another **empty** directory; existing output is not overwritten. The script uses `--target x86_64-pc-windows-msvc --bundles nsis -- --locked`, checks both ProductVersion fields, verifies x64/GUI-subsystem payload and unsigned status, then records sizes/hashes/toolchains. It never installs or launches the resulting application.
 
 On a Mac, install the two Rust targets first, then build an ad-hoc test DMG:
 

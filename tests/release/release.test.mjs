@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { checkReleaseVersion, ROOT } from '../../scripts/check-release-version.mjs';
 import { APPLE_SECRET_NAMES, assetNames, releaseRequest, requireAppleCredentials } from '../../scripts/release-policy.mjs';
-import { assembleRelease, fileDigest, peArchitecture, verifyReleaseDirectory } from '../../scripts/release-artifacts.mjs';
+import { assembleRelease, assertWindowsGuiApplication, fileDigest, peArchitecture, verifyReleaseDirectory } from '../../scripts/release-artifacts.mjs';
 import { publishRelease } from '../../scripts/publish-release.mjs';
 import Ajv from 'ajv';
 
@@ -194,6 +194,62 @@ test('PE inspection distinguishes the x64 payload from a normal x86 NSIS bootstr
   bytes.writeUInt16LE(0x8664, 0x84); writeFileSync(file, bytes); assert.equal(peArchitecture(file), 'x64');
   bytes.writeUInt16LE(0x14c, 0x84); writeFileSync(file, bytes); assert.equal(peArchitecture(file), 'x86');
   bytes.writeUInt16LE(0xaa64, 0x84); writeFileSync(file, bytes); assert.throws(() => peArchitecture(file));
+});
+
+function windowsApplicationFixture() {
+  const bytes = Buffer.alloc(512);
+  bytes.writeUInt16LE(0x5a4d);
+  bytes.writeUInt32LE(0x80, 0x3c);
+  bytes.writeUInt32LE(0x4550, 0x80);
+  bytes.writeUInt16LE(0x8664, 0x84);
+  bytes.writeUInt16LE(0xf0, 0x94);
+  bytes.writeUInt16LE(0x20b, 0x98);
+  bytes.writeUInt16LE(2, 0xdc);
+  return bytes;
+}
+
+test('Windows package gate accepts GUI payloads and rejects console or non-x64 applications', t => {
+  const file = path.join(temporary(t), 'synthetic.exe');
+  writeFileSync(file, windowsApplicationFixture());
+  assert.doesNotThrow(() => assertWindowsGuiApplication(file));
+  for (const subsystem of [0, 1, 3, 9]) {
+    const bytes = windowsApplicationFixture();
+    bytes.writeUInt16LE(subsystem, 0xdc);
+    writeFileSync(file, bytes);
+    assert.throws(() => assertWindowsGuiApplication(file), /Windows GUI subsystem/);
+  }
+  const x86 = windowsApplicationFixture();
+  x86.writeUInt16LE(0x14c, 0x84);
+  writeFileSync(file, x86);
+  assert.throws(() => assertWindowsGuiApplication(file), /not x64/);
+});
+
+test('Windows GUI inspection fails closed on missing, malformed or truncated PE headers', t => {
+  const file = path.join(temporary(t), 'synthetic.exe');
+  for (const mutate of [
+    bytes => bytes.subarray(0, 64),
+    bytes => { bytes.writeUInt16LE(0, 0); return bytes; },
+    bytes => { bytes.writeUInt32LE(0xfffffff0, 0x3c); return bytes; },
+    bytes => { bytes.writeUInt32LE(0, 0x80); return bytes; },
+    bytes => { bytes.writeUInt16LE(0, 0x94); return bytes; },
+    bytes => { bytes.writeUInt16LE(69, 0x94); return bytes; },
+    bytes => { bytes.writeUInt16LE(0xffff, 0x94); return bytes; },
+    bytes => { bytes.writeUInt16LE(0x10b, 0x98); return bytes; },
+    bytes => bytes.subarray(0, 300),
+  ]) {
+    writeFileSync(file, mutate(windowsApplicationFixture()));
+    assert.throws(() => assertWindowsGuiApplication(file));
+  }
+});
+
+test('Windows release entry point and both build paths enforce the GUI subsystem', () => {
+  const main = readFileSync(path.join(ROOT, 'apps/desktop/src-tauri/src/main.rs'), 'utf8').replace(/\s+/g, '');
+  assert.ok(main.includes('#![cfg_attr(all(target_os="windows",not(debug_assertions)),windows_subsystem="windows")]'));
+  const packaging = readFileSync(path.join(ROOT, 'scripts/package-windows.ps1'), 'utf8');
+  const ci = readFileSync(path.join(ROOT, '.github/workflows/ci.yml'), 'utf8');
+  assert.match(packaging, /assertWindowsGuiApplication\(process\.env\.COPILOT_BYOK_MANAGER_PACKAGE_BINARY\)/);
+  assert.ok(packaging.indexOf('assertWindowsGuiApplication(') < packaging.indexOf('Compress-Archive'));
+  assert.match(ci, /assertWindowsGuiApplication\('target\/release\/copilot-byok-manager\.exe'\)/);
 });
 
 test('formal assembly produces complete checksums and bound source metadata', t => {

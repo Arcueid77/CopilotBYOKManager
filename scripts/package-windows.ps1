@@ -31,8 +31,8 @@ try {
     if ((Get-AuthenticodeSignature -LiteralPath $file).Status -ne 'NotSigned') { throw 'Unexpected signing state; v0.1 pipeline requires an explicitly unsigned Windows build.' }
   }
   $env:COPILOT_BYOK_MANAGER_PACKAGE_BINARY = [IO.Path]::GetFullPath((Join-Path (Get-Location) $binary))
-  node --input-type=module -e "import {peArchitecture} from './scripts/release-artifacts.mjs'; if(peArchitecture(process.env.COPILOT_BYOK_MANAGER_PACKAGE_BINARY)!=='x64') throw Error('Application payload is not x64');"
-  if ($LASTEXITCODE -ne 0) { throw 'Application architecture validation failed.' }
+  node --input-type=module -e "import {assertWindowsGuiApplication} from './scripts/release-artifacts.mjs'; assertWindowsGuiApplication(process.env.COPILOT_BYOK_MANAGER_PACKAGE_BINARY);"
+  if ($LASTEXITCODE -ne 0) { throw 'Application x64/GUI subsystem validation failed.' }
   if ((git rev-parse HEAD).Trim() -ne $releaseSha) { throw 'Source commit changed during the build.' }
   if (-not $sourceDirty -and [bool](git status --porcelain --untracked-files=normal)) { throw 'Source became dirty during the build.' }
   New-Item -ItemType Directory -Path $releaseOutput -Force | Out-Null

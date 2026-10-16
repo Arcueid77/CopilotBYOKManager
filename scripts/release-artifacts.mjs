@@ -12,14 +12,31 @@ export function fileDigest(file) {
   return { name: path.basename(file), size: stat.size, sha256: createHash('sha256').update(readFileSync(file)).digest('hex') };
 }
 
-export function peArchitecture(file) {
+function readPeHeader(file) {
   const bytes = readFileSync(file);
   assert.ok(bytes.length > 256 && bytes.readUInt16LE(0) === 0x5a4d, 'Missing PE header');
   const offset = bytes.readUInt32LE(0x3c);
   assert.ok(offset + 24 <= bytes.length && bytes.readUInt32LE(offset) === 0x4550, 'Invalid PE header');
   const machine = bytes.readUInt16LE(offset + 4);
   assert.ok([0x8664, 0x14c].includes(machine), 'Unexpected PE architecture');
+  return { bytes, offset, machine };
+}
+
+export function peArchitecture(file) {
+  const { machine } = readPeHeader(file);
   return machine === 0x8664 ? 'x64' : 'x86';
+}
+
+export function assertWindowsGuiApplication(file) {
+  const { bytes, offset, machine } = readPeHeader(file);
+  assert.equal(machine, 0x8664, 'Application payload is not x64');
+  const optionalOffset = offset + 24;
+  const optionalSize = bytes.readUInt16LE(offset + 20);
+  assert.ok(optionalSize >= 112 && optionalOffset + optionalSize <= bytes.length,
+    'Missing or truncated PE optional header');
+  assert.equal(bytes.readUInt16LE(optionalOffset), 0x20b, 'Application payload is not PE32+');
+  assert.equal(bytes.readUInt16LE(optionalOffset + 68), 2,
+    'Application payload must use the Windows GUI subsystem; console builds are not distributable');
 }
 
 export function validatePlatformMetadata(metadata, { version, sha, mode, platform }) {
