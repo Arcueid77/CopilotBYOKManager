@@ -15,6 +15,24 @@ export function githubCli(args, { allow404 = false } = {}) {
   return result.stdout.trim();
 }
 
+export function findRelease(tag, cli = githubCli) {
+  // GitHub's tag endpoint omits Drafts, even for the authenticated maintainer.
+  // The repository list includes them; keep the lookup bounded and retain the
+  // numeric identity so a replacement Release cannot be promoted accidentally.
+  for (let page = 1; page <= 10; page++) {
+    const releases = JSON.parse(cli(['api', `repos/${REPOSITORY}/releases?per_page=100&page=${page}`]));
+    assert.ok(Array.isArray(releases) && releases.length <= 100, 'Invalid Release listing');
+    const matches = releases.filter(release => release.tag_name === tag);
+    assert.ok(matches.length <= 1, 'Ambiguous Release tag');
+    if (matches.length) {
+      assert.ok(Number.isSafeInteger(matches[0].id) && matches[0].id > 0, 'Invalid Release identity');
+      return matches[0];
+    }
+    if (releases.length < 100) return null;
+  }
+  throw new Error('Release lookup limit reached; no mutation performed');
+}
+
 export function publishRelease({ directory, version, sha, tag, mode, cli = githubCli, downloadDirectory }) {
   assert.ok(['draft', 'publish'].includes(mode), 'dry-run cannot create a Release');
   assert.match(tag, TAG_PATTERN); assert.equal(tag, `v${version}`);
@@ -31,8 +49,7 @@ export function publishRelease({ directory, version, sha, tag, mode, cli = githu
     assert.equal(object.sha, sha, 'Tag moved after validation; refusing Release mutation');
   };
   checkTag();
-  const response = cli(['api', `repos/${REPOSITORY}/releases/tags/${tag}`], { allow404: true });
-  const existing = response === null ? null : JSON.parse(response);
+  const existing = findRelease(tag, cli);
   if (existing) assert.equal(existing.draft, true, 'Never overwrite an already public Release');
   if (mode === 'publish') assert.ok(existing, 'publish requires an existing Draft Release');
   if (!existing) {
@@ -42,8 +59,16 @@ export function publishRelease({ directory, version, sha, tag, mode, cli = githu
     assert.ok(existingNames.every(name => files.includes(name)), 'Draft contains unexpected attachments; reconcile manually before retrying');
     cli(['release', 'edit', tag, '--repo', REPOSITORY, '--target', sha, '--prerelease', '--latest=false', '--notes-file', path.join(directory, 'RELEASE-NOTES.md')]);
   }
+  const releaseId = (existing || findRelease(tag, cli))?.id;
+  assert.ok(Number.isSafeInteger(releaseId) && releaseId > 0, 'Created Draft is unavailable');
+  const readRelease = () => {
+    const release = api(`releases/${releaseId}`);
+    assert.equal(release.id, releaseId, 'Release identity changed');
+    assert.equal(release.tag_name, tag, 'Release tag changed');
+    return release;
+  };
   if (mode === 'draft') cli(['release', 'upload', tag, ...files.map(name => path.join(directory, name)), '--repo', REPOSITORY, '--clobber']);
-  const uploaded = api(`releases/tags/${tag}`);
+  const uploaded = readRelease();
   assert.equal(uploaded.draft, true, 'Release became public during attachment upload');
   assert.deepEqual(uploaded.assets.map(asset => asset.name).sort(), files, 'Remote attachment set is incomplete');
   for (const asset of uploaded.assets) {
@@ -56,7 +81,7 @@ export function publishRelease({ directory, version, sha, tag, mode, cli = githu
   assert.equal(uploaded.body.trim(), readFileSync(path.join(directory, 'RELEASE-NOTES.md'), 'utf8').trim(), 'Remote notes mismatch');
   checkTag();
   if (mode === 'publish') {
-    const finalDraft = api(`releases/tags/${tag}`);
+    const finalDraft = readRelease();
     assert.equal(finalDraft.draft, true, 'Release changed while verifying; refusing promotion');
     // Our own verification downloads change download_count. Compare only stable
     // asset identity/content metadata, so replacement is detected without making
@@ -64,8 +89,8 @@ export function publishRelease({ directory, version, sha, tag, mode, cli = githu
     const identity = assets => assets.map(({ id, name, size, digest, updated_at }) => ({ id, name, size, digest, updated_at })).sort((a, b) => a.name.localeCompare(b.name));
     assert.deepEqual(identity(finalDraft.assets), identity(uploaded.assets), 'Draft attachments changed while verifying');
     assert.equal(finalDraft.body, uploaded.body, 'Draft notes changed while verifying');
-    cli(['release', 'edit', tag, '--repo', REPOSITORY, '--draft=false', '--prerelease', '--latest=false']);
-    assert.equal(api(`releases/tags/${tag}`).draft, false, 'GitHub did not confirm publication');
+    cli(['api', '--method', 'PATCH', `repos/${REPOSITORY}/releases/${releaseId}`, '-F', 'draft=false', '-F', 'prerelease=true', '-f', 'make_latest=false']);
+    assert.equal(readRelease().draft, false, 'GitHub did not confirm publication');
   }
 }
 

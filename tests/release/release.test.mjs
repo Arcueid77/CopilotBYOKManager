@@ -6,7 +6,7 @@ import path from 'node:path';
 import { checkReleaseVersion, ROOT } from '../../scripts/check-release-version.mjs';
 import { APPLE_SECRET_NAMES, assetNames, releaseRequest, requireAppleCredentials } from '../../scripts/release-policy.mjs';
 import { assembleRelease, assertWindowsGuiApplication, fileDigest, peArchitecture, verifyReleaseDirectory } from '../../scripts/release-artifacts.mjs';
-import { publishRelease } from '../../scripts/publish-release.mjs';
+import { findRelease, publishRelease } from '../../scripts/publish-release.mjs';
 import Ajv from 'ajv';
 
 const sha = 'a'.repeat(40), version = '0.1.0';
@@ -318,7 +318,23 @@ test('publication refuses moved tags and already-public Releases', t => {
   const config = fixture(t, 'draft'); assembleRelease(config);
   const options = { directory: config.output, version, sha, tag: 'v0.1.0', mode: 'publish' };
   assert.throws(() => publishRelease({ ...options, cli: () => JSON.stringify({ object: { type: 'commit', sha: 'b'.repeat(40) } }) }), /Tag moved/);
-  assert.throws(() => publishRelease({ ...options, cli: args => args[1].includes('/git/') ? JSON.stringify({ object: { type: 'commit', sha } }) : JSON.stringify({ draft: false }) }), /already public/);
+  assert.throws(() => publishRelease({ ...options, cli: args => args[1].includes('/git/') ? JSON.stringify({ object: { type: 'commit', sha } }) : JSON.stringify([{ id: 42, tag_name: 'v0.1.0', draft: false }]) }), /already public/);
+});
+
+test('Draft lookup uses the authenticated release list and follows bounded pages', () => {
+  const calls = [];
+  const draft = { id: 42, tag_name: 'v0.1.0', draft: true };
+  assert.equal(findRelease('v0.1.0', args => {
+    calls.push(args);
+    assert.doesNotMatch(args[1], /releases\/tags\//);
+    return JSON.stringify(calls.length === 1 ? Array.from({ length: 100 }, (_, index) => ({ id: index + 100, tag_name: `v9.0.${index}` })) : [draft]);
+  }).id, 42);
+  assert.equal(calls.length, 2);
+  assert.match(calls[1][1], /page=2$/);
+  assert.equal(findRelease('v0.1.0', () => '[]'), null);
+  assert.throws(() => findRelease('v0.1.0', () => JSON.stringify([draft, draft])), /Ambiguous/);
+  assert.throws(() => findRelease('v0.1.0', () => JSON.stringify([{ ...draft, id: '../other' }])), /identity/);
+  assert.throws(() => findRelease('v0.1.0', () => JSON.stringify(Array.from({ length: 100 }, () => ({ tag_name: 'v9.0.0' })))), /limit/);
 });
 
 test('publishing waits for downloaded asset verification before making a Draft public', t => {
@@ -327,22 +343,24 @@ test('publishing waits for downloaded asset verification before making a Draft p
   const calls = [], filenames = readdirSync(config.output).sort(); let draft = true, downloadCount = 0;
   const cli = args => {
     calls.push(args);
+    if (args.includes('draft=false')) { draft = false; return '{}'; }
     if (args[0] === 'api') {
       if (args[1].includes('/git/')) return JSON.stringify({ object: { type: 'commit', sha } });
-      return JSON.stringify({ draft, body: readFileSync(path.join(config.output, 'RELEASE-NOTES.md'), 'utf8'), assets: filenames.map((name, index) => ({ id: index + 1, name, size: fileDigest(path.join(config.output, name)).size, download_count: downloadCount })) });
+      const release = { id: 42, tag_name: 'v0.1.0', draft, body: readFileSync(path.join(config.output, 'RELEASE-NOTES.md'), 'utf8'), assets: filenames.map((name, index) => ({ id: index + 1, name, size: fileDigest(path.join(config.output, name)).size, download_count: downloadCount })) };
+      assert.doesNotMatch(args[1], /releases\/tags\//);
+      return JSON.stringify(args[1].includes('releases?') ? [release] : release);
     }
     if (args[1] === 'download') {
       for (const name of filenames) copyFileSync(path.join(config.output, name), path.join(downloads, name));
       downloadCount++;
     }
-    if (args.includes('--draft=false')) draft = false;
     return '';
   };
   publishRelease({ directory: config.output, version, sha, tag: 'v0.1.0', mode: 'publish', cli, downloadDirectory: downloads });
   assert.equal(draft, false);
-  assert.ok(calls.findIndex(c => c[1] === 'download') < calls.findIndex(c => c.includes('--draft=false')));
+  assert.ok(calls.findIndex(c => c[1] === 'download') < calls.findIndex(c => c.includes('draft=false')));
   assert.equal(calls.filter(c => c[1] === 'upload' || c[1] === 'create').length, 0, 'Promotion must not replace accepted packages');
-  assert.deepEqual(calls.filter(c => c[1] === 'edit').map(c => c.slice(3)), [['--repo', 'Arcueid77/CopilotBYOKManager', '--draft=false', '--prerelease', '--latest=false']]);
+  assert.deepEqual(calls.filter(c => c.includes('PATCH')), [['api', '--method', 'PATCH', 'repos/Arcueid77/CopilotBYOKManager/releases/42', '-F', 'draft=false', '-F', 'prerelease=true', '-f', 'make_latest=false']]);
 });
 
 test('publish rejects rebuilt publish-mode artifacts instead of replacing the accepted Draft', t => {
@@ -353,22 +371,24 @@ test('publish rejects rebuilt publish-mode artifacts instead of replacing the ac
 });
 
 test('tampered downloads or concurrently replaced Draft assets never reach public promotion', t => {
-  for (const corruption of ['bytes', 'identity']) {
+  for (const corruption of ['bytes', 'identity', 'release-id', 'release-tag']) {
     const config = fixture(t, 'draft'); assembleRelease(config);
     const downloads = path.join(config.root, 'downloads'); mkdirSync(downloads);
     const filenames = readdirSync(config.output).sort(); let downloaded = false, promoted = false;
     const cli = args => {
+      if (args.includes('draft=false')) { promoted = true; return '{}'; }
       if (args[0] === 'api') {
         if (args[1].includes('/git/')) return JSON.stringify({ object: { type: 'commit', sha } });
-        return JSON.stringify({ draft: true, body: readFileSync(path.join(config.output, 'RELEASE-NOTES.md'), 'utf8'),
-          assets: filenames.map((name, index) => ({ id: index + (downloaded && corruption === 'identity' ? 100 : 1), name, size: fileDigest(path.join(config.output, name)).size })) });
+        const release = { id: downloaded && corruption === 'release-id' ? 43 : 42,
+          tag_name: downloaded && corruption === 'release-tag' ? 'v0.1.1' : 'v0.1.0', draft: true, body: readFileSync(path.join(config.output, 'RELEASE-NOTES.md'), 'utf8'),
+          assets: filenames.map((name, index) => ({ id: index + (downloaded && corruption === 'identity' ? 100 : 1), name, size: fileDigest(path.join(config.output, name)).size })) };
+        return JSON.stringify(args[1].includes('releases?') ? [release] : release);
       }
       if (args[1] === 'download') {
         for (const name of filenames) copyFileSync(path.join(config.output, name), path.join(downloads, name));
         if (corruption === 'bytes') writeFileSync(path.join(downloads, assetNames(version).windows), 'tampered remote bytes');
         downloaded = true;
       }
-      if (args.includes('--draft=false')) promoted = true;
       return '';
     };
     assert.throws(() => publishRelease({ directory: config.output, version, sha, tag: 'v0.1.0', mode: 'publish', cli, downloadDirectory: downloads }));

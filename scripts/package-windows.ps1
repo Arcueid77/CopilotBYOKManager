@@ -34,7 +34,13 @@ try {
   node --input-type=module -e "import {assertWindowsGuiApplication} from './scripts/release-artifacts.mjs'; assertWindowsGuiApplication(process.env.COPILOT_BYOK_MANAGER_PACKAGE_BINARY);"
   if ($LASTEXITCODE -ne 0) { throw 'Application x64/GUI subsystem validation failed.' }
   if ((git rev-parse HEAD).Trim() -ne $releaseSha) { throw 'Source commit changed during the build.' }
-  if (-not $sourceDirty -and [bool](git status --porcelain --untracked-files=normal)) { throw 'Source became dirty during the build.' }
+  $afterBuildStatus = @(git status --porcelain --untracked-files=normal)
+  if (-not $sourceDirty -and $afterBuildStatus.Count -gt 0) {
+    # Report names/status only, never file contents, to diagnose runner-specific
+    # generated files without weakening the clean-source requirement.
+    $afterBuildStatus | Write-Output
+    throw 'Source became dirty during the build.'
+  }
   New-Item -ItemType Directory -Path $releaseOutput -Force | Out-Null
   $setupName = "CopilotBYOKManager-v${releaseVersion}-windows-x64-setup.exe"
   $zipName = "CopilotBYOKManager-v${releaseVersion}-windows-x64-standalone.zip"
