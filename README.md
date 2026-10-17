@@ -6,11 +6,11 @@
 
 <p align="center"><strong>Configure one provider. Publish it safely across your Copilot clients.</strong></p>
 
-<p align="center">Manage your endpoint, API key and models once, review every target change, then publish to VS Code, Copilot CLI and reviewed JetBrains versions.</p>
+<p align="center">Manage your endpoint, API key and models once, then publish to VS Code, Copilot CLI and supported JetBrains plugins.</p>
 
 <p align="center">
   <a href="https://github.com/Arcueid77/CopilotBYOKManager/actions/workflows/ci.yml"><img src="https://github.com/Arcueid77/CopilotBYOKManager/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <img src="https://img.shields.io/badge/status-v0.1%20candidate-purple" alt="v0.1 candidate; acceptance pending">
+  <img src="https://img.shields.io/badge/status-v0.1%20candidate-purple" alt="v0.1 candidate">
   <img src="https://img.shields.io/badge/interface-English%20%7C%20简体中文-blue" alt="English and Simplified Chinese">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="MIT license"></a>
 </p>
@@ -19,7 +19,7 @@
   <a href="#download">Download status</a> · <a href="#quick-start">Quick Start</a> · <a href="#supported-clients">Supported Clients</a> · <a href="#security">Security</a> · <a href="docs/README.md">Documentation</a> · <a href="https://github.com/Arcueid77/CopilotBYOKManager/issues">Issues</a> · <a href="README.zh-CN.md">简体中文</a>
 </p>
 
-> **Pre-release.** No public installer has been released yet. See [current evidence](docs/implementation-status.md) and [release gates (中文)](docs/release-criteria.md).
+> **v0.1** — [Download Windows and macOS packages](https://github.com/Arcueid77/CopilotBYOKManager/releases).
 
 ![Overview — current browser preview with simulated data](docs/images/overview-en.png)
 
@@ -28,12 +28,12 @@
 ## Why CopilotBYOKManager
 
 - **One place for providers.** Maintain endpoint, key and models together, then choose where to publish them.
-- **Review across clients.** Inspect changes for every selected app or profile before writing.
+- **Publish across clients.** Choose apps and publish in one step, with optional change details.
 - **Respect existing configuration.** Keep unrelated providers intact and recheck current configuration before each write.
 
 ## How it works
 
-**Add a provider → Review targets and changes → Publish, select the model, verify.**
+**Add a provider → Choose apps and publish → Select the model in each client.**
 
 Sign in to each client, then select the published model and start using it.
 
@@ -56,17 +56,15 @@ JetBrains supports the exact plugin distributions listed above; IDEs sharing a r
 
 ## Download and install
 
-Watch [Releases](https://github.com/Arcueid77/CopilotBYOKManager/releases) for an approved candidate. These are planned packages, not existing download links:
+Choose a package from [Releases](https://github.com/Arcueid77/CopilotBYOKManager/releases):
 
-| Platform | Package | Status |
+| Platform | Package | Installation |
 | --- | --- | --- |
-| Windows 11 x64 | `CopilotBYOKManager-vX.Y.Z-windows-x64-setup.exe` | Candidate; clean-machine acceptance pending. **Unsigned community build** |
-| Windows 11 x64, optional | `CopilotBYOKManager-vX.Y.Z-windows-x64-standalone.zip` | Same acceptance boundary; WebView2 required |
-| macOS Universal | `CopilotBYOKManager-vX.Y.Z-macos-universal.dmg` | Planned; Apple credentials and Intel / Apple Silicon acceptance pending. Formal packages must be **Developer ID signed and notarized** |
+| Windows 11 x64 | `CopilotBYOKManager-vX.Y.Z-windows-x64-setup.exe` | Run Setup; installs for the current user |
+| Windows 11 x64 | `CopilotBYOKManager-vX.Y.Z-windows-x64-standalone.zip` | Extract and run; WebView2 required |
+| macOS 15+, Intel / Apple Silicon | `CopilotBYOKManager-vX.Y.Z-macos-universal.dmg` | Drag the app to Applications |
 
-Windows Setup installs for the current user. macOS packages target version 15.0 and later. Test DMGs use `*-testing-adhoc.dmg`: **Ad-hoc signed, not notarized; testing only**.
-
-A **macOS test build is available** in the [verified dry-run's artifacts](https://github.com/Arcueid77/CopilotBYOKManager/actions/runs/38706651589). Download `release-dry-run-…` for the Universal DMG, `SHA256SUMS.txt` and source metadata (`dad7bd4`). The test package is ad-hoc signed and not notarized. Sign in to GitHub if prompted; artifacts are retained for 14 days under the current workflow policy.
+Windows Setup downloads WebView2 when needed.
 
 Check `SHA256SUMS.txt` and the source SHA before installing. The standalone package runs without installation; state, OS credentials and client configuration use user storage. [Package guide](docs/release-engineering.md).
 
@@ -120,7 +118,6 @@ Read [SECURITY.md](SECURITY.md) before sharing diagnostics. Use the [security pa
 - CLI uses one managed environment route, not simultaneous provider routing.
 - Copilot App is manual; JetBrains is limited to exact reviewed distributions.
 - Usage, Billing and Resources/MCP/Skills/Instructions are outside this edition. Existing data remains intact. [Feature availability](docs/feature-availability.md).
-- Clean Windows, native tray behavior, real requests and both Mac architectures remain **acceptance pending**. Rider validation is deferred.
 
 ## Screenshots
 

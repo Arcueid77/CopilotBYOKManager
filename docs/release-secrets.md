@@ -1,8 +1,8 @@
-# Apple signing setup and first-release acceptance
+# Optional Apple signing setup and platform validation
 
-A **maintainer-operated checklist** for Apple signing credentials and release validation. The Windows community build does **not** need Authenticode or Apple credentials.
+A **maintainer-operated checklist** for optional Apple signing and platform validation. Since the 2026-10-17 maintainer decision, default Windows/macOS publication needs no Apple credentials or completed manual acceptance. Release notes omit signing and acceptance notices. The checks below retain their actual status and do not block that default path.
 
-Formal macOS Draft/publish builds require **Developer ID Application + Hardened Runtime + Apple Notary Service + stapled tickets**. Missing credentials are fatal. Dry-run always uses an ad-hoc testing DMG and receives no Apple secrets, even when secrets exist in the environment. It is not an officially notarized distribution.
+Select `macos_signing=developer-id` only to request **Developer ID Application + Hardened Runtime + Apple Notary Service + stapled tickets**. Missing credentials then fail the build. The default `ad-hoc` job receives no Apple secrets in dry-run or Draft mode; its release packages are allowed in public Releases. Dry-run artifacts still cannot be promoted.
 
 ## 1. Obtain credentials yourself
 
@@ -34,15 +34,15 @@ There is **no `KEYCHAIN_PASSWORD` secret**: the build generates a fresh random p
 
 Only the formal Mac build step receives the six Apple values. The script validates all of them before building, strips unrelated Apple/updater environment variables from the child build, creates a temporary Keychain, preserves/restores the user's Keychain search list and deletes private files/keychain on completion or failure. Secret-bearing subprocess arguments and signing identities are not echoed by its error handler. Hosted runner disposal is the additional cleanup boundary on cancellation/host loss; do not reuse a failed signing runner as a general workstation.
 
-The `release` environment also guards the final Draft/public Release job. Mac dry-run is a separate `build-macos-testing` job with **no environment and no secret mappings**. It does not require or create `release`, so maintainers can inspect a test DMG before setting up Apple credentials. No pull-request event is configured; fork repository and non-main dispatch execution are rejected before signing. These controls still require maintainers to review the committed workflow/scripts.
+Only the optional Developer ID job uses the `release` environment. The default `build-macos-adhoc` and final Release jobs do not require or create it. No pull-request event is configured; fork repositories and non-main dispatch execution are rejected. Publication requires an explicit maintainer-authorized dispatch and verifies the original Draft bytes.
 
 ## 3. Prove the build before public promotion
 
 1. Run `dry-run`, `platform=macos` (or `all`) from the main workflow at a fixed reviewed SHA. Inspect the ad-hoc/testing filenames and metadata. Keep Gatekeeper enabled when testing.
-2. After the version is aligned and the maintainer explicitly authorizes creating/pushing its strict `vX.Y.Z` tag, run Draft. The tag push defaults to Draft; missing Apple secrets or any failed signature/notarization check must fail the job.
+2. After version alignment and maintainer authorization, push the strict `vX.Y.Z` tag to create the default Draft. To replace it with a Developer ID build, explicitly dispatch `draft` with `macos_signing=developer-id`; missing secrets or failed signing/notarization checks fail that build.
 3. Verify both `.app` and DMG checks recorded by the workflow: two architectures, stable Bundle ID/version/executable, Hardened Runtime, strict code signature, Gatekeeper and stapled tickets. Tauri notarizes the app; the script submits the final DMG too. Formal assets must have no `testing-adhoc` suffix.
 4. Download the **Draft's actual files**, verify SHA256SUMS and record exact source SHA plus file hashes for the clean-machine matrix below.
-5. Only approve publish after that matrix and the [core gates (中文)](release-criteria.md) pass. Publish rechecks the fixed source and verifies the Draft bytes without replacing them. If a Draft is rebuilt/updated, its hashes change and its package acceptance must be revisited.
+5. With maintainer publication authorization, publish rechecks the fixed source and verifies the Draft bytes without replacing them. If a Draft is rebuilt/updated, verify its new hashes. Manual platform results stay separate under the [current release criteria (中文)](release-criteria.md).
 
 ## 4. Real-machine acceptance matrix
 

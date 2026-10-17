@@ -1,6 +1,6 @@
 # CopilotBYOKManager implementation status
 
-Updated 2026-10-17 for concrete app actions without general review reminders, following current-configuration reads and publication after manual edits, following direct publication, shared-catalog status, app naming/sorting and optional account checks, following confirmed CLI replacement, concise interface/documentation copy, four-page layout polish and the Windows console-free release fix, on top of the maintainer-approved v0.1 scope, icon refresh and unsigned Mac preview. Initial release engineering started at `83a82db3555eb0defa278bd6e042b7c55a76088f`; current package source and evidence are recorded below. The [specification §21](mvp-implementation-spec.md#21-final-acceptance) and [feature availability](feature-availability.md) separate core release gates from the retained extended milestone. The product has not had a public release.
+Updated 2026-10-17 for the maintainer-authorized release, concrete app actions without general review reminders, current-configuration reads and publication after manual edits, direct publication, shared-catalog status, app naming/sorting and optional account checks, confirmed CLI replacement, concise interface/documentation copy, four-page layout polish and the Windows console-free release fix. Initial release engineering started at `83a82db3555eb0defa278bd6e042b7c55a76088f`; source and evidence are recorded below. The [specification §21](mvp-implementation-spec.md#21-final-acceptance) and [feature availability](feature-availability.md) separate the core release from the retained extended milestone. Public versions and their exact build metadata are on [Releases](https://github.com/Arcueid77/CopilotBYOKManager/releases).
 
 ## Current implementation
 
@@ -46,7 +46,9 @@ Fixed an existing Unix-only Clippy error in the CLI transaction fixture, a brows
 
 Local checks passed: `npm run check` (22 release tests, 75 web tests, 284 Rust library + 6 integration tests, version/docs/fmt/strict Clippy), `local-e2e` Rust tests (285 + 6) and strict Clippy, 12 native-tooling tests, 22 isolated browser scenario groups, 48 layout combinations plus editor/publication checks, actionlint 1.7.12 for both workflows, and whitespace checks. The official actionlint archive was checksum-verified; no global tool installation was needed. Browser coverage includes an older demo session retaining its provider after refresh.
 
-Public release remains NO-GO under the current gates: the protected Mac signing environment/Apple credentials are not configured, and clean Windows/Mac package, native tray/desktop and real-client request acceptance remain open. Current core IPC evidence supersedes the earlier core-suite gap; it does not claim those separate acceptance layers. Windows dry-run packaging can proceed independently. No authentication material was copied and no real provider request or client installation was performed.
+The maintainer subsequently authorized release on 2026-10-17 without publisher signing or completed manual acceptance, and requested no signing/acceptance notices in release notes or download copy. The workflow now defaults to a credentials-free Mac Universal build, retains explicit optional Developer ID builds and promotes verified Draft bytes without rebuilding. Internal manual results remain open, not PASS. No authentication material was copied and no real provider request or client installation was performed.
+
+Release-policy validation: `npm run check` passed with 23 release tests, 75 web tests and 284 Rust library + 6 integration tests, plus version/docs/fmt/strict Clippy. Actionlint 1.7.12 and `git diff --check` passed. New coverage permits ad-hoc release packages, preserves truthful metadata and dry-run isolation, rejects inconsistent signing metadata, and checks that promotion skips rebuilding while retaining source checks and downloaded-byte verification. No application code, dependencies or persisted schemas changed in this release-policy update.
 
 ### Concrete app actions — 2026-10-17
 
@@ -245,10 +247,10 @@ The earlier 2026-10-13 documentation/rename refresh reran the required web, Rust
 ## Remaining work within the v0.1 core scope
 
 1. NativeCore's 19 current core IPC cases passed on 2026-10-17. Verify Windows tray/Exit/relaunch against the real isolated desktop and retain exact final-source/package evidence.
-2. Complete clean Windows 11 x64 final-NSIS install/start/reopen/uninstall, WebView2 and user configuration preservation. Authenticode is not required; unsigned/source/hash disclosure is.
-3. Mac ad-hoc packaging is verified above. For formal distribution, have the maintainer configure Apple credentials and the protected release environment, verify the formal pipeline, then accept the actual Draft DMG separately on Apple Silicon and Intel.
+2. Continue clean Windows 11 x64 final-NSIS install/start/reopen/uninstall, WebView2 and user configuration preservation checks as quality follow-up.
+3. Continue final Draft DMG checks on Apple Silicon and Intel. Default distribution needs no Apple credentials; optional Developer ID builds require separate setup.
 4. Verify exact advertised VS Code/CLI/manual App paths and authorized provider requests. Resume JetBrains runtime work only when the maintainer resumes it: per-IDE official login, model visibility, minimal request and multi-IDE sharing.
-5. Review Draft attachment hashes, notes, real support matrix and security-report availability; approve public candidate promotion only after core gates.
+5. Verify exact Draft attachment hashes, notes and metadata before maintainer-authorized public promotion. Manual results remain separately tracked under the 2026-10-17 release decision.
 
 ## Deferred extended milestone, not v0.1 blockers
 

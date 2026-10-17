@@ -22,6 +22,12 @@ on:
         default: dry-run
         type: choice
         options: [dry-run, draft, publish]
+      macos_signing:
+        description: 'Optional Developer ID build (requires configured Apple credentials)'
+        required: true
+        default: ad-hoc
+        type: choice
+        options: [ad-hoc, developer-id]
 
 permissions:
   contents: read
@@ -40,6 +46,7 @@ jobs:
       tag: ${{ steps.resolve.outputs.tag }}
       mode: ${{ steps.resolve.outputs.mode }}
       platform: ${{ steps.resolve.outputs.platform }}
+      macosSigning: ${{ steps.resolve.outputs.macosSigning }}
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
@@ -54,6 +61,7 @@ jobs:
           INPUT_REF: ${{ inputs.ref }}
           INPUT_MODE: ${{ inputs.mode }}
           INPUT_PLATFORM: ${{ inputs.platform }}
+          INPUT_MACOS_SIGNING: ${{ inputs.macos_signing }}
         run: node scripts/resolve-release.mjs
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
@@ -99,7 +107,7 @@ jobs:
 
   build-windows:
     needs: [validate, test]
-    if: needs.validate.outputs.platform != 'macos'
+    if: needs.validate.outputs.platform != 'macos' && needs.validate.outputs.mode != 'publish'
     runs-on: windows-latest
     timeout-minutes: 60
     steps:
@@ -127,13 +135,12 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-  build-macos-testing:
+  build-macos-adhoc:
     needs: [validate, test]
-    if: needs.validate.outputs.platform != 'windows' && needs.validate.outputs.mode == 'dry-run'
+    if: needs.validate.outputs.platform != 'windows' && needs.validate.outputs.macosSigning == 'ad-hoc' && needs.validate.outputs.mode != 'publish'
     runs-on: macos-15
     timeout-minutes: 120
-    # Deliberately no environment or secrets: a preview must not create or
-    # require the protected release environment before Apple setup is ready.
+    # Default packaging needs no Apple account, environment or credentials.
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
@@ -146,26 +153,27 @@ jobs:
           rustup toolchain install 1.88.0 --profile minimal --target x86_64-apple-darwin --target aarch64-apple-darwin
           rustup default 1.88.0
       - run: npm ci
-      - name: Build ad-hoc testing DMG (no Apple secrets)
+      - name: Build and verify universal DMG
         env:
-          RELEASE_MODE: dry-run
+          RELEASE_MODE: ${{ needs.validate.outputs.mode }}
+          RELEASE_MACOS_SIGNING: ad-hoc
           RELEASE_SHA: ${{ needs.validate.outputs.sha }}
           RELEASE_TAG: ${{ needs.validate.outputs.tag }}
         run: node scripts/package-macos.mjs
       - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
-          name: macos-testing-adhoc-${{ needs.validate.outputs.sha }}
+          name: macos-adhoc-${{ needs.validate.outputs.sha }}
           path: target/platform-assets/macos/*
           if-no-files-found: error
           retention-days: 14
 
   build-macos:
     needs: [validate, test]
-    if: needs.validate.outputs.platform != 'windows' && needs.validate.outputs.mode != 'dry-run'
+    if: needs.validate.outputs.platform != 'windows' && needs.validate.outputs.macosSigning == 'developer-id' && needs.validate.outputs.mode != 'publish'
     runs-on: macos-15
     timeout-minutes: 120
-    # Only this protected job receives Apple secrets. Formal signing never
-    # falls back to the independent, secrets-free testing job.
+    # Only an explicitly selected Developer ID build receives Apple secrets.
+    # A failed signed build never falls back to ad-hoc packaging.
     environment: release
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -182,6 +190,7 @@ jobs:
       - name: Build Developer ID signed and notarized DMG (missing secrets fail)
         env:
           RELEASE_MODE: ${{ needs.validate.outputs.mode }}
+          RELEASE_MACOS_SIGNING: developer-id
           RELEASE_SHA: ${{ needs.validate.outputs.sha }}
           RELEASE_TAG: ${{ needs.validate.outputs.tag }}
           APPLE_CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
@@ -199,12 +208,12 @@ jobs:
           retention-days: 14
 
   assemble-release:
-    needs: [validate, test, build-windows, build-macos-testing, build-macos]
+    needs: [validate, test, build-windows, build-macos-adhoc, build-macos]
     if: >-
-      always() && !cancelled() && needs.validate.result == 'success' && needs.test.result == 'success' &&
+      always() && !cancelled() && needs.validate.result == 'success' && needs.test.result == 'success' && needs.validate.outputs.mode != 'publish' &&
       (needs.build-windows.result == 'success' || needs.build-windows.result == 'skipped') &&
       (needs.build-macos.result == 'success' || needs.build-macos.result == 'skipped') &&
-      (needs.build-macos-testing.result == 'success' || needs.build-macos-testing.result == 'skipped')
+      (needs.build-macos-adhoc.result == 'success' || needs.build-macos-adhoc.result == 'skipped')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -221,9 +230,9 @@ jobs:
           name: windows-${{ needs.validate.outputs.sha }}
           path: target/platform-assets/windows
       - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
-        if: needs.build-macos.result == 'success' || needs.build-macos-testing.result == 'success'
+        if: needs.build-macos.result == 'success' || needs.build-macos-adhoc.result == 'success'
         with:
-          name: macos-${{ needs.validate.outputs.mode == 'dry-run' && 'testing-adhoc' || 'notarized' }}-${{ needs.validate.outputs.sha }}
+          name: macos-${{ needs.validate.outputs.macosSigning == 'ad-hoc' && 'adhoc' || 'notarized' }}-${{ needs.validate.outputs.sha }}
           path: target/platform-assets/macos
       - name: Assemble exact asset set, provenance, notes and SHA256SUMS
         env:
@@ -240,11 +249,13 @@ jobs:
           retention-days: 14
 
   publish-release:
-    needs: [validate, assemble-release]
-    if: needs.validate.outputs.mode != 'dry-run'
+    needs: [validate, test, assemble-release]
+    if: >-
+      always() && !cancelled() && needs.validate.result == 'success' && needs.test.result == 'success' &&
+      ((needs.validate.outputs.mode == 'draft' && needs.assemble-release.result == 'success') ||
+      (needs.validate.outputs.mode == 'publish' && needs.assemble-release.result == 'skipped'))
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    environment: release
     permissions:
       contents: write
     steps:
@@ -260,8 +271,8 @@ jobs:
         with:
           name: release-${{ needs.validate.outputs.mode }}-${{ needs.validate.outputs.sha }}
           path: target/release-assets
-      # publish tests/builds the same SHA again but promotes the existing Draft's
-      # reviewed bytes, never replacing them with a timestamp/signature rebuild.
+      # Publish reruns checks, then promotes the existing Draft's verified bytes.
+      # It never rebuilds or replaces attachments during promotion.
       - name: Verify Draft uploads or promote the unchanged reviewed Draft
         env:
           GH_TOKEN: ${{ github.token }}

@@ -6,7 +6,8 @@ import { releaseRequest } from './release-policy.mjs';
 try {
   const request = releaseRequest({ event: process.env.GITHUB_EVENT_NAME, ref: process.env.GITHUB_REF,
     repository: process.env.GITHUB_REPOSITORY, requestedRef: process.env.INPUT_REF,
-    mode: process.env.INPUT_MODE || 'dry-run', platform: process.env.INPUT_PLATFORM || 'all' });
+    mode: process.env.INPUT_MODE || 'dry-run', platform: process.env.INPUT_PLATFORM || 'all',
+    macosSigning: process.env.INPUT_MACOS_SIGNING || 'ad-hoc' });
   const git = args => execFileSync('git', args, { encoding: 'utf8' }).trim();
   const sourceRef = request.tag ? `refs/tags/${request.tag}` : request.ref === 'main' ? 'refs/remotes/origin/main' : request.ref;
   const sha = git(['rev-parse', '--verify', `${sourceRef}^{commit}`]);

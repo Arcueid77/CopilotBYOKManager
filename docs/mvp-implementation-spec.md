@@ -1074,10 +1074,10 @@ CI must run relevant checks on Windows, macOS, and Linux; Windows must also perf
 
 ### 21.1 v0.1 core configuration release
 
-An evaluator must verify the final package and exact source SHA, not a prototype or another commit:
+The maintainer's 2026-10-17 release decision allows publication without publisher signing or completed manual acceptance. Automated checks, exact source/package verification and native safety invariants remain required. The following manual evaluation tracks product quality; unperformed checks remain unperformed and need not appear in release notes. Evaluate the final package and exact source SHA, not a prototype or another commit:
 
 1. Install the current-user Windows x64 NSIS package on a clean Windows 11 user/VM; check WebView2 handling, start menu, uninstall registration, startup, reopen and uninstall without deleting client configuration.
-2. Install the macOS Universal DMG through Applications; verify Developer ID Application, Hardened Runtime, notarization and stapled tickets. Test Intel and Apple Silicon separately, starting at macOS 15 to match the selected CI runner.
+2. Install the macOS Universal DMG through Applications; verify both architectures and Hardened Runtime. Developer ID, notarization and stapled tickets are required only when that optional build mode is selected. Test Intel and Apple Silicon separately, starting at macOS 15 to match the selected CI runner.
 3. Verify only Overview / Providers / Apps / About are exposed. Hidden services must not be queried automatically or delete retained data; keep their native security/migration regressions.
 4. Add one provider, save/read/update/delete its OS-held key, fetch or enter models, and preserve unknown capability states.
 5. Review explicit targets through native-held expiring one-shot plans, publish, inspect persistent results, select the model in each advertised real client and send an authorized minimal request. Record all four states separately.
@@ -1085,7 +1085,7 @@ An evaluator must verify the final package and exact source SHA, not a prototype
 7. Interrupt a write and exercise journal/recovery, conditional rollback, missing/invalid state and credential failures with isolated data; failures must remain explicit and safe.
 8. Verify bilingual copy, themes, drafts, keyboard/error/busy states and platform desktop behavior. On Windows, verify tray fallback, restore, Exit and repeat launch. On Mac, verify Finder launch, CLI detection, close-window behavior and Cmd+Q; do not claim a Windows-style tray.
 9. Pass locked builds, automated checks and final native integration checks at the same SHA. No secrets, raw conversations or private recovery data in diagnostic/release artifacts.
-10. Validate strict `vX.Y.Z` version agreement, Windows Setup + formal Mac DMG + SHA256SUMS, source metadata, signing disclosures and bilingual docs. Windows Authenticode is not required: label **Unsigned community build**. Ad-hoc Mac artifacts are testing-only, never formal releases. Publish only after all core gates and explicit maintainer approval.
+10. Validate strict `vX.Y.Z` version agreement, Windows Setup + Mac Universal DMG + SHA256SUMS, source metadata and bilingual docs. Windows Authenticode and Mac Developer ID are optional. A freshly built ad-hoc Mac package can be released; dry-run artifacts cannot be promoted. Publish verified Draft bytes with maintainer authorization. Signing and manual acceptance notices are not required in release notes or download copy.
 
 Detailed evidence and GO / NO-GO criteria are in [release criteria](release-criteria.md); build/signing operations are in [release engineering](release-engineering.md). No store listing, updater or Linux/Windows ARM64/MSI release is required or introduced.
 

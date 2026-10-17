@@ -6,11 +6,11 @@
 
 <p align="center"><strong>Provider 一次配置，安全发布到多个 Copilot 客户端。</strong></p>
 
-<p align="center">集中管理端点、密钥和模型，逐项预览目标改动，再发布到 VS Code、Copilot CLI 与已审核版本的 JetBrains。</p>
+<p align="center">集中管理端点、密钥和模型，一键发布到 VS Code、Copilot CLI 与支持的 JetBrains 插件。</p>
 
 <p align="center">
   <a href="https://github.com/Arcueid77/CopilotBYOKManager/actions/workflows/ci.yml"><img src="https://github.com/Arcueid77/CopilotBYOKManager/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <img src="https://img.shields.io/badge/status-v0.1%20candidate-purple" alt="v0.1 候选版，验收待完成">
+  <img src="https://img.shields.io/badge/status-v0.1%20candidate-purple" alt="v0.1 候选版">
   <img src="https://img.shields.io/badge/interface-English%20%7C%20简体中文-blue" alt="中英文界面">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="MIT 许可证"></a>
 </p>
@@ -19,7 +19,7 @@
   <a href="#download">下载状态</a> · <a href="#quick-start">快速上手</a> · <a href="#supported-clients">支持客户端</a> · <a href="#security">安全</a> · <a href="docs/README.md">文档</a> · <a href="https://github.com/Arcueid77/CopilotBYOKManager/issues">问题反馈</a> · <a href="README.md">English</a>
 </p>
 
-> **预发布阶段。** 尚未公开发行安装包。见[当前证据](docs/implementation-status.md)与[发布门槛](docs/release-criteria.md)。
+> **v0.1** — [下载 Windows 和 macOS 安装包](https://github.com/Arcueid77/CopilotBYOKManager/releases)。
 
 ![总览：当前浏览器预览，使用模拟数据](docs/images/overview-zh-CN.png)
 
@@ -28,12 +28,12 @@
 ## 为什么使用 CopilotBYOKManager
 
 - **Provider 在一处维护。** 地址、密钥和模型放在一起，再选择要发布的应用。
-- **多客户端预览后发布。** 写入之前，逐项检查所选应用与档案的变化。
+- **一键发布到多个客户端。** 选择应用后发布，也可按需查看具体改动。
 - **尊重已有配置。** 保留其他供应商；每次写入前重新检查当前配置。
 
 ## 工作方式
 
-**添加供应商 → 核对目标和改动 → 发布、选用模型、验证。**
+**添加供应商 → 选择应用并发布 → 在客户端选用模型。**
 
 在各客户端完成登录，选用发布的模型即可开始使用。
 
@@ -56,17 +56,15 @@ JetBrains 支持上方版本表中列出的插件发行版；共用运行时目�
 
 ## 下载与安装
 
-经批准的候选版会出现在 [Releases](https://github.com/Arcueid77/CopilotBYOKManager/releases)。以下是计划产物，并非已有下载链接：
+在 [Releases](https://github.com/Arcueid77/CopilotBYOKManager/releases) 选择所需安装包：
 
-| 平台 | 安装包 | 状态 |
+| 平台 | 安装包 | 安装方式 |
 | --- | --- | --- |
-| Windows 11 x64 | `CopilotBYOKManager-vX.Y.Z-windows-x64-setup.exe` | 候选版；干净机验收待完成。**Unsigned community build（未签名社区构建）** |
-| Windows 11 x64，可选 | `CopilotBYOKManager-vX.Y.Z-windows-x64-standalone.zip` | 验收边界相同；需要 WebView2 |
-| macOS Universal | `CopilotBYOKManager-vX.Y.Z-macos-universal.dmg` | 计划中；Apple 凭据、Intel / Apple Silicon 验收待完成。正式包必须 **Developer ID signed and notarized（签名并公证）** |
+| Windows 11 x64 | `CopilotBYOKManager-vX.Y.Z-windows-x64-setup.exe` | 运行安装器，安装到当前用户 |
+| Windows 11 x64 | `CopilotBYOKManager-vX.Y.Z-windows-x64-standalone.zip` | 解压后运行，需要 WebView2 |
+| macOS 15+，Intel / Apple Silicon | `CopilotBYOKManager-vX.Y.Z-macos-universal.dmg` | 将应用拖入 Applications |
 
-Windows Setup 安装到当前用户。macOS 安装包目标版本为 15.0 及以上。测试 DMG 使用 `*-testing-adhoc.dmg`：**Ad-hoc signed, not notarized; testing only（临时签名、未公证，仅供测试）**。
-
-**macOS 测试包现已可取用**：打开[已通过的测试构建附件](https://github.com/Arcueid77/CopilotBYOKManager/actions/runs/38706651589)，下载 `release-dry-run-…`，其中含 Universal DMG、`SHA256SUMS.txt` 和源码记录（`dad7bd4`）。测试包采用临时签名，未公证。如有提示请登录 GitHub；按当前工作流设置，附件保留 14 天。
+Windows 安装器会在需要时下载 WebView2。
 
 安装前核对 `SHA256SUMS.txt` 与源码 SHA。Standalone 为免安装版；状态、系统凭据和客户端配置使用用户存储。[安装包说明（英文）](docs/release-engineering.md)。
 
@@ -120,7 +118,6 @@ Windows Setup 安装到当前用户。macOS 安装包目标版本为 15.0 及以
 - CLI 当前为单条受管环境路由，不是多供应商同时路由。
 - Copilot App 需要手动配置；JetBrains 仅限确切审核过的插件发行版。
 - Usage、Billing、Resources/MCP/Skills/Instructions 不属于本核心版。已有数据保留。[功能记录](docs/feature-availability.md)。
-- 干净 Windows、原生托盘、真实请求及两种 Mac 架构均**待验收**。Rider 验收继续延期。
 
 ## 界面截图
 

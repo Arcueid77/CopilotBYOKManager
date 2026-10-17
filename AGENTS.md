@@ -2,7 +2,7 @@
 
 This file is the entry point for a coding agent continuing the repository on `main`.
 
-The public repository is `Arcueid77/CopilotBYOKManager`. This is an unreleased product. Use `CopilotBYOKManager` for the product and configuration directory, `copilot-byok-manager` for packages/binaries, and `COPILOT_BYOK_MANAGER_*` for app-specific environment options. Do not add historical-brand aliases, automatic credential adoption or old-directory migration.
+The public repository is `Arcueid77/CopilotBYOKManager`. Use `CopilotBYOKManager` for the product and configuration directory, `copilot-byok-manager` for packages/binaries, and `COPILOT_BYOK_MANAGER_*` for app-specific environment options. Do not add historical-brand aliases, automatic credential adoption or old-directory migration.
 
 ## Read first
 
@@ -20,7 +20,7 @@ Read `docs/implementation-status.md` for the current implementation/evidence bas
 
 The maintainer-approved 2026-10-15 v0.1 release scope exposes only Overview / Providers / Apps / About. Preserve hidden Usage/Billing/authorization/Resources implementations and data without mounting or querying them from the core shell. Their live acceptance belongs to a later extended milestone, not v0.1 blockers or PASS results. Keep recovery, publication results and revocation accessible within the four pages. Read `docs/feature-availability.md` before re-exposing staged capabilities; this does not authorize excluded features or complete-MVP claims. Theme is presentation-only. Windows close-to-tray requires a working native tray, explicit restore/Quit and normal-close fallback when unavailable.
 
-Read `docs/release-engineering.md`, `docs/release-criteria.md` and `docs/release-secrets.md` before release work. v0.1 requires Windows x64 current-user NSIS (explicitly unsigned) and a formal Developer ID signed/notarized/stapled macOS Universal DMG, with exact source SHA, version and SHA256SUMS. Ad-hoc Mac builds are testing-only. Strict `vX.Y.Z` tags create Drafts; public promotion preserves reviewed Draft bytes and requires separate maintainer approval. No push/tag/Release/settings/secret mutation is implied by local engineering work.
+Read `docs/release-engineering.md`, `docs/release-criteria.md` and `docs/release-secrets.md` before release work. The maintainer's 2026-10-17 decision permits Windows x64 current-user NSIS and macOS Universal DMG publication without publisher signing or completed manual acceptance. Keep exact source SHA, version and SHA256SUMS. Release notes and download copy should describe features and installation, without signing or acceptance notices; never claim unperformed checks passed. Developer ID signing is optional and explicitly selected. Strict `vX.Y.Z` tags create Drafts; public promotion preserves verified Draft bytes and requires maintainer authorization, which may already be given in the current task. Local engineering alone does not authorize remote publication or settings/secret changes.
 
 CLI publication replaces its existing user-environment configuration after preview and explicit confirmation, regardless of prior ownership. Do not restore an ownership prerequisite for CLI apply. Keep stale-plan checks, private before/after snapshots, conditional rollback and new ownership recording; CLI revocation and other clients retain their ownership checks.
 

@@ -68,8 +68,8 @@ export function validatePlatformMetadata(metadata, { version, sha, mode, platfor
     assert.equal(metadata.notarization, 'not-applicable');
   } else {
     assert.equal(metadata.architecture, 'x86_64+arm64');
-    assert.equal(metadata.signature, testing ? 'ad-hoc' : 'developer-id');
-    assert.equal(metadata.notarization, testing ? 'not-notarized' : 'stapled');
+    assert.ok((testing ? ['ad-hoc'] : ['ad-hoc', 'developer-id']).includes(metadata.signature), 'Unexpected macOS signature');
+    assert.equal(metadata.notarization, metadata.signature === 'developer-id' ? 'stapled' : 'not-notarized');
   }
 }
 
@@ -95,10 +95,7 @@ export function assembleRelease({ input, output, version, sha, mode, platform, n
   writeFileSync(path.join(output, 'release-metadata.json'), JSON.stringify({ schema: 1, version, commit: sha, mode, platform, builds: manifests }, null, 2) + '\n');
   const values = {
     VERSION: version, COMMIT: sha,
-    MACOS_STATUS: platforms.includes('macos') ? mode === 'dry-run' ? 'Ad-hoc signed, not notarized; testing only' : 'Developer ID signed and notarized; stapled ticket verified' : 'Not built in this platform-only dry-run',
-    WINDOWS_STATUS: platforms.includes('windows') ? 'Unsigned community build' : 'Not built in this platform-only dry-run',
     FILES: manifests.flatMap(m => m.files).map(f => `- \`${f.name}\``).join('\n'),
-    CHANNEL: mode === 'dry-run' ? 'Testing artifacts only; not a public Release.' : 'v0.1 core configuration release candidate (pre-release, not Latest).',
   };
   const notes = readFileSync(notesTemplate, 'utf8').replace(/\{\{([A-Z_]+)\}\}/g, (_, key) => {
     assert.ok(key in values, `Unknown release-note placeholder ${key}`); return values[key];
@@ -134,7 +131,5 @@ export function verifyReleaseDirectory(directory, { version, sha, mode, platform
   assert.equal(readFileSync(path.join(directory, 'SHA256SUMS.txt'), 'utf8'), expectedSums, 'Checksum list does not match the complete artifact set');
   const notes = readFileSync(path.join(directory, 'RELEASE-NOTES.md'), 'utf8');
   assert.ok(notes.includes(sha) && notes.includes(`v${version}`), 'Release notes provenance mismatch');
-  if (expectedPlatforms.includes('windows')) assert.ok(notes.includes('Unsigned community build'));
-  if (expectedPlatforms.includes('macos')) assert.ok(notes.includes(mode === 'dry-run' ? 'Ad-hoc signed, not notarized; testing only' : 'Developer ID signed and notarized'));
   return [...filenames, 'SHA256SUMS.txt'].sort();
 }

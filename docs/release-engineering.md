@@ -1,6 +1,6 @@
 # Release engineering: v0.1 core configuration edition
 
-**Status: engineering candidate, not an accepted or published release.** The first scope is Overview / Providers / Apps / About. Hidden Usage, Billing and Resources remain retained and unmounted; their live acceptance belongs to the extended milestone, not this release. Startup safety, stored-data preservation and all native write/recovery contracts still apply. See [release gates (中文)](release-criteria.md) and [specification §21](mvp-implementation-spec.md#21-final-acceptance).
+The maintainer's **2026-10-17 decision permits publication without publisher signing or completed manual acceptance**, and requests feature/download notes without signing or acceptance notices. Automated checks, exact source/package provenance and native safety contracts remain required. The scope is Overview / Providers / Apps / About; hidden Usage, Billing and Resources stay retained and unmounted. See [release criteria (中文)](release-criteria.md) and [specification §21](mvp-implementation-spec.md#21-final-acceptance).
 
 Configure one provider. Publish it safely across your Copilot clients.
 
@@ -8,13 +8,13 @@ Configure one provider. Publish it safely across your Copilot clients.
 
 | Output | Policy |
 | --- | --- |
-| `CopilotBYOKManager-vX.Y.Z-windows-x64-setup.exe` | Required; Tauri NSIS, current user, **Unsigned community build** |
-| `CopilotBYOKManager-vX.Y.Z-macos-universal.dmg` | Required for Draft/public release; Developer ID signed, Hardened Runtime, notarized, stapled |
+| `CopilotBYOKManager-vX.Y.Z-windows-x64-setup.exe` | Required; Tauri NSIS, current user |
+| `CopilotBYOKManager-vX.Y.Z-macos-universal.dmg` | Required for Draft/public release; both architectures, Hardened Runtime; Developer ID optional |
 | `SHA256SUMS.txt` | Required; covers every attachment except itself, including metadata and release notes |
 | `CopilotBYOKManager-vX.Y.Z-windows-x64-standalone.zip` | Optional extra; EXE + license + data-location warning, not a fully portable app |
-| `release-metadata.json`, `RELEASE-NOTES.md` | Exact source SHA, version, toolchain, architecture/signing results and user disclosures |
+| `release-metadata.json`, `RELEASE-NOTES.md` | Exact source SHA, version, toolchain, architecture/build results and concise feature/install notes |
 
-Mac dry-run uses `CopilotBYOKManager-vX.Y.Z-macos-universal-testing-adhoc.dmg` and a `testing-adhoc` Actions artifact name. It is **Ad-hoc signed, not notarized; testing only**. It cannot pass formal assembly. A platform-only dry-run is valid, but missing either mandatory platform is a hard failure in formal modes.
+Mac dry-run uses `CopilotBYOKManager-vX.Y.Z-macos-universal-testing-adhoc.dmg` and cannot be promoted. A fresh Draft build uses the regular release filename and may use ad-hoc signing. Actual signature/notarization results remain in machine-readable metadata. A platform-only dry-run is valid; Draft/public releases require both platforms.
 
 Stable identities are unchanged: product `CopilotBYOKManager`, executable/package `copilot-byok-manager`, Bundle ID `io.github.avalonero.copilotbyokmanager`, configuration root `CopilotBYOKManager`, credential service `io.github.avalonero.copilotbyokmanager.connections`. No data migration, credential adoption, updater, Linux distribution, Windows ARM64/MSI or store publishing is introduced.
 
@@ -38,16 +38,16 @@ For a version bump, update those application sources together (not every third-p
 | --- | --- | --- |
 | Push `v*` | Must resolve to existing strict `vX.Y.Z`, version matches | Full checks + both formal packages → **Draft only** |
 | Dispatch `dry-run` | `main`, full 40-character SHA on main ancestry, or strict existing tag | Full checks, selected platform(s), Actions artifacts only; no Release API mutation |
-| Dispatch `draft` | Existing strict version tag, `platform=all` | Full checks + formally signed Mac; creates/updates only a Draft |
-| Dispatch `publish` | Existing strict version tag, `platform=all`, existing Draft | Rechecks same source and formal builds; verifies the already-reviewed Draft's exact downloaded bytes before making that Draft public as a Pre-release |
+| Dispatch `draft` | Existing strict version tag, `platform=all` | Full checks + both packages; creates/updates only a Draft |
+| Dispatch `publish` | Existing strict version tag, `platform=all`, existing Draft | Rechecks the same source; downloads and verifies the Draft's exact bytes before making it public as a Pre-release |
 
 Dispatch the workflow **from main**. `ref` is the separate source input, not the workflow execution branch. No pull_request/pull_request_target event or fork repository is accepted. A target must be reachable from origin/main, and for formal modes its workflow blob must match the executing workflow. Ref syntax is bounded and passed as argument arrays, never executable shell text. Resolution freezes a full SHA; all subsequent jobs check out that SHA.
 
-The jobs are validate → Windows/macOS tests → platform builds → assembly → guarded Release operation. Publish repeats checks/builds but **does not replace reviewed Draft attachments or notes with rebuilt bytes**: timestamps/signatures can change between builds. Acceptance must refer to the Draft files that will actually become public. If a Draft needs different bytes or notes, explicitly rerun `draft`, review/accept its new hashes, and then publish. Public releases are never overwritten by this workflow.
+Draft jobs are validate → Windows/macOS tests → platform builds → assembly → verified Release upload. Publish reruns checks, skips builds/assembly and **promotes the existing Draft attachments without replacing them**. If a Draft needs different bytes or notes, explicitly rerun `draft`, verify its new hashes, and then publish. Public releases are never overwritten.
 
-Formal build failure, missing Apple secrets, changed tag, missing/extra/empty attachments, dirty CI source, mismatched version/SHA, incorrect architecture/signing metadata or any hash mismatch stops the process. Public-release promotion downloads all Draft attachments and checks their complete set, digest list, provenance and notes again. Recovery is an explicit rerun against the same tag, not forcing a moved tag or deleting unexpected attachments automatically.
+Build failure, changed tag, missing/extra/empty attachments, dirty CI source, mismatched version/SHA, inconsistent architecture/signing metadata or any hash mismatch stops the process. Missing Apple secrets fail only an explicitly selected Developer ID build; it never silently falls back. Public promotion downloads all Draft attachments and verifies the complete set, digest list, provenance and notes again. Recovery is an explicit rerun against the same tag, not a moved tag or automatic attachment deletion.
 
-Both formal Mac signing and the final Release job use the `release` environment. Configure reviewers before formal use. Mac dry-run runs in a separate `build-macos-testing` job with **no environment and no Apple secrets**; it can produce preview packages before Apple setup without creating or modifying an environment. Public promotion requires maintainer approval after the real-machine/client gates pass.
+The default `build-macos-adhoc` job uses no environment or Apple secrets in either dry-run or Draft mode. Optional `macos_signing=developer-id` selects the protected `build-macos` job and its `release` environment. The final Release job needs only its scoped Actions token; public promotion requires an explicit maintainer-authorized publish dispatch. No Apple or repository environment setup is needed for the default release.
 
 ## Local verification and packages
 
@@ -62,7 +62,7 @@ npm run check
 git diff --check
 ```
 
-`check` includes local documentation links/anchors, formatting, locked Rust tests and strict Clippy. If installed locally, run `actionlint .github/workflows/ci.yml .github/workflows/release.yml`; otherwise use a task-local official release verified against its published checksums, not a global installation. Schema/policy tests include missing Apple credentials, fork/PR/ref rejection, version drift, mandatory attachment loss, ad-hoc promotion, byte tampering and moved tags. They use synthetic files and a fake GitHub CLI; no credentials or real Release mutations.
+`check` includes local documentation links/anchors, formatting, locked Rust tests and strict Clippy. If installed locally, run `actionlint .github/workflows/ci.yml .github/workflows/release.yml`; otherwise use a task-local official release verified against its published checksums. Policy tests cover optional Apple credentials, ad-hoc release assembly, forbidden dry-run promotion, fork/PR/ref rejection, version drift, attachment loss, byte tampering and moved tags. Tests use synthetic files and a fake GitHub CLI.
 
 On Windows x64 with PowerShell 7 and the Rust/MSVC toolchain:
 
@@ -79,7 +79,7 @@ rustup target add x86_64-apple-darwin aarch64-apple-darwin
 node scripts/package-macos.mjs
 ```
 
-The script uses `universal-apple-darwin` and `--bundles app,dmg` with Tauri's official bundler. Both outputs are requested because the locked CLI removes its intermediate `.app` in DMG-only mode; verification must retain that app, not skip its checks. Only the final DMG is distributed. It verifies `lipo`, Info.plist, hardened code signatures and the app again inside a read-only mounted DMG. Formal signing is restricted to the environment job; see [Apple setup](release-secrets.md). Tauri notarizes/staples the app; the script also submits/staples/validates the final DMG. Temporary credentials/keychain are cleaned on success or failure. A detach failure never leads to recursively deleting through a mounted filesystem.
+The script uses `universal-apple-darwin` and `--bundles app,dmg` with Tauri's official bundler, retaining the app for verification before checking it again inside a read-only mounted DMG. Only the final DMG is distributed. It checks `lipo`, Info.plist and hardened code signatures. `RELEASE_MACOS_SIGNING` defaults to `ad-hoc`; optional `developer-id` is restricted to the protected CI job described in [Apple setup](release-secrets.md). That mode notarizes/staples both app and DMG and cleans temporary credentials/keychain on success or failure. A detach failure never leads to recursive deletion through a mounted filesystem.
 
 To assemble an exact clean local source's Windows-only test outputs (PowerShell):
 
@@ -111,15 +111,15 @@ git push origin v0.1.0
 # A tag push defaults to Draft. Explicitly rerun/update a Draft if needed:
 gh workflow run release.yml --ref main -f ref=v0.1.0 -f platform=all -f mode=draft
 
-# Only after final Draft package acceptance and environment approval:
+# After verifying the Draft files, with maintainer publication authorization:
 gh workflow run release.yml --ref main -f ref=v0.1.0 -f platform=all -f mode=publish
 ```
 
-Download and inspect Draft assets before approval, including SHA256SUMS, metadata, Windows unsigned disclosure and Mac signing/notary tickets. Update the checked-in [release notes template](release-notes-template.md) and versioned support evidence **before tagging**; pending acceptance must remain pending until real evidence exists. The release workflow neither changes repository settings nor creates Apple credentials. Stable/Latest promotion is a separate future maintainer decision, not a hidden effect of publish.
+Download and inspect Draft assets, SHA256SUMS and metadata before promotion. Update the [release notes template](release-notes-template.md) **before tagging**. Internal evidence stays truthful; release notes need no signing or acceptance notices. The workflow does not change repository settings or create Apple credentials. Stable/Latest promotion remains a separate maintainer decision.
 
 ## Evidence still required
 
-The [Mac dry-run at `dad7bd4`](https://github.com/Arcueid77/CopilotBYOKManager/actions/runs/38706651589) passed on the hosted Mac, including the app inside the final DMG; its testing artifacts are retained for 14 days under the current workflow policy. The package uses ad-hoc signing and is not notarized. The protected formal build still requires Apple setup; test final Draft DMGs on both Intel and Apple Silicon, final NSIS on clean Windows, and each advertised client/version. Rider remains deferred unless the maintainer resumes it. Full details: [release gates (中文)](release-criteria.md), [local validation (中文)](local-validation-plan.md), [current evidence](implementation-status.md).
+The [Mac dry-run at `dad7bd4`](https://github.com/Arcueid77/CopilotBYOKManager/actions/runs/38706651589) passed on the hosted Mac, including the final DMG payload. Real-machine checks remain tracked separately, without blocking the maintainer-authorized release or being reported as passed. Rider remains deferred. Full details: [release criteria (中文)](release-criteria.md), [local validation (中文)](local-validation-plan.md), [current evidence](implementation-status.md).
 
 The engineering host's default tests pass, but requiring file-symlink fixtures with `COPILOT_BYOK_MANAGER_TEST_REQUIRE_LINKS=1` fails locally with Windows privilege error 1314. That local limitation remains; it is not a passed local symlink branch. Both ordinary CI and Release tests retain the strict setting, and the hosted Windows/Mac release suites passed it at `dad7bd4` with Node 22. Local Windows packaging used Node 24; keep these evidence layers distinct.
 

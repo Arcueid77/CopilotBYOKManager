@@ -61,7 +61,7 @@ test('file-version drift and missing locks are hard failures', t => {
 });
 
 test('tag push defaults to Draft; dispatch dry-run can select a platform', () => {
-  assert.deepEqual(releaseRequest({ event: 'push', ref: 'refs/tags/v0.1.0' }), { mode: 'draft', platform: 'all', ref: 'v0.1.0', tag: 'v0.1.0' });
+  assert.deepEqual(releaseRequest({ event: 'push', ref: 'refs/tags/v0.1.0' }), { mode: 'draft', platform: 'all', macosSigning: 'ad-hoc', ref: 'v0.1.0', tag: 'v0.1.0' });
   assert.equal(releaseRequest({ event: 'workflow_dispatch', ref: 'refs/heads/main', platform: 'windows' }).mode, 'dry-run');
 });
 
@@ -74,7 +74,8 @@ test('release policy rejects PRs, forks, branch publication, partial formal sets
     { requestedRef: '--upload-pack=evil' }, { requestedRef: 'main\n$(echo injection)' },
     { requestedRef: 'refs/pull/1/head' }, { requestedRef: 'v0.1.0:main' },
     { requestedRef: 'v0.1.0\n' }, { requestedRef: 'a'.repeat(40) + '\n' },
-    { mode: 'other' }, { platform: 'linux' },
+    { mode: 'other' }, { platform: 'linux' }, { macosSigning: 'unknown' },
+    { mode: 'dry-run', macosSigning: 'developer-id' },
   ]) assert.throws(() => releaseRequest({ ...base, ...override }));
 });
 
@@ -86,25 +87,32 @@ test('formal Apple signing requires every secret and a Developer ID Application 
   assert.throws(() => requireAppleCredentials({ ...env, APPLE_SIGNING_IDENTITY: '-' }));
 });
 
-test('Mac previews have no environment or secrets and cannot enter formal publication', () => {
+test('default Mac packaging needs no secrets; Developer ID builds are explicitly selected', () => {
   const workflow = readFileSync(path.join(ROOT, '.github/workflows/release.yml'), 'utf8');
   const job = name => {
     const match = workflow.match(new RegExp(`^  ${name}:\\r?\\n([\\s\\S]*?)(?=^  [a-z][a-z-]+:|(?![\\s\\S]))`, 'm'));
     assert.ok(match, `Missing job: ${name}`);
     return match[1];
   };
-  const testing = job('build-macos-testing'), formal = job('build-macos');
-  assert.match(testing, /if: needs\.validate\.outputs\.platform != 'windows' && needs\.validate\.outputs\.mode == 'dry-run'/);
-  assert.match(testing, /RELEASE_MODE: dry-run/);
-  assert.match(testing, /name: macos-testing-adhoc-/);
+  const testing = job('build-macos-adhoc'), formal = job('build-macos');
+  assert.match(testing, /needs\.validate\.outputs\.macosSigning == 'ad-hoc'/);
+  assert.match(testing, /RELEASE_MACOS_SIGNING: ad-hoc/);
+  assert.match(testing, /name: macos-adhoc-/);
   assert.doesNotMatch(testing, /^\s+environment:|secrets\.|contents: write/m);
-  assert.match(formal, /needs\.validate\.outputs\.mode != 'dry-run'/);
+  assert.match(formal, /needs\.validate\.outputs\.macosSigning == 'developer-id'/);
+  assert.match(formal, /RELEASE_MACOS_SIGNING: developer-id/);
   assert.match(formal, /environment: release/);
   for (const name of APPLE_SECRET_NAMES) assert.ok(formal.includes(`secrets.${name}`));
-  assert.match(job('publish-release'), /if: needs\.validate\.outputs\.mode != 'dry-run'/);
+  const publication = job('publish-release');
+  assert.doesNotMatch(publication, /^\s+environment:|secrets\./m);
+  assert.match(publication, /needs\.validate\.outputs\.mode == 'publish' && needs\.assemble-release\.result == 'skipped'/);
+  assert.match(publication, /needs\.test\.result == 'success'/);
+  for (const build of ['build-windows', 'build-macos-adhoc', 'build-macos']) {
+    assert.match(job(build), /needs\.validate\.outputs\.mode != 'publish'/);
+  }
   const assembly = job('assemble-release');
-  assert.match(assembly, /needs: \[validate, test, build-windows, build-macos-testing, build-macos\]/);
-  assert.match(assembly, /needs\.build-macos-testing\.result == 'success' \|\| needs\.build-macos-testing\.result == 'skipped'/);
+  assert.match(assembly, /needs: \[validate, test, build-windows, build-macos-adhoc, build-macos\]/);
+  assert.match(assembly, /needs\.build-macos-adhoc\.result == 'success' \|\| needs\.build-macos-adhoc\.result == 'skipped'/);
 });
 
 test('bundle uses standard NSIS/DMG, stable identity, current-user installation and no updater', () => {
@@ -255,7 +263,19 @@ test('Windows release entry point and both build paths enforce the GUI subsystem
 test('formal assembly produces complete checksums and bound source metadata', t => {
   const config = fixture(t); assembleRelease(config);
   assert.equal(verifyReleaseDirectory(config.output, config).length, 5);
-  assert.match(readFileSync(path.join(config.output, 'RELEASE-NOTES.md'), 'utf8'), /Developer ID signed and notarized/);
+  const notes = readFileSync(path.join(config.output, 'RELEASE-NOTES.md'), 'utf8');
+  assert.match(notes, /Copilot Chat/);
+  assert.doesNotMatch(notes, /signed|notarized|acceptance|签名|验收/i);
+});
+
+test('a release can contain an ad-hoc Mac package without promoting dry-run bytes', t => {
+  const config = fixture(t);
+  editPlatform(config, 'macos', m => { m.signature = 'ad-hoc'; m.notarization = 'not-notarized'; });
+  assembleRelease(config);
+  assert.ok(verifyReleaseDirectory(config.output, config).includes(assetNames(version).macos));
+  const metadata = JSON.parse(readFileSync(path.join(config.output, 'release-metadata.json'), 'utf8'));
+  assert.equal(metadata.builds.find(build => build.platform === 'macos').signature, 'ad-hoc');
+  assert.throws(() => verifyReleaseDirectory(config.output, { ...config, mode: 'dry-run' }));
 });
 
 test('single-platform dry-run is explicitly testing-only and cannot be promoted', t => {
@@ -264,7 +284,7 @@ test('single-platform dry-run is explicitly testing-only and cannot be promoted'
   assert.throws(() => verifyReleaseDirectory(config.output, { ...config, mode: 'publish', platform: 'all' }));
 });
 
-test('missing, empty, mismatched, adhoc, dirty and traversal artifacts fail assembly', t => {
+test('missing, empty, mismatched, inconsistent signature, dirty and traversal artifacts fail assembly', t => {
   for (const change of [
     c => rmSync(path.join(c.input, 'windows', assetNames(version).windows)),
     c => writeFileSync(path.join(c.input, 'windows', assetNames(version).windows), ''),

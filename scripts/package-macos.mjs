@@ -25,8 +25,11 @@ try {
   process.chdir(ROOT);
   const mode = process.env.RELEASE_MODE || 'dry-run';
   assert.ok(['dry-run', 'draft', 'publish'].includes(mode));
-  const formal = mode !== 'dry-run';
-  if (formal) {
+  const signing = process.env.RELEASE_MACOS_SIGNING || 'ad-hoc';
+  assert.ok(['ad-hoc', 'developer-id'].includes(signing), 'Unknown macOS signing mode');
+  if (mode === 'dry-run') assert.equal(signing, 'ad-hoc', 'Dry-run does not receive Apple credentials');
+  const signed = signing === 'developer-id';
+  if (signed) {
     assert.equal(process.env.GITHUB_ACTIONS, 'true', 'Formal signing is restricted to the release environment job');
     requireAppleCredentials(process.env);
   }
@@ -44,9 +47,9 @@ try {
   let keychainCreated = false, originalKeychains, mounted = false;
   const mount = path.join(taskTemp, 'mounted-dmg');
   const env = Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.startsWith('APPLE_') && !key.startsWith('TAURI_SIGNING_')));
-  env.APPLE_SIGNING_IDENTITY = formal ? process.env.APPLE_SIGNING_IDENTITY : '-';
+  env.APPLE_SIGNING_IDENTITY = signed ? process.env.APPLE_SIGNING_IDENTITY : '-';
   try {
-    if (formal) {
+    if (signed) {
       const password = randomBytes(32).toString('hex');
       decodeSecret(process.env.APPLE_CERTIFICATE_BASE64, certificate);
       decodeSecret(process.env.APPLE_API_PRIVATE_KEY_BASE64, privateKey);
@@ -90,11 +93,11 @@ try {
         assert.equal(result.status, 0); report = result.stderr + result.stdout;
       } catch { throw new Error('Read app signing report failed'); }
       assert.ok(report.includes('runtime'), 'Hardened Runtime is not enabled');
-      if (formal) {
+      if (signed) {
         assert.ok(report.includes('Authority=Developer ID Application:') && !report.includes('Signature=adhoc'), 'App is not Developer ID signed');
         run('spctl', ['--assess', '--type', 'execute', '--verbose=2', app], 'Gatekeeper app assessment');
         run('xcrun', ['stapler', 'validate', app], 'App notarization ticket verification');
-      } else assert.ok(report.includes('Signature=adhoc'), 'Dry-run must use ad-hoc signing');
+      } else assert.ok(report.includes('Signature=adhoc'), 'Expected ad-hoc signing');
     };
     verifyApp(path.join(bundleRoot, 'macos', appName));
     console.log('Verified retained app: identity, version, both architectures and code signature.');
@@ -102,7 +105,7 @@ try {
     assert.equal(dmgs.length, 1, 'Expected exactly one fresh DMG');
     const dmg = path.join(bundleRoot, 'dmg', dmgs[0]);
     fileDigest(dmg);
-    if (formal) {
+    if (signed) {
       // Tauri notarizes/staples the .app. Notarize the final container too, then
       // staple the DMG ticket; there is no handwritten DMG or Info.plist layout.
       const response = JSON.parse(run('xcrun', ['notarytool', 'submit', dmg, '--key', privateKey, '--key-id', env.APPLE_API_KEY, '--issuer', env.APPLE_API_ISSUER, '--wait', '--timeout', '30m', '--output-format', 'json'], 'DMG notarization'));
@@ -126,13 +129,13 @@ try {
     assert.equal(run('git', ['rev-parse', 'HEAD'], 'Recheck source commit'), commit, 'Source commit changed during the build');
     if (!sourceDirty) assert.equal(run('git', ['status', '--porcelain', '--untracked-files=normal'], 'Recheck source cleanliness'), '', 'Source became dirty during the build');
     mkdirSync(output, { recursive: true });
-    const destination = path.join(output, assetNames(version, !formal).macos);
+    const destination = path.join(output, assetNames(version, mode === 'dry-run').macos);
     copyFileSync(dmg, destination);
     writeFileSync(path.join(output, 'platform.json'), JSON.stringify({ schema: 1, version, commit, sourceDirty, mode,
-      platform: 'macos', architecture: 'x86_64+arm64', signature: formal ? 'developer-id' : 'ad-hoc', notarization: formal ? 'stapled' : 'not-notarized',
+      platform: 'macos', architecture: 'x86_64+arm64', signature: signed ? 'developer-id' : 'ad-hoc', notarization: signed ? 'stapled' : 'not-notarized',
       product: 'CopilotBYOKManager', identifier: 'io.github.avalonero.copilotbyokmanager', executable: 'copilot-byok-manager',
       files: [fileDigest(destination)], node: process.version, rust: run('rustc', ['--version'], 'Rust version') }, null, 2) + '\n');
-    console.log(`Verified macOS universal package (${formal ? 'Developer ID + notarization' : 'testing: ad-hoc, not notarized'}).`);
+    console.log(`Verified macOS universal package (${signing}).`);
   } finally {
     try {
       if (keychainCreated) {
