@@ -19,6 +19,10 @@
   <a href="#download">下载状态</a> · <a href="#quick-start">快速上手</a> · <a href="#supported-clients">支持客户端</a> · <a href="#security">安全</a> · <a href="docs/README.md">文档</a> · <a href="https://github.com/Arcueid77/CopilotBYOKManager/issues">问题反馈</a> · <a href="README.md">English</a>
 </p>
 
+<p align="center">
+  社区友链：<a href="https://linux.do">LINUX DO</a>
+</p>
+
 > **v0.1** — [下载 Windows 和 macOS 安装包](https://github.com/Arcueid77/CopilotBYOKManager/releases)。
 
 ![总览：当前浏览器预览，使用模拟数据](docs/images/overview-zh-CN.png)

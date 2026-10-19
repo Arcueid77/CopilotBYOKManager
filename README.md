@@ -19,6 +19,10 @@
   <a href="#download">Download status</a> · <a href="#quick-start">Quick Start</a> · <a href="#supported-clients">Supported Clients</a> · <a href="#security">Security</a> · <a href="docs/README.md">Documentation</a> · <a href="https://github.com/Arcueid77/CopilotBYOKManager/issues">Issues</a> · <a href="README.zh-CN.md">简体中文</a>
 </p>
 
+<p align="center">
+  Community: <a href="https://linux.do">LINUX DO</a>
+</p>
+
 > **v0.1** — [Download Windows and macOS packages](https://github.com/Arcueid77/CopilotBYOKManager/releases).
 
 ![Overview — current browser preview with simulated data](docs/images/overview-en.png)
