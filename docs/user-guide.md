@@ -12,7 +12,7 @@ You do not need to maintain a separate provider configuration for every client. 
 
 [Get started](#getting-started) · [Supported clients](#supported-clients) · [First connection](#first-connection) · [Everyday use](#everyday-use) · [Planned features](#usage) · [FAQ](#faq)
 
-> This is a v0.1 core candidate with no published GitHub Releases installers yet. You can try the browser interface or run the desktop app from source. Windows NSIS is unsigned; formal macOS Universal DMGs must be Developer ID signed and notarized. Clean Windows, Intel/Apple Silicon Macs and actual client requests still require acceptance; see [package instructions](release-engineering.md) and [current evidence](implementation-status.md).
+Download desktop packages from [Releases](https://github.com/Arcueid77/CopilotBYOKManager/releases). See the selected version's installation instructions and checksums.
 
 The interface supports **English and Simplified Chinese**. It follows your system language on first launch; choose **Interface language** at the top to switch and save your preference. Other system languages fall back to English. Finish or close an open form or deployment preview before switching. Connection names, model IDs, endpoints and original diagnostic messages are not translated.
 
@@ -23,9 +23,9 @@ The interface supports **English and Simplified Chinese**. It follows your syste
 | Overview | Check configuration status, next actions and the latest publication result |
 | Providers | Manage endpoint, key and models; preview publication or revoke owned configuration |
 | Apps | Choose a provider per app; review detection, installation, official sign-in and publication history |
-| About | Appearance, help, offline planned-feature record and local storage/recovery information |
+| About | Window behavior, help, offline planned-feature record and local storage/recovery information |
 
-Use **Appearance** at the top or in About to choose **System, Light or Dark**. The preference is saved independently of language. Switching appearance keeps open drafts and reviewed previews intact.
+Use **Appearance** at the top to choose **System, Light or Dark**. The preference is saved independently of language. Switching appearance keeps open drafts and reviewed previews intact.
 
 On Windows, closing the window hides it to the tray by default. In **About → When closing the window**, choose **Hide to system tray** or **Exit the app**; the choice is saved. Left-click the tray icon or choose **Open main window** to restore it; right-click **Exit CopilotBYOKManager** to quit. Ordinary minimize stays on the taskbar. Opening the app again restores the existing window instead of starting another instance. The tray menu follows the interface language.
 
@@ -33,7 +33,7 @@ If the tray cannot be created, hiding fails, or window preferences cannot be rea
 
 ## What you can do
 
-- **Manage providers centrally:** save multiple connections, fetch or manually enter models, and choose a preferred model.
+- **Manage providers centrally:** save multiple providers, fetch or manually enter models, and choose a recommended model.
 - **Apply configuration to multiple clients:** select targets, review changes, confirm publication, and check each target's result and next steps.
 - **Set up clients:** check installation status, install supported Windows components through reviewed plans, and complete official sign-in and account checks for each client.
 - **Keep the core workflow focused:** Overview, Providers, Apps and About. Usage, Billing and resource entry points are temporarily hidden; existing data is retained.
@@ -47,7 +47,7 @@ A **provider entry** is a reusable endpoint/key/model configuration. **Publishin
 | Client | Provider configuration | Before you use it |
 | --- | --- | --- |
 | VS Code Stable / Insiders and detected profiles | Automatically adds or updates this connection's provider group while preserving other providers | After publishing, select the model in Copilot's model picker in the corresponding profile |
-| GitHub Copilot CLI | Automatically configures one environment-variable route and the preferred model | Unchecked by default; only one such route is active at a time. Open a new terminal and CLI session afterward |
+| GitHub Copilot CLI | Publishes multiple providers and models to `providers.json` | Unchecked by default; confirm publication, start a new session and choose with `/model` |
 | GitHub Copilot plugin in JetBrains IDEs | Automatically writes shared BYOK configuration for reviewed plugin versions | Close the relevant IDEs first; reopen them after publishing, sign in, and select a model |
 | GitHub Copilot App | Provides setup instructions; does not automatically write provider configuration | Add the provider and verify it manually in the app |
 
@@ -58,6 +58,10 @@ Accepted protocols, endpoints, and model capabilities can differ between clients
 <a id="getting-started"></a>
 
 ## Get started
+
+### Install the desktop app
+
+Choose your version on [Releases](https://github.com/Arcueid77/CopilotBYOKManager/releases): run the Windows x64 Setup, or extract the standalone ZIP and run `copilot-byok-manager.exe`. On macOS 15+, open the Universal DMG and drag the app into Applications. Windows Setup downloads WebView2 when needed. The standalone app uses the same user data locations as Setup.
 
 ### Try the interface without changing your configuration
 
@@ -96,6 +100,8 @@ Open **Apps (应用)** to view detected apps and profiles. Each Overview row's *
 
 - If an installed component's status is outdated, open **Installation and updates (安装与更新)** and click **Detect again (重新检测)**.
 - For a missing supported Windows component, click its **Install (安装)** button, review the plan, and confirm. Install clients without an automatic installation path yourself.
+
+The installation window shows each component separately, including its stage, approximate downloaded amount, percentage when available, and elapsed time. Unknown download sizes use an indeterminate bar. **Cancel installation** stops the remaining work and keeps completed components visible. A newly installed Copilot CLI is detected without restarting the manager; **Detect again** also checks the current Windows search paths.
 - Expand **Sign-in and account checks (optional) / 登录与账号检查（可选）** and follow the official sign-in steps in each client. The manager never copies one client's sign-in credentials to another.
 
 Use **Record checked account (记录已核对的账号)** only after checking the clients yourself. This does not sign in or switch their accounts. Provider publication does not require account alignment. Manual confirmation and software-verified identity are shown separately. **Provider setup does not require granting this manager access to personal Billing.** Billing authorization is separate and is not offered in this core edition.
@@ -113,7 +119,7 @@ Go to **Providers (供应商) → Add provider (添加供应商)** and fill in:
 
 `https://api.example.com/v1` is only an example of the URL format, not a working endpoint. Remote endpoints require HTTPS; local loopback endpoints may use HTTP.
 
-If your provider does not use the default OpenAI-compatible Chat Completions interface, first expand **Advanced options: provider type, protocol, and headers (高级选项：供应商类型、接口协议与请求头)**:
+Check **Current protocol (当前协议)** before fetching models. Use **Change protocol (更改协议)** to open **Advanced options: provider type, protocol, and headers (高级选项：供应商类型、接口协议与请求头)** if the default OpenAI-compatible Chat Completions interface is not appropriate:
 
 - Select **Chat Completions, Responses, or Messages** according to the provider's documentation.
 - Changing the provider type does not automatically change the URL or protocol; check them separately.
@@ -134,26 +140,28 @@ another-model-id | Backup model
 
 Replace these example IDs with the actual IDs supplied by your provider. The display name after the vertical bar is optional. For Azure connections, manually enter the actual deployment name, not the underlying model name.
 
-Choose a **Preferred model (首选模型)**, then click **Save provider (保存供应商)**:
+Choose a **Recommended model (推荐模型)**, then click **Save provider (保存供应商)**:
 
-- Copilot CLI uses the preferred model for `COPILOT_MODEL`.
+- Choose the actual model in each client after publishing.
 - Clients with model pickers, such as VS Code and JetBrains, require you to select the model inside the client.
 
 Fetch models and **Test model catalog (测试模型目录)** query the provider's model list. After saving, publish the provider to your apps.
 
 ### 4. Publish configuration
 
+Apps shows the current provider names and model counts separately from **Provider to publish (本次发布)**. That selector chooses what to add or update; it does not select the client's active provider. Empty, unreadable and unsupported configurations have distinct labels. Results identify both the provider and target app.
+
 1. On the connection card, click **Publish to apps (发布到应用)**.
-2. Review each target and uncheck any clients or profiles you do not want to update. **Copilot CLI is unchecked by default**; select it explicitly if you want its single-route environment configuration.
+2. Review each target and uncheck any clients or profiles you do not want to update. **Copilot CLI is unchecked by default**; select it explicitly to publish its providers and models.
 3. If JetBrains is included, close the relevant IDEs using that shared configuration first.
 4. Click **Publish configuration (发布配置)**. Ordinary publication checks and applies the selected targets, then shows the result. Use **View changes (查看变更)** first to review details. Targets marked **Manual action required (需手动处理)** remain manual.
-5. Replacing CLI configuration or removing a provider group stops at a preview. Check it, then click **Confirm publication (确认发布)**.
+5. Publishing to CLI or removing a provider group stops at a preview. Check it, then click **Confirm publication (确认发布)**.
 
-Every publication uses a native plan valid for 15 minutes and usable once. Changed or expired plans are refused. Check any error and retry to obtain a fresh plan; CLI replacement and group removal require confirmation again.
+Every publication uses a native plan valid for 15 minutes and usable once. Changed or expired plans are refused. Check any error and retry to obtain a fresh plan; CLI publication and group removal require confirmation again.
 
 Afterward, check each target's result under **Overview (总览) → Latest publication (最近一次发布)** or **Providers (供应商) → Recent configuration operations (最近配置操作)**. Restart instructions, manual steps, and model-selection guidance remain visible after the notification disappears.
 
-Overview puts **Add your first provider** above environment reminders when no provider exists. **Choose a provider to publish** opens Providers. A row's **Review** focuses that exact app. Apps also lets you select a provider on each card and publish to that target directly. Supported configured apps sort first, followed by supported unconfigured apps. JetBrains cards show plugin support individually. Copilot Chat is the VS Code default profile; a built-in Agents profile sharing that catalog uses the same card and observed configuration. Changing the selection invalidates an idle preview; language changes preserve it. During publication, navigation, refresh and dismissal are blocked. On failure or uncertainty, check publication/recovery and generate a fresh preview.
+Overview offers **Add your first provider** for an empty catalog and **Publish to apps** in the header once a provider is available. **View app** focuses the selected app card. Supported configured apps sort first, followed by supported unconfigured apps. JetBrains cards show plugin support individually. Copilot Chat is the VS Code default profile; a built-in Agents profile sharing its catalog uses the same card. Changing the publication selection invalidates an idle preview; language changes preserve the selection. During publication, navigation, refresh and dismissal are blocked. On failure, check publication/recovery and generate a fresh preview.
 
 ### 5. Select and verify the model in each client
 
@@ -163,7 +171,9 @@ Open the profile you selected when publishing, then choose the published model i
 
 **Copilot CLI**
 
-Open a new terminal, start a new CLI session, and check the selected model. An existing terminal does not automatically receive updated environment variables. This adapter currently uses a legacy environment-variable configuration method, not `providers.json`. While this BYOK route is active, do not expect to use the GitHub official model route at the same time.
+The provider and every enabled model are written to `~/.copilot/providers.json` (`%USERPROFILE%\.copilot\providers.json` on Windows). Publish providers one at a time to keep them together, then start a new CLI session and choose with `/model`. The same model ID can belong to different providers. Updating one provider preserves the others and the saved default model. Without GitHub sign-in, start with `copilot --model <provider-id>/<model-id>`; the IDs appear in the publication preview details. Chat Completions, Responses and Messages are supported; local interfaces such as Ollama can omit a key.
+
+Custom `COPILOT_HOME` or `COPILOT_PROVIDERS_CONFIG` paths are not automatically published yet. Republishing a provider also clears that same Connection's manager-owned legacy environment route; open a new terminal after this upgrade. Other legacy environment configuration is preserved. See [the CLI contract](copilot-cli-support.md).
 
 **JetBrains**
 
@@ -171,7 +181,9 @@ Reopen the relevant IDE, complete official GitHub Copilot sign-in, and select th
 
 **Copilot App**
 
-Go to **Apps (应用) → Copilot App providers (Copilot App 供应商) → View manual setup steps (查看手动配置步骤)**. In the app's **Model providers**, add the provider using the displayed endpoint and model, and enter the required key inside the app. You can then click **I have completed manual setup (我已完成手动配置)** to record your confirmation.
+On its Apps card, choose **Provider to configure manually (本次手动配置)**, then **Manual setup (手动配置)**. Confirmations are saved separately for each provider and displayed as **Confirmed by you (你已确认)**. Editing a provider changes its record to **Confirm updated configuration (修改后待确认)**. Reopen the guide after updating the App and confirm again.
+
+In the App's **Model providers**, add the provider using the displayed endpoint and model, and enter its key inside the App. Then click **I have completed manual setup (我已完成手动配置)** in the manager's guide.
 
 If App was included in a publication, use its result's **Manual setup for [connection]** button to open instructions for that specific connection, even when another connection is selected elsewhere.
 
@@ -187,7 +199,7 @@ Find the provider under **Providers (供应商)** and click **Edit (编辑)**:
 
 1. Update the relevant fields. Leave an existing key blank to keep it, enter a new key to replace it, or check **Remove saved key (移除已保存的密钥)** to remove it.
 2. Click **Save provider (保存供应商)**.
-3. Use **Publish to apps → Publish configuration** again to update the intended targets; confirm CLI replacement or group removal when prompted.
+3. Use **Publish to apps → Publish configuration** again to update the intended targets; confirm CLI publication or group removal when prompted.
 4. Reopen clients or create new sessions as instructed by the publication results.
 
 Editing a connection does not automatically synchronize it to all clients in the background. If fetching models asks for credentials after you change the endpoint, protocol, or headers, enter the key for the current endpoint again. Catalog discovery will not silently send the stored key to a changed destination.
@@ -197,7 +209,7 @@ Editing a connection does not automatically synchronize it to all clients in the
 Add another connection under **Providers (供应商)**, then publish it to the clients you want:
 
 - **VS Code / JetBrains:** multiple provider groups can coexist. Switch using the client's model picker.
-- **Copilot CLI:** uses one environment route at a time. Select the provider, review the preview and confirm to replace the current route, even if it was configured manually or by another tool. Open a new terminal and CLI session afterward. If configuration changes after preview, generate a fresh preview and confirm again.
+- **Copilot CLI:** multiple providers and models coexist in `providers.json`. Select a provider, review and confirm to update only its group; manual configuration and other providers are preserved. Start a new CLI session and choose a model afterward. If configuration changes after preview, generate a fresh preview and confirm again.
 - **Copilot App:** add or switch providers manually inside the app.
 
 Select the active model in each client's model picker.
@@ -206,7 +218,7 @@ Select the active model in each client's model picker.
 
 | Action | What changes in the manager | What changes in the client |
 | --- | --- | --- |
-| Turn off the connection's enable switch | Keeps the connection but prevents new publication | Published configuration remains; clients do not automatically return to official models |
+| Turn off the provider's Allow publishing switch | Keeps the provider and pauses new publication | Published configuration remains |
 | **Remove (移除) → Stop managing only (仅停止管理…) → Confirm (确认停止管理)** | Removes the connection, publication records, ownership proofs, and its dedicated credential | Configuration and any materialized keys remain; you are responsible for managing them afterward |
 | **Remove (移除) → Preview revocation and deletion (预览撤销并删除) → Confirm (确认撤销并删除)** | Removes the connection after successful revocation | Removes only configuration verified as managed by this app, not other providers |
 
@@ -252,9 +264,9 @@ Start with the per-target results under **Overview → Latest publication**, the
 
 ### What if the CLI reports a configuration conflict, or I want to return to the official route?
 
-The current adapter does not take over an existing `providers.json` registry. If that registry takes precedence over the environment route, publication is refused. Review the CLI's existing configuration yourself; do not simply delete credential-bearing files.
+Check that `providers.json` contains valid provider/model arrays and that no custom configuration path is set. Unsupported schemas, unreadable files or edits after preview stop publication. Resolve the reported issue and generate a fresh preview.
 
-To remove this manager's override, use **Preview revocation and deletion** on the relevant connection. Review all affected published targets, confirm, then open a new terminal and CLI session. This only revokes configuration owned by the manager. Any independently configured routes remain, so check the effective route inside the CLI afterward.
+Use **Preview revocation and deletion** on the relevant provider, review the targets and confirm. Only its managed group is removed; other providers remain. Start a new session and select a remaining model or a GitHub-hosted model. If the registry is empty, preserved independent environment routes may become active again, so check those too.
 
 ### Why is my JetBrains version unsupported?
 

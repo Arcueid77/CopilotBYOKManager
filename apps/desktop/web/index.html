@@ -55,6 +55,7 @@
             <label class="appearance-picker"><span data-i18n="外观">外观</span><select id="interface-theme" data-appearance-select aria-label="外观" data-i18n-aria-label="外观"><option value="system" data-i18n="跟随系统">跟随系统</option><option value="light" data-i18n="浅色">浅色</option><option value="dark" data-i18n="深色">深色</option></select></label>
             <label class="language-picker"><span data-i18n="界面语言">界面语言</span><select id="interface-language" aria-label="界面语言" data-i18n-aria-label="界面语言"><option value="en" lang="en">English</option><option value="zh-CN" lang="zh-CN">简体中文</option></select></label>
             <button id="refresh-button" class="button ghost" data-i18n="刷新">刷新</button>
+            <button id="overview-publish-button" class="button primary" data-action="jump-connections" data-i18n="发布到客户端" hidden>发布到客户端</button>
             <button id="add-connection-button" class="button primary" data-i18n="添加连接">添加连接</button>
           </div>
         </header>
@@ -68,12 +69,14 @@
     <script src="i18n.js"></script>
     <script src="ui-lifecycle.js"></script>
     <script src="deployment-review.js"></script>
+    <script src="installer-progress.js"></script>
     <script src="installer-ui.js"></script>
     <script src="account-ui.js"></script>
     <script src="setup-ui.js"></script>
     <script src="jetbrains-ui.js"></script>
     <script src="plan-session.js"></script>
     <script src="core-ui.js"></script>
+    <script src="core-loader.js"></script>
     <script src="model-discovery.js"></script>
     <script src="client-presentation.js"></script>
     <script src="manager-ui.js"></script>

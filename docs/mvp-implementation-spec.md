@@ -8,7 +8,7 @@ The interface exposes **Overview / Providers / Apps / About**. Usage, personal B
 
 Where an upstream GitHub, VS Code, package-manager, model-price, or client-log interface changes, the implementation must prefer a safe explicit Unsupported/SchemaError state over undocumented credential extraction, brittle private-state mutation, fabricated data, or silent fallback.
 
-The checked-in code contains connected native deployment/recovery, installation, account, Resources and Usage slices. The [implementation status](implementation-status.md) records their actual coverage and dated validation. The complete milestone is still unaccepted: clean-machine and real-client checks remain open, and unsupported upstream capabilities remain explicit. CopilotBYOKManager is an unreleased product with its own storage, credential and build identifiers; historical-brand compatibility is not required.
+The checked-in code contains connected native deployment/recovery, installation, account, Resources and Usage slices. The [implementation status](implementation-status.md) records their actual coverage and dated validation. Clean-machine and real-client checks remain open as tracked quality work. CopilotBYOKManager uses its own storage, credential and build identifiers; historical-brand compatibility is not required.
 
 ## 2. Product goal
 
@@ -162,7 +162,7 @@ A deployment preview must:
 - expire after 15 minutes;
 - be consumable once.
 
-The frontend may not send a serialized deployment operation list to apply. A user click on Publish configuration may obtain a native preview and immediately submit its one-shot ID for ordinary provider publication. View changes remains optional. CLI environment replacement and removing a provider group must display the preview and require a subsequent explicit confirmation. Native preview and apply remain separate commands; no stale plan may be silently rebuilt and applied.
+The frontend may not send a serialized deployment operation list to apply. A user click on Publish configuration may obtain a native preview and immediately submit its one-shot ID for ordinary provider publication. View changes remains optional. CLI registry publication and removing a provider group must display the preview and require a subsequent explicit confirmation. Native preview and apply remain separate commands; no stale plan may be silently rebuilt and applied.
 
 ### 6.3 Apply consistency
 
@@ -216,7 +216,7 @@ At minimum:
 
 Ownership validation requires the persisted evidence listed above. Foreign-owner, unmanaged, legacy, and ambiguous state must be Conflict/ActionRequired for VS Code, JetBrains, Resources and all revocation.
 
-Copilot CLI publication is an explicit replacement of its single user-environment route. It must accept existing unmanaged, foreign-owner, legacy or externally edited configuration without requiring a prior ownership proof. The user selects CLI, reviews the replacement and confirms the native-held plan. Preserve exact before bytes in the private transaction journal, reject changes since preview, and record fresh ownership only after successful application. Keep unrelated shell content and environment variables unchanged. Revocation still requires a durable installation/Connection/resource binding corroborated by current ownership markers. Pre-existing provider content edits are accepted; each plan snapshots the current bytes for stale checks and rollback. Public provider-registry precedence and custom-root checks remain separate from ownership.
+Copilot CLI publication updates an installation/Connection-scoped named provider and every enabled model in the public `~/.copilot/providers.json` registry. Existing manual or other-tool entries are preserved. Prior ownership is not a publication prerequisite: the user selects CLI, reviews the change and confirms the native-held plan. Multiple Connections keep independent durable claims in the shared file, including identical upstream model IDs under different providers. Preserve the selected default model and unrelated configuration. Snapshot exact before bytes privately; reject changes since preview, and record ownership only after successful application. Revocation requires the durable installation/Connection/resource binding and matching scoped provider name, removing only that provider's entries. Provider content edits are accepted before review, not after it. Republishing a Connection with a durably owned legacy environment route prepares its cleanup in the same transaction; independently configured routes remain untouched. Unknown registry schemas and custom-root overrides are unsupported. See [the pinned CLI contract](copilot-cli-support.md).
 
 ### 6.8 Deletion
 
@@ -276,7 +276,10 @@ The Clients page must expose:
 - `Install all missing` for all required supported components;
 - plan preview before execution;
 - per-operation progress and final result;
+- typed preparation/download/install/verification/cancellation stages; approximate byte progress when observed, otherwise an indeterminate display, plus elapsed time;
 - re-detection after completion.
+
+Windows re-detection must observe current user/machine search paths and the reviewed WinGet portable directory even if the manager's inherited PATH is stale. All CLI consumers share discovery. Cancellation preserves completed components and keeps the manager window usable; later-component cancellation is Partial when earlier components succeeded. Progress carries no raw installer output, URLs or credentials.
 
 ### 8.2 Backend-owned allowlist
 
@@ -857,6 +860,10 @@ Core refresh must not query hidden Usage/Billing/pricing/Resources or separate a
 
 No static success rate, resource count, or token value.
 
+Shared provider capabilities must not appear as a unique CLI badge. App cards and Overview preserve Missing, Unavailable, Unsupported, empty and configured states and show current provider names/model counts. A publication selector describes the next operation, not the client's active provider. Publication results and history identify both provider and target. A publishing-eligibility switch is labeled Allow publishing; the recommendation field is labeled Recommended model.
+
+The dashboard renders independently of optional component/account checks. Installation and account details load on explicit expansion/refresh; presentation-only redraws never trigger them. Manual App confirmations are stored per Connection and shown as user-confirmed records, with changed configuration requiring reconfirmation. A confirmation binds the provider revision shown in its guide and does not read or verify App configuration.
+
 ### 17.2 Clients
 
 For each logical surface show:
@@ -938,7 +945,7 @@ Browser-only mode must display a prominent Demo/Preview badge, use disposable da
 
 Dialogs must move focus inside, contain keyboard navigation, isolate the background, support Escape where the operation can be dismissed, and restore focus after closure. Connection/resource editors confirm before discarding unsaved changes; dirty tracking must not serialize passwords or other input values into draft storage. Saving prevents duplicate submission or misleading cancellation, and errors persist with retained input and a focused field/summary.
 
-Keep common Connection fields visible and provider/protocol/header details under advanced options. Do not infer or rewrite the selected protocol from a display label. Publishing retains per-target results beyond a toast: VS Code requires model selection, JetBrains requires IDE restart and model selection, CLI requires a new terminal/session, and Copilot app setup remains manual. The legacy exclusive CLI route is not preselected by default; its scope is explained before review.
+Keep common Connection fields visible and provider/protocol/header details under advanced options. Do not infer or rewrite the selected protocol from a display label. Publishing retains per-target results beyond a toast: VS Code requires model selection, JetBrains requires IDE restart and model selection, CLI requires a new session and /model selection, and Copilot app setup remains manual. CLI credential-file publication requires explicit target selection and confirmation, with multi-provider preservation explained before review.
 
 Catalog checkboxes join the same editable Connection draft and are included by Save connection, without a separate add confirmation or automatic full-catalog selection. Endpoint/credential changes invalidate pending catalog selections while preserving original/manual model lines. Make the first-Connection action directly visible ahead of optional environment reminders; recovery takes precedence. A client Review action locates that exact target, and a skipped App result links to the manual guide for that publication's Connection. Active publication prevents navigation, refresh or misleading cancellation; failures remain visible and consume the previous preview; a user-initiated retry obtains a fresh native plan and repeats any required confirmation. Closing an idle inline preview restores its opener; completion focuses the persistent per-target result. Apps remain individual cards, sorted by supported/configured, supported/unconfigured, then unsupported or unavailable. Label the VS Code default profile as Copilot Chat; suppress the built-in Agents entry only when discovery establishes it shares the same writable catalog with that edition's Chat profile. Report observed shared configuration on each supported consumer without fabricating ownership. Account alignment is an optional manual record, never an automatic login/synchronization claim or prerequisite for publishing providers.
 

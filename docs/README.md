@@ -9,7 +9,7 @@ Start with the product overview in [English](../README.md) or [简体中文](../
 | [English user guide](user-guide.md) / [中文用户手册](user-guide.zh-CN.md) | Four pages, provider fields, model discovery, client follow-up, revoke/recovery and FAQ |
 | [Release engineering](release-engineering.md) | English v0.1 scope, reproducible Windows/macOS builds, dry-run/Draft/publish and artifact checks |
 | [Apple secrets and acceptance](release-secrets.md) | Maintainer-only account/credential/environment setup, real Intel/Apple Silicon/Windows checks |
-| [Release notes template](release-notes-template.md) | Version/SHA-bound download, signing, client, privacy and pending-acceptance disclosures |
+| [Release notes template](release-notes-template.md) | Version/SHA-bound features, downloads and installation instructions |
 | [Screenshot provenance](images/README.md) | Current browser UI, simulated data, reproduction and privacy limits |
 
 The first release is the four-page v0.1 core, not the complete extended MVP. The release gates and local validation procedures below are **in Chinese**; the English engineering and Apple guides explain the operational steps and remaining acceptance in English. Hidden feature acceptance stays deferred, not PASS.
@@ -20,6 +20,8 @@ The first release is the four-page v0.1 core, not the complete extended MVP. The
 | --- | --- |
 | [MVP implementation specification](mvp-implementation-spec.md) | Normative scope, state semantics and final acceptance criteria |
 | [Architecture](architecture.md) | Current modules, trust boundaries, storage and required invariants |
+| [Copilot CLI registry](copilot-cli-support.md) | Pinned providers.json schema, multi-provider publication, legacy cleanup and validation |
+| [Windows installer support](installer-support.md) | Fresh CLI discovery, real terminal progress, cancellation and partial results |
 | [Adversarial review](adversarial-review.md) | Failure cases and required mitigations |
 | [Security policy](../SECURITY.md) | Private reporting and sensitive-data rules |
 | [Agent entry point](../AGENTS.md) | Development workflow, product identities and required checks |

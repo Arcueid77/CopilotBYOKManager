@@ -58,7 +58,7 @@ export async function nativeSuite(options, record) {
       }
       await d.browser.$('#content[data-route="overview"]').waitForExist();
       assert.equal(await d.browser.$('.preview-banner').isExisting(), false);
-      assert.ok((await d.browser.$('.manager-health').getText()).length > 0);
+      assert.ok((await d.browser.$('[data-home-sources]').getText()).length > 0);
       assert.equal(await d.browser.$('.manager-pending').isExisting(), false);
       assert.deepEqual(await d.browser.execute(() => [...document.querySelectorAll('#primary-nav [data-route]')].map(el => el.dataset.route)), ['overview','connections','clients','about']);
       if (options.evidenceRoot) await d.browser.saveScreenshot(path.join(options.evidenceRoot,'native-home.png'));
@@ -104,6 +104,8 @@ export async function nativeSuite(options, record) {
       fs.writeFileSync(settings, original);
     });
     await step('B04 Reviewed deployment UI, foreign data, backups and manual app', async () => {
+      const registry = file('home/.copilot/providers.json');
+      write('home/.copilot/providers.json', JSON.stringify({providers:[{name:'manual-fixture',type:'openai',baseUrl:'https://manual.example.test/v1'}],models:[{id:'gpt-5',provider:'manual-fixture'}]}));
       await d.click('[data-action="deploy-connection"]');
       for (const checkbox of await d.browser.$$('input[name="deployment-target"]')) {
         if (await checkbox.isEnabled() && !(await checkbox.isSelected())) await checkbox.click();
@@ -117,6 +119,18 @@ export async function nativeSuite(options, record) {
       const app = (await d.ipc('get_dashboard')).clients.find(c => c.kind === 'github-copilot-app');
       assert.equal(app.supportsWrite, false);
       assert.equal((await d.ipc('get_setup_status')).manualConfirmed, false);
+      const cli = (await d.ipc('get_dashboard')).clients.find(c => c.kind === 'copilot-cli');
+      const first = JSON.parse(fs.readFileSync(registry));
+      assert.equal(first.providers.length, 2);
+      const second = await put({id:null,name:'Second CLI provider',apiKey:'fixture-second-cli-key',models:[{id:'same',modelId:'gpt-5',name:'Same ID',enabled:true},{id:'other',modelId:'org/code:latest',name:'Other model',enabled:true}]});
+      const plan = await d.ipc('preview_deployment',{connectionId:second.id,targetIds:[cli.id]});
+      assert.equal(JSON.parse(fs.readFileSync(registry)).providers.length, 2, 'Preview cannot write');
+      await apply(plan);
+      const current = (await d.ipc('get_dashboard')).clientConfigurations.find(c => c.targetId === cli.id);
+      assert.equal(current.sources.length, 3);
+      assert.equal(current.sources.find(s => s.connectionId === second.id).modelCount, 2);
+      const revoke = await d.ipc('preview_revoke_and_delete',{connectionId:second.id}); await apply(revoke);
+      assert.deepEqual(JSON.parse(fs.readFileSync(registry)), first, 'Scoped revoke preserves the first and manual provider');
     });
     await step('B05 No-op bytes, stale targets, unknown, replay and unconfirmed IDs', async () => {
       const before = hash(fs.readFileSync(settings)); const stat = fs.statSync(settings).mtimeMs;
@@ -150,14 +164,22 @@ export async function nativeSuite(options, record) {
       const p = await preview(); fault('crash:first-write'); await assert.rejects(apply(p)); await restart();
       assert.ok((await d.ipc('get_dashboard')).deploymentRecovery);
       const restore = await d.ipc('preview_deployment_recovery', {});
-      // The first sorted resource is a fake HKCU value. Alter it externally.
-      write('private/registry/COPILOT_MODEL', Buffer.from([1, 0, 0, 0, 88, 0, 0, 0]));
+      // Mutate the actual first attempted file, not a presumed legacy HKCU slot.
+      const state = await d.ipc('get_dashboard');
+      const journal = JSON.parse(fs.readFileSync(path.join(path.dirname(state.statePath),'deployment-journal.json')));
+      const attempted = journal.writes.slice(0,journal.attempted).find(w => JSON.stringify(w.before) !== JSON.stringify(w.after));
+      assert.equal(attempted.resource.kind, 'file');
+      assert.ok(fs.lstatSync(attempted.resource.location).isFile() && !fs.lstatSync(attempted.resource.location).isSymbolicLink());
+      const changed = fs.realpathSync.native(attempted.resource.location);
+      const relative = path.relative(fs.realpathSync.native(root), changed);
+      assert.ok(relative && !path.isAbsolute(relative) && !relative.split(path.sep).includes('..'));
+      fs.appendFileSync(changed, '\n');
       await assert.rejects(d.ipc('apply_deployment_recovery', { planId: restore.id, confirmed: true }));
       const conflict = await d.ipc('preview_deployment_recovery', {}); assert.ok(conflict.view.conflictCount > 0);
       const keep = await d.ipc('preview_deployment_recovery', { action: 'keepCurrent' });
-      const before = hash(fs.readFileSync(file('private/registry/COPILOT_MODEL')));
+      const before = hash(fs.readFileSync(changed));
       await d.ipc('apply_deployment_recovery', { planId: keep.id, confirmed: true });
-      assert.equal(hash(fs.readFileSync(file('private/registry/COPILOT_MODEL'))), before);
+      assert.equal(hash(fs.readFileSync(changed)), before);
       assert.ok(!(await d.ipc('get_dashboard')).deploymentRecovery);
     });
     await step('B09 Real parsers, exact estimate and repeated import', async () => {
@@ -604,6 +626,29 @@ export async function nativeSuite(options, record) {
       assert.doesNotMatch(fs.readFileSync(settings,'utf8'),new RegExp(fresh.id));
       assert.match(fs.readFileSync(settings,'utf8'),/Foreign/);
       await assert.rejects(d.ipc('apply_deployment_plan',{planId:revoke.id,confirmed:true}));
+    });
+    await step('B33 Installer progress and cancellation preserve completed components and the native window', async () => {
+      for (const name of ['copilot-cli','copilot-app']) {
+        const marker=file(`private/installed-${name}`); if(fs.existsSync(marker)) fs.unlinkSync(marker);
+      }
+      write('private/installed-delayed-copilot-app','1');
+      await d.click('#primary-nav [data-route="clients"]'); await d.click('#refresh-button');
+      await until(async()=>(await d.browser.$$('[data-install-action="install-all"]')).length===1,'Installation controls did not refresh');
+      const details=await d.browser.$('#installation-panel').parentElement();
+      if(await details.getAttribute('open')===null) await details.$('summary').click();
+      await d.click('[data-install-action="install-all"]'); await d.click('[data-install-confirm]');
+      await d.browser.$('.install-modal progress[value="20"]').waitForExist();
+      assert.equal(await d.browser.$('[data-install-modal-close]').isEnabled(),false);
+      await d.click('[data-install-cancel-run]');
+      await d.browser.$('.install-modal .install-result-list').waitForExist();
+      const run=(await d.ipc('get_install_runs'))[0];
+      assert.equal(run.status,'partial');
+      assert.equal(run.results.find(r=>r.componentId==='copilot-cli').status,'completedAndVerified');
+      assert.equal(run.results.find(r=>r.componentId==='github-copilot-app').status,'cancelled');
+      assert.ok((await d.ipc('get_dashboard')).clients.length);
+      if(options.evidenceRoot) await d.browser.saveScreenshot(path.join(options.evidenceRoot,'native-install-cancel.png'));
+      await d.click('[data-install-modal-close]');
+      assert.equal(await d.browser.execute(()=>document.querySelector('.app-shell').inert),false);
     });
   } finally {
     try { await d?.stop(); await server.close(); record('B cleanup: owned driver, app and loopback ports', 'PASS', 'Closed owned process tree; fixtures retained privately'); }

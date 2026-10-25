@@ -119,8 +119,8 @@ Required mitigation:
 - persisted state keeps the deployed provider target identity and historical fingerprint; provider authority checks the installation/Connection/physical-resource binding plus current markers, while current-plan fingerprints protect writes;
 - marker text alone is never sufficient ownership proof;
 - foreign-owner or ambiguous state is a conflict for other client/resource writes and every revocation;
-- CLI publication uses explicit reviewed replacement authority instead of prior ownership: snapshot unmanaged/foreign/changed configuration, require confirmation, recheck live bytes, and commit new ownership only after verified writes;
-- test that CLI replacement accepts unowned configuration while cancellation performs no write, stale reviews fail, rollback restores original bytes, and revocation rejects foreign or ambiguous ownership. Pre-existing edits to an owned provider are allowed; changes after plan creation or after application still block stale writes or rollback.
+- CLI registry publication requires explicit confirmation rather than prior ownership; merge the stable installation/Connection-scoped group, preserve other providers/models, recheck the entire file, and commit a separate proof per Connection only after verified writes;
+- test provider/model ID collisions across Connections, update/revoke isolation, exact foreign-number preservation, duplicate keys, unknown schemas, dangling model references, bounded arrays, symlink/reparse rejection, secret-free observations, cancellation, stale plans and conditional rollback. Republish only the same Connection's durably owned legacy environment route as a journaled upgrade; never clear another Connection's route.
 - current status is a read-only observation of public configuration. Do not turn publication history or a field-order-sensitive digest into a current-state warning. Test edits, deletion, malformed data, bounded names/counts, credential redaction and shared catalogs.
 
 ### Rollback overwrites newer user work
@@ -241,6 +241,10 @@ Required mitigation:
 - independent operations may continue;
 - overall status remains Partial when appropriate;
 - shared CLI/app package operations are deduplicated rather than executed twice.
+- cancellation preserves already verified components and produces Partial when later components stop; a late cancel cannot erase complete success;
+- installer progress is typed metadata, scoped to the current operation; unknown terminal formats remain indeterminate and raw output never reaches history or IPC;
+- a pseudoconsole child is attached to its own job before resume, cannot inherit the GUI's diagnostic handles, and receives only child-local cancellation; regression helpers prove the parent remains alive and output drains during teardown;
+- fresh Windows PATH and WinGet portable-location observations prevent a stale parent environment from hiding a newly installed CLI; malformed registry observations remain unknown.
 
 ### False success
 
@@ -576,7 +580,7 @@ Required mitigation:
 - block navigation, refresh, edits and dismissal during publication, retain failure/uncertainty feedback, and require a fresh one-shot preview after failure; direct-publication preflight also blocks duplicate submission and navigation, while CLI replacement and group removal still require review confirmation;
 - put catalog selections into the same saved draft; unchecking or endpoint invalidation may remove only unchanged checkbox-added lines, never original/manual models;
 - retain escaped per-target results and client-specific next steps beyond transient notifications;
-- require explicit selection of the legacy exclusive CLI route by default;
+- require explicit selection and confirmation for CLI provider-registry publication;
 - keep official quota/Billing outside local-usage filter state, preserving unknown/partial values and exact decimals.
 
 The isolated browser suite covers these behaviors, including replacement attempts and failure recovery.
@@ -601,6 +605,9 @@ Required mitigation:
 - typed state machines in backend and frontend;
 - badges/tooltips explain source and evidence;
 - overall status derives from per-step records without erasing detail.
+- App cards and Overview distinguish a failed configuration read from a successful empty catalog. Manual confirmation is scoped to the provider's native revision, never promoted to observed client configuration; stale, malformed and oversized confirmation records fail explicitly.
+- Core dashboard rendering must not wait for optional account/network or installer/version probes. Independent request results have generation guards so a late response cannot replace newer state or a saved window preference.
+- User cancellation is counted separately from failed/incomplete installation, retaining already completed components.
 
 ### XSS/HTML injection
 

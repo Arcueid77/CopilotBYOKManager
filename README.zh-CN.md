@@ -25,9 +25,9 @@
 
 > **v0.1** — [下载 Windows 和 macOS 安装包](https://github.com/Arcueid77/CopilotBYOKManager/releases)。
 
-![总览：当前浏览器预览，使用模拟数据](docs/images/overview-zh-CN.png)
+![总览：四页界面示例，使用模拟数据](docs/images/overview-zh-CN.png)
 
-*当前四页界面，使用模拟数据；没有真实账号、密钥或客户端写入。[截图说明](docs/images/README.md)。*
+*四页界面示例，使用模拟数据。[截图说明](docs/images/README.md)。*
 
 ## 为什么使用 CopilotBYOKManager
 
@@ -50,7 +50,7 @@
 | 客户端 | 方式 | 当前边界与下一步 |
 | --- | --- | --- |
 | VS Code Stable / Insiders / 配置档案 | 自动 | 受管供应商分组。在对应档案选用模型并测试。[检测细节](docs/vscode-detection.md) |
-| GitHub Copilot CLI | 自动 | 确认后替换当前环境配置。完成后新开终端和会话。[客户端手册](docs/user-guide.zh-CN.md#5-到客户端里选用并验证) |
+| GitHub Copilot CLI | 自动 | 通过 `providers.json` 同时配置多个供应商和模型。重启 CLI 会话后用 `/model` 选择。[客户端手册](docs/user-guide.zh-CN.md#5-到客户端里选用并验证) |
 | 已审核的 JetBrains GitHub Copilot 插件发行版 | 自动，固定版本 | 关闭后重开 IDE，分别登录、选用和测试。[确切版本表](docs/jetbrains-support.md#version-and-compatibility-boundary) |
 | GitHub Copilot App | 手动 | 无自动写入或验证，在 App 内配置并核对。[指引](docs/user-guide.zh-CN.md#5-到客户端里选用并验证) |
 
@@ -83,7 +83,7 @@ Windows 安装器会在需要时下载 WebView2。
 1. 在 **供应商**添加 Provider 地址与 API 密钥。
 2. 获取模型目录或手动填写模型 ID，保存供应商。
 3. 选择需要配置的应用与档案；CLI 需要主动勾选。
-4. 点击 **发布配置**并查看逐目标结果；可选 **查看变更**，覆盖 CLI 或移除供应商分组时须确认。
+4. 点击 **发布配置**并查看逐目标结果；可选 **查看变更**，发布到 CLI 或移除供应商分组时须确认。
 5. 在客户端选用模型，发送一条不含敏感内容的最小测试请求。
 
 真实请求可能产生费用。字段、客户端步骤、更新、撤销和恢复见[中文手册](docs/user-guide.zh-CN.md)与[English guide](docs/user-guide.md)。
@@ -92,7 +92,7 @@ Windows 安装器会在需要时下载 WebView2。
 
 | 功能 | 提供什么 |
 | --- | --- |
-| 集中管理供应商 | 端点、协议、密钥引用、模型目录和首选模型 |
+| 集中管理供应商 | 端点、协议、密钥引用、模型目录和推荐模型 |
 | 多客户端发布 | 明确选择目标，保留逐目标结果 |
 | 写入前审核 | 原生持有、到期失效、单次消费的计划与目标重检 |
 | 按归属撤销 | 仅清理受管配置，保留其他供应商 |
@@ -119,13 +119,13 @@ Windows 安装器会在需要时下载 WebView2。
 
 ## 已知限制
 
-- CLI 当前为单条受管环境路由，不是多供应商同时路由。
+- CLI 使用默认的 `~/.copilot/providers.json`，暂不支持自定义配置根目录。[注册表说明](docs/copilot-cli-support.md)
 - Copilot App 需要手动配置；JetBrains 仅限确切审核过的插件发行版。
 - Usage、Billing、Resources/MCP/Skills/Instructions 不属于本核心版。已有数据保留。[功能记录](docs/feature-availability.md)。
 
 ## 界面截图
 
-全部来自当前浏览器前端，使用**模拟数据**。总览见首屏。
+四页界面示例，使用**模拟数据**。总览见首屏。
 
 | 供应商编辑 · 浅色 | 发布预览 · 深色 |
 | --- | --- |

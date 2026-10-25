@@ -17,7 +17,6 @@ fn unknown() -> AppError {
 }
 
 pub(super) fn observe(connections: &[Connection]) -> AppResult<Vec<ConfiguredSource>> {
-    provider_registry::ensure_environment_is_effective()?;
     from_values(&values()?, connections)
 }
 

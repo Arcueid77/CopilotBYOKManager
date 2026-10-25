@@ -225,6 +225,41 @@ pub fn executable(name: &str) -> Option<PathBuf> {
     };
     checked(&format!("bin/{file}")).ok()
 }
+#[cfg(windows)]
+pub fn installer_process(
+    executable: &Path,
+    args: &[&std::ffi::OsStr],
+    cancel: &std::sync::atomic::AtomicBool,
+    progress: &mut dyn FnMut(crate::installer::progress::InstallProgress),
+) -> AppResult<crate::native_process::CapturedOutput> {
+    use crate::installer::progress::{InstallPhase, InstallProgress};
+    constrain(executable)?;
+    if args
+        .get(2)
+        .is_some_and(|value| *value == std::ffi::OsStr::new("GitHub.CopilotApp"))
+        && installed("delayed-copilot-app")
+    {
+        let started = std::time::Instant::now();
+        while started.elapsed() < std::time::Duration::from_secs(10) {
+            if cancel.load(std::sync::atomic::Ordering::Acquire) {
+                return Err(AppError::Cancelled);
+            }
+            progress(InstallProgress {
+                phase: InstallPhase::Downloading,
+                downloaded_bytes: Some(2 * 1024 * 1024),
+                total_bytes: Some(10 * 1024 * 1024),
+                elapsed_seconds: started.elapsed().as_secs(),
+            });
+            std::thread::sleep(std::time::Duration::from_millis(100));
+        }
+    }
+    process(
+        executable,
+        args,
+        crate::native_process::CaptureMode::Standard,
+    )
+}
+
 pub fn process(
     executable: &Path,
     args: &[&std::ffi::OsStr],
@@ -282,12 +317,14 @@ pub fn process(
         if installed("vscode-copilot") {
             stdout = "GitHub.copilot-chat@0.65.0\n".into();
         }
-    } else if args.as_slice() == ["--version"] {
+    } else if args.as_slice() == ["--version"]
+        || args.as_slice() == ["--no-auto-update", "--version"]
+    {
         stdout = if executable
             .file_name()
             .is_some_and(|name| name == "copilot.exe")
         {
-            "GitHub Copilot CLI 1.0.90\n".into()
+            "GitHub Copilot CLI 1.0.90.\n".into()
         } else if executable
             .file_name()
             .is_some_and(|name| name == "pwsh.exe")

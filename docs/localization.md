@@ -12,6 +12,8 @@ Navigation, buttons, form help, statuses, dialogs, recovery warnings, Usage, Res
 
 The core edition exposes Overview / Providers / Apps / About (总览 / 供应商 / 应用 / 关于). Extended Usage/Resources translations remain but their pages are not mounted. Connection/client domain IDs and native command names are unchanged by user-facing labels.
 
+Core user-facing terms are Provider / 供应商, App / 应用, Provider to publish / 本次发布, Allow publishing / 允许发布 and Recommended model / 推荐模型. Keep internal Connection IDs unchanged. Existing model/provider names are data, not translation keys. Language redraws preserve expanded sections without starting their optional probes.
+
 Appearance offers System / Light / Dark (跟随系统 / 浅色 / 深色), saved separately under `copilot-byok-manager.appearance`. Only these values are accepted. Denied storage keeps the choice for this session. System changes apply only in System mode. Theme changes are CSS-only, including during a draft/reviewed preview: no field values are stored, no redraw occurs and no native command is called.
 
 The Windows tray menu follows the selected interface language rather than mixing languages. A bounded presentation-only `set_tray_locale` command accepts `en` or `zh-CN`; it updates fixed native Open main window / Exit labels, with no file, credential, deployment or account operation. Initial labels use English until the frontend applies its saved/system choice. Rapid switches are coalesced, a failed label update leaves the window language intact, and locale is still persisted only in the existing browser preference. Browser preview never sends this command.

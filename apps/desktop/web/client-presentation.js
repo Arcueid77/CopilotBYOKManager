@@ -49,8 +49,30 @@
   }
 
   function description(client) {
+    if (client.kind === "copilot-cli" && client.detected && client.supportsWrite) return tr("发布后，在新的 CLI 会话中用 /model 选择模型。");
     if (vscode(client) && client.detected && client.supportsWrite && /^vscode:(stable|insiders):default$/.test(client.id)) return tr("使用 VS Code 默认配置档案的模型目录。");
     return client.detail;
+  }
+
+  function configurationState(client, snapshot, data = {}) {
+    if (["error", "unknown"].includes(client.status)) return { state: "unavailable", label: tr("检测不可用"), sources: [] };
+    if (!client.detected && client.status === "read-only") return { state: "unsupported", label: tr("应用或插件已停用"), sources: [] };
+    if (!client.detected) return { state: "missing", label: tr("未安装"), sources: [] };
+    if (client.kind === "github-copilot-app") {
+      if (data.errors?.manualProviders) return { state: "unavailable", label: tr("手动配置记录读取失败"), sources: [] };
+      const records = (data.manualProviders ?? []).filter(record => record.state !== "notConfirmed");
+      const sources = records.flatMap(record => {
+        const connection = snapshot.connections.find(value => value.id === record.connectionId);
+        return connection ? [{ ...record, name: connection.name, manual: true }] : [];
+      });
+      return { state: "manual", label: sources.length ? tr("手动配置记录") : tr("在 Copilot App 中手动添加供应商"), sources };
+    }
+    if (!client.supportsWrite) return { state: "unsupported", label: tr("不支持自动发布"), sources: [] };
+    const current = configuration(client, snapshot);
+    if (current?.state === "unsupported") return { state: "unsupported", label: tr("此配置格式暂不支持"), sources: [] };
+    if (!current || current.state !== "available") return { state: "unavailable", label: tr("配置读取失败"), sources: [] };
+    const values = sources(client, snapshot);
+    return { state: values.length ? "configured" : "empty", label: values.length ? tr("已配置 {0} 个供应商", values.length) : tr("未配置供应商"), sources: values };
   }
 
   function capability(client) {
@@ -60,5 +82,5 @@
     return client.supportsWrite ? tr("Copilot 已安装 · 支持自动配置") : tr("Copilot 已安装 · 当前版本不支持自动配置");
   }
 
-  return { name, visible, ordered, configuration, sources, description, capability };
+  return { name, visible, ordered, configuration, sources, description, capability, configurationState };
 });

@@ -24,6 +24,8 @@
   let lastResult = null;
   let lastRun = null;
   let renderVersion = 0;
+  let activeInstall = false;
+  let observationError = null;
 
   const browserObservations = [
     {
@@ -81,7 +83,8 @@
       broken: tr("需要修复"),
       unknown: tr("检测不可用"),
       inProgress: tr("安装中"),
-      complete: tr("已结束，请核对各组件"),
+      running: tr("安装中"),
+      complete: tr("已完成"),
       partial: tr("部分完成"),
       interrupted: tr("已中断"),
       elevationDenied: tr("管理员确认被拒绝"),
@@ -90,7 +93,7 @@
       skippedAlreadyReady: tr("已就绪，无需安装"),
       skippedDependencyFailed: tr("依赖不可用"),
       failed: tr("失败"),
-      cancelled: tr("已取消，需重新检测"),
+      cancelled: tr("已取消"),
       timedOut: tr("已超时，需重新检测"),
     }[status] ?? status;
   }
@@ -159,9 +162,9 @@
         <span class="install-runtime">${isDesktop ? tr("支持的 Windows 组件可审核安装") : tr("浏览器试用，不执行安装")}</span>
       </div>
       ${loading && values.length === 0 ? `<div class="install-loading">${tr("检测组件中…")}</div>` : ""}
-      ${!loading && values.length === 0 ? `<div class="install-loading">${tr("尚未读取组件状态，请刷新。")}</div>` : ""}
+      ${!loading && values.length === 0 ? `<div class="install-loading">${observationError ? tr("组件状态读取失败，请重新检测。") : tr("尚未读取组件状态，请刷新。")}</div>` : ""}
       ${values.length ? `<div class="install-grid">${values.map(renderComponent).join("")}</div>` : ""}
-      ${lastRun ? `<div class="install-result-summary"><div><strong>${tr("安装 {0}", escapeHtml(statusLabel(lastRun.status)))}</strong><span>${escapeHtml(lastRun.detail)}</span></div>${lastRun.status === "running" ? `<button class="button danger small" data-install-action="cancel" data-run-id="${escapeHtml(lastRun.id)}">${tr("取消任务")}</button>` : ""}</div>` : ""}
+      ${lastRun ? `<div class="install-result-summary"><div><strong>${tr("安装 {0}", escapeHtml(statusLabel(lastRun.status)))}</strong></div></div>${window.CopilotBYOKManagerInstallProgress.render(lastRun, { componentName, statusLabel })}` : ""}
       ${lastResult ? renderLastResult(lastResult) : ""}
     `;
   }
@@ -195,17 +198,12 @@
   }
 
   function renderLastResult(result) {
-    const successes = result.results.filter((item) =>
-      ["completedAndVerified", "skippedAlreadyReady"].includes(item.status),
-    ).length;
-    const failures = result.results.length - successes;
     return `
       <div class="install-result-summary">
         <div>
           <strong>${tr("上次安装")}</strong>
-          <span>${tr("计划 {0}", escapeHtml(result.planId))}</span>
         </div>
-        <div><strong>${successes}</strong> ${tr("完成 ·")} <strong>${failures}</strong> ${tr("待核对")}</div>
+        <div>${escapeHtml(window.CopilotBYOKManagerInstallProgress.summaryText(result.results))}</div>
       </div>
     `;
   }
@@ -303,7 +301,7 @@
   function dialog() { return modalLifecycle ??= window.CopilotBYOKManagerUI.modal({ root: modalRoot, background: document.querySelector(".app-shell"), cleanup() { modalRoot.replaceChildren(); currentModalPlan = null; } }); }
 
   async function previewInstall(componentIds) {
-    if (loading || componentIds.length === 0) return;
+    if (loading || activeInstall || componentIds.length === 0) return;
     loading = true;
     markChanged();
     try {
@@ -390,24 +388,39 @@
 
   async function applyPlan(plan) {
     if (!isDesktop) return;
-    if (!currentModalPlan || currentModalPlan.id !== plan.id) return;
+    if (activeInstall || !currentModalPlan || currentModalPlan.id !== plan.id) return;
+    activeInstall = true;
     currentModalPlan = null;
+    const view = modalRoot.querySelector(".install-modal");
+    view.querySelector(".modal-header h2").textContent = tr("正在安装");
+    view.setAttribute("aria-label", tr("正在安装"));
+    view.querySelector(".eyebrow").hidden = true;
+    dialog().setBusy(true);
+    view.querySelectorAll("[data-install-modal-close]").forEach(button => { button.disabled = true; });
     const confirm = modalRoot.querySelector("[data-install-confirm]");
     if (confirm) {
       confirm.disabled = true;
+      confirm.hidden = true;
       confirm.textContent = tr("安装中…");
     }
+    view.querySelectorAll(".modal-footer [data-install-modal-close]").forEach(button => { button.hidden = true; });
     let runId = null;
     let unlisten = null;
     let poll = null;
     let closed = false;
+    let cancellationRequested = false;
     const acceptProgress = (run) => {
-      if (closed || run?.planId !== plan.id) return;
+      if (closed || !view.isConnected || run?.planId !== plan.id) return;
+      if (lastRun?.id === run.id && lastRun.status !== "running" && run.status === "running") return;
+      if (lastRun?.id === run.id && lastRun.results.length > run.results.length) return;
       runId = run.id; lastRun = run;
-      const list = modalRoot.querySelector(".install-plan-list");
-      if (list) list.innerHTML = `<p role="status">${escapeHtml(run.currentComponentId ? tr("正在处理 {0}", componentName(run.currentComponentId)) : statusLabel(run.status))}</p><p>${escapeHtml(run.detail)}</p>${run.results.map((item) => `<p>${escapeHtml(componentName(item.componentId))}: ${escapeHtml(statusLabel(item.status))}</p>`).join("")}`;
-      const cancel = modalRoot.querySelector("[data-install-cancel-run]");
-      if (cancel) cancel.disabled = run.status !== "running";
+      const list = view.querySelector(".install-plan-list");
+      const display = cancellationRequested && run.status === "running" ? { ...run, progress: { ...run.progress, phase: "cancelling" } } : run;
+      const title = run.status === "running" ? window.CopilotBYOKManagerInstallProgress.phaseLabel(display.progress?.phase ?? "preparing") : tr("安装结果");
+      view.querySelector(".modal-header h2").textContent = title; view.setAttribute("aria-label", title);
+      if (list) list.innerHTML = window.CopilotBYOKManagerInstallProgress.render(display, { componentName, statusLabel });
+      const cancel = view.querySelector("[data-install-cancel-run]");
+      if (cancel) cancel.disabled = cancellationRequested || run.status !== "running";
       markChanged();
     };
     const cancel = document.createElement("button");
@@ -415,36 +428,46 @@
     cancel.dataset.installCancelRun = ""; cancel.disabled = true;
     modalRoot.querySelector(".modal-footer")?.append(cancel);
     cancel.addEventListener("click", async () => {
-      if (!runId) return;
+      if (!runId || cancellationRequested) return;
+      cancellationRequested = true;
       cancel.disabled = true;
-      try { await invoke("cancel_install_run", { runId }); cancel.textContent = tr("已请求取消，结束后将重新检测"); }
-      catch (error) { showToast(error?.message ?? String(error), "error"); cancel.disabled = false; }
+      cancel.textContent = tr("正在停止安装…");
+      if (lastRun) acceptProgress(lastRun);
+      try { await invoke("cancel_install_run", { runId }); }
+      catch (error) { if (!closed && view.isConnected) { cancellationRequested = false; showToast(error?.message ?? String(error), "error"); cancel.disabled = false; cancel.textContent = tr("取消安装"); } }
     });
     const observe = async () => {
-      try { const runs = await invoke("get_install_runs"); const run = runs.find((value) => value.planId === plan.id); if (run) { acceptProgress(run); cancel.disabled = run.status !== "running"; } }
+      try { const runs = await invoke("get_install_runs"); const run = runs.find((value) => value.planId === plan.id); if (run) acceptProgress(run); }
       catch { /* Final native result/history reports persistence errors explicitly. */ }
     };
     try {
       if (window.__TAURI__?.event?.listen) unlisten = await window.__TAURI__.event.listen("copilot-byok-manager:install-progress", (event) => {
-        acceptProgress(event.payload); cancel.disabled = event.payload?.status !== "running";
+        acceptProgress(event.payload);
       });
       poll = setInterval(observe, 2000);
       const result = await invoke("apply_install_plan", { planId: plan.id });
+      closed = true;
+      activeInstall = false;
+      dialog().setBusy(false);
       lastResult = result;
       observations = result.observations;
       document.dispatchEvent(new Event("copilot-byok-manager:refresh-setup"));
       currentModalPlan = null;
       showResultModal(result);
-      const attention = result.results.some((item) => !["completedAndVerified", "skippedAlreadyReady"].includes(item.status));
-      showToast(attention ? tr("安装已结束，仍有项目需要核对") : tr("所选组件已重新检测并确认就绪"), attention ? "warning" : "success");
+      const counts = window.CopilotBYOKManagerInstallProgress.summarize(result.results);
+      showToast(window.CopilotBYOKManagerInstallProgress.summaryText(result.results), counts.attention ? "warning" : "success");
       markChanged();
     } catch (error) {
-    closeModal();
-    showToast(
-      tr("{0} 重试前请重新生成预览。", error?.message ?? String(error)),
-      "error",
-    );
-    } finally { closed = true; if (poll) clearInterval(poll); unlisten?.(); }
+      if (view.isConnected) {
+        view.querySelector(".install-plan-list").innerHTML = `<p role="alert">${tr("安装未完成，请重新检测后重试。")}</p><details><summary>${tr("详细原因")}</summary><p>${escapeHtml(error?.message ?? String(error))}</p></details>`;
+        cancel.remove();
+      }
+      showToast(tr("安装未完成，请重新检测后重试。"), "error");
+    } finally {
+      closed = true; activeInstall = false; if (poll) clearInterval(poll); unlisten?.();
+      dialog().setBusy(false);
+      if (view.isConnected) view.querySelectorAll("[data-install-modal-close]").forEach(button => { button.disabled = false; button.hidden = false; });
+    }
 
   }
 
@@ -464,7 +487,7 @@
                   (item) => `
                     <div class="install-result-row">
                       <span class="install-status ${statusClass(item.status)}">${escapeHtml(statusLabel(item.status))}</span>
-                      <div><strong>${escapeHtml(componentName(item.componentId))}</strong><p>${escapeHtml(item.detail)}</p></div>
+                      <div><strong>${escapeHtml(componentName(item.componentId))}</strong>${["completedAndVerified", "skippedAlreadyReady", "cancelled"].includes(item.status) ? "" : `<details><summary>${tr("详细原因")}</summary><p>${escapeHtml(item.detail)}</p></details>`}</div>
                     </div>`,
                 )
                 .join("")}
@@ -515,7 +538,10 @@
   });
 
   window.CopilotBYOKManagerInstaller = {
-    hydrate(value, runs) { observations = value; if (Array.isArray(runs)) { lastRun = runs[0] ?? null; if (lastRun) lastResult = { planId: lastRun.planId, results: lastRun.results }; } renderVersion += 1; },
+    get busy() { return activeInstall; },
+    get checking() { return loading; },
+    setLoading(value) { loading = value; markChanged(); },
+    hydrate(value, runs, error = null) { observations = value; observationError = error; if (Array.isArray(runs)) { lastRun = runs[0] ?? null; lastResult = lastRun ? { planId: lastRun.planId, results: lastRun.results } : null; } renderVersion += 1; },
     mount: ensurePanel,
     previewStatus: () => structuredClone(browserObservations),
     preview: previewInstall,

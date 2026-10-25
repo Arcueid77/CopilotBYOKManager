@@ -31,7 +31,7 @@ function seedPreview() {
     ],
     clients: [
       { id: 'vscode:stable:default', kind: 'vs-code-copilot', name: 'VS Code · Default', detail: 'Example workspace profile. Other provider groups are preserved when publishing this configuration.', path: 'Example VS Code profile', detected: true, supportsWrite: true, status: 'available' },
-      { id: 'copilot-cli:user-environment', kind: 'copilot-cli', name: 'GitHub Copilot CLI', detail: 'Example single environment route.', path: 'Example CLI environment', detected: true, supportsWrite: true, status: 'available' },
+      { id: 'copilot-cli:user-environment', kind: 'copilot-cli', name: 'GitHub Copilot CLI', detail: 'Example multi-provider registry.', path: '~/.copilot/providers.json', detected: true, supportsWrite: true, status: 'available' },
       { id: 'github-copilot-app:local', kind: 'github-copilot-app', name: 'GitHub Copilot App', detail: 'Example installation. Provider setup is manual; no private application stores are accessed.', path: 'Example App installation', detected: true, supportsWrite: false, status: 'read-only' },
       { id: 'jetbrains:example', kind: 'jetbrains-copilot', name: 'JetBrains · Example Profile', detail: 'Example unavailable profile.', path: 'No real IDE is used in this preview', detected: false, supportsWrite: false, status: 'not-installed' },
     ], deployments: [], clientConfigurations: [],

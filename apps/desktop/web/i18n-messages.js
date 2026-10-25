@@ -5,6 +5,52 @@
   if (typeof module === "object" && module.exports) module.exports = messages;
   else root.CopilotBYOKManagerMessages = messages;
 })(globalThis, () => ({
+  "查看各应用的供应商配置与最近操作。": ["查看各应用的供应商配置与最近操作。","See provider configuration and recent actions across your apps."],
+  "发布后，在新的 CLI 会话中用 /model 选择模型。": ["发布后，在新的 CLI 会话中用 /model 选择模型。","After publishing, use /model in a new CLI session to choose a model."],
+  "手动配置记录读取失败": ["手动配置记录读取失败","Manual setup records could not be read"],
+  "手动配置记录": ["手动配置记录","Manual setup records"],
+  "不支持自动发布": ["不支持自动发布","Automatic publication unavailable"],
+  "此配置格式暂不支持": ["此配置格式暂不支持","Configuration format unsupported"],
+  "允许发布": ["允许发布","Allow publishing"],
+  "允许发布 {0}": ["允许发布 {0}","Allow publishing {0}"],
+  "你已确认": ["你已确认","Confirmed by you"],
+  "修改后待确认": ["修改后待确认","Confirm updated configuration"],
+  "供应商已移除": ["供应商已移除","Provider removed"],
+  "{0} 个可发布，{1} 个已暂停。": ["{0} 个可发布，{1} 个已暂停。","{0} available to publish · {1} paused."],
+  "窗口行为": ["窗口行为","Window behavior"],
+  "账号状态读取失败，请重试。": ["账号状态读取失败，请重试。","Account status could not be read. Try again."],
+  "本次手动配置": ["本次手动配置","Provider to configure manually"],
+  "本次发布": ["本次发布","Provider to publish"],
+  "发布到 {0} 的供应商": ["发布到 {0} 的供应商","Provider to publish to {0}"],
+  "当前协议": ["当前协议","Current protocol"],
+  "更改协议": ["更改协议","Change protocol"],
+  "读取确认记录…": ["读取确认记录…","Reading confirmation records…"],
+  "浏览器试用，不保存手动确认。": ["浏览器试用，不保存手动确认。","Browser preview does not save manual confirmations."],
+  "供应商已变化，请关闭后刷新。": ["供应商已变化，请关闭后刷新。","The provider changed. Close this dialog and refresh."],
+  "已记录你的确认，可在应用页查看。": ["已记录你的确认，可在应用页查看。","Your confirmation is recorded on Apps."],
+  "供应商已修改，请在 App 中更新后重新确认。": ["供应商已修改，请在 App 中更新后重新确认。","This provider changed. Update it in the App and confirm again."],
+  "确认将关联到当前供应商配置。": ["确认将关联到当前供应商配置。","This confirmation applies to the current provider configuration."],
+  "确认记录无法读取，请关闭后刷新重试。": ["确认记录无法读取，请关闭后刷新重试。","Confirmation records could not be read. Close and refresh to retry."],
+  "已记录 {0} 的手动配置确认。": ["已记录 {0} 的手动配置确认。","Manual setup confirmation saved for {0}."],
+  "确认未保存，请关闭后刷新重试。": ["确认未保存，请关闭后刷新重试。","Confirmation was not saved. Close and refresh to retry."],
+  "应用或插件已停用": ["应用或插件已停用","App or plugin disabled"],
+  "{0} 个已完成": ["{0} 个已完成","{0} completed"],
+  "{0} 个已取消": ["{0} 个已取消","{0} cancelled"],
+  "{0} 个需处理": ["{0} 个需处理","{0} need attention"],
+  "组件状态读取失败，请重新检测。": ["组件状态读取失败，请重新检测。","Component status could not be read. Detect again."],
+  "正在安装": ["正在安装","Installing"],
+  "准备安装": ["准备安装", "Preparing installation"],
+  "下载安装包": ["下载安装包", "Downloading package"],
+  "校验并安装": ["校验并安装", "Verifying and installing"],
+  "检测安装结果": ["检测安装结果", "Checking installation"],
+  "正在停止安装…": ["正在停止安装…", "Stopping installation…"],
+  "安装器运行中": ["安装器运行中", "Installer running"],
+  "等待安装": ["等待安装", "Queued"],
+  "未完成": ["未完成", "Not completed"],
+  "已就绪 {0} / {1}": ["已就绪 {0} / {1}", "Ready: {0} / {1}"],
+  "已用时 {0}": ["已用时 {0}", "Elapsed: {0}"],
+  "约 {0} / {1} · {2}%": ["约 {0} / {1} · {2}%", "About {0} / {1} · {2}%"],
+  "安装未完成，请重新检测后重试。": ["安装未完成，请重新检测后重试。", "Installation did not complete. Detect again before retrying."],
   "未配置供应商": ["未配置供应商", "No providers configured"],
   "配置读取失败": ["配置读取失败", "Configuration could not be read"],
   "模型数量未知": ["模型数量未知", "Model count unavailable"],
@@ -31,12 +77,13 @@
   "已配置 {0} 个供应商": ["已配置 {0} 个供应商","Configured providers: {0}"],
   "发布配置": ["发布配置", "Publish configuration"],
   "查看变更": ["查看变更", "View changes"],
-  "选择应用后发布，完成后显示结果。覆盖 CLI 环境配置或移除模型时会先请你确认。": ["选择应用后发布，完成后显示结果。覆盖 CLI 环境配置或移除模型时会先请你确认。", "Choose apps and publish to see the results. Replacing CLI environment configuration or removing models requires confirmation first."],
+  "选择应用后发布，完成后显示结果。发布到 CLI 或移除模型时会先请你确认。": ["选择应用后发布，完成后显示结果。发布到 CLI 或移除模型时会先请你确认。", "Choose apps and publish to see the results. Publishing to CLI or removing models requires confirmation first."],
+  "通过 providers.json 管理多个供应商及模型。": ["通过 providers.json 管理多个供应商及模型。", "Manage multiple providers and models through providers.json."],
   "选择应用后即可发布。": ["选择应用后即可发布。", "Choose apps to publish to."],
   "目标已改变，发布时会重新检查。": ["目标已改变，发布时会重新检查。", "Targets changed. Publication will check them again."],
   "正在发布配置…": ["正在发布配置…", "Publishing configuration…"],
   "发布失败或结果不确定。请核对结果与恢复状态后重试。": ["发布失败或结果不确定。请核对结果与恢复状态后重试。", "Publication failed or its outcome is uncertain. Check the results and recovery status before retrying."],
-  "管理连接并发布到应用。": ["管理连接并发布到应用。", "Manage connections and publish to apps."],
+  "管理连接并发布到应用。": ["管理供应商并发布到应用。","Manage providers and publish to apps."],
   "添加供应商端点和模型，发布到支持的客户端。": ["添加供应商端点和模型，发布到支持的客户端。", "Add provider endpoints and models, then publish to supported clients."],
   "供应商": ["供应商", "Providers"],
   "应用": ["应用", "Apps"],
@@ -114,17 +161,14 @@
   ],
   "另有 {0} 个来源": ["另有 {0} 个来源", "{0} more sources"],
   "查看 {0} 的手动配置步骤": ["查看 {0} 的手动配置步骤", "Manual setup for {0}"],
-  "此客户端保持手动配置，请在 App 内添加本次连接。": [
-    "此客户端保持手动配置，请在 App 内添加本次连接。",
-    "This client requires manual setup. Add this connection inside the App."
-  ],
+  "此客户端保持手动配置，请在 App 内添加本次连接。": ["请在 App 内添加此供应商。","Add this provider in the App."],
   "配置一个供应商，用于多个 Copilot 客户端": [
     "配置一个供应商，用于多个 Copilot 应用", "One provider configuration, across Copilot apps"
   ],
   "先添加端点、密钥与模型，再选择你要使用的客户端并预览发布。": ["先添加端点、密钥与模型，再选择应用并发布。","Add an endpoint, key and models, then choose apps and publish."],
   "添加第一个连接": ["添加第一个供应商", "Add your first provider"],
   "选择连接并发布": ["选择供应商并发布", "Choose a provider to publish"],
-  "该连接已移除，请重新选择连接。": ["该连接已移除，请重新选择连接。", "This connection was removed. Choose another connection."],
+  "该连接已移除，请重新选择连接。": ["该供应商已移除，请重新选择。","This provider was removed. Choose another provider."],
   "本地 Token 汇总与覆盖范围": ["本地 Token 汇总与覆盖范围", "Local token totals and coverage"],
   "筛选仅影响本地观察，不改变官方额度或账单。": [
     "筛选仅影响本地观察，不改变官方额度或账单。", "Filters apply only to local observations, not official quota or Billing."
@@ -522,14 +566,8 @@
     "测试模型目录接口…",
     "Testing the model catalog endpoint…"
   ],
-  "连接已停用，客户端配置仍保留。": [
-    "连接已停用，客户端配置仍保留。",
-    "Connection disabled; client configuration is retained."
-  ],
-  "连接已启用，尚未重新发布。": [
-    "连接已启用，尚未重新发布。",
-    "Connection enabled; not yet redeployed."
-  ],
+  "连接已停用，客户端配置仍保留。": ["已暂停发布，应用中的配置保留。","Publishing paused. Existing app configuration is retained."],
+  "连接已启用，尚未重新发布。": ["已允许发布。","Publishing enabled."],
   "{0} 重试前请重新预览。": [
     "{0} 重试前请重新预览。",
     "{0} Preview again before retrying."
@@ -690,10 +728,7 @@
     "{0}{1} 个目标配置已写入{2}{3}。请核对下方结果与下一步。",
     "{0}{1} target configurations written{2}{3}. Review the results and next steps below."
   ],
-  "请先启用连接再发布。": [
-    "请先启用连接再发布。",
-    "Enable the connection before deploying."
-  ],
+  "请先启用连接再发布。": ["请先允许该供应商发布。","Enable publishing for this provider first."],
   "只读恢复期间不能发布。": [
     "只读恢复期间不能发布。",
     "Deployment is blocked during read-only recovery."
@@ -702,14 +737,8 @@
     "预览撤销并删除",
     "Preview revoke and delete"
   ],
-  "受管配置已撤销，连接已删除": [
-    "受管配置已撤销，连接已删除",
-    "Managed configuration revoked and connection deleted"
-  ],
-  "撤销未完成，连接已保留。请查看活动记录或恢复状态。": [
-    "撤销未完成，连接已保留。请查看活动记录或恢复状态。",
-    "Revocation is incomplete; the connection was retained. Check activity or recovery status."
-  ],
+  "受管配置已撤销，连接已删除": ["受管配置已撤销，供应商已删除","Managed configuration revoked and provider deleted"],
+  "撤销未完成，连接已保留。请查看活动记录或恢复状态。": ["撤销未完成，供应商已保留。请查看发布记录或恢复状态。","Revocation is incomplete; the provider was retained. Check publication history or recovery status."],
   "确认撤销并删除": [
     "确认撤销并删除",
     "Confirm revoke and delete"
@@ -722,10 +751,7 @@
     "已核验的受管目标：",
     "Verified managed targets:"
   ],
-  "受管配置与连接一并删除。外部修改会使预览失效；凭据清理失败单独报告。": [
-    "受管配置与连接一并删除。外部修改会使预览失效；凭据清理失败单独报告。",
-    "Managed configuration and the connection will be removed together. External changes invalidate the preview; credential cleanup failures are reported separately."
-  ],
+  "受管配置与连接一并删除。外部修改会使预览失效；凭据清理失败单独报告。": ["受管配置与供应商一并删除。预览后发生改动须重新核对；密钥清理结果单独报告。","Remove the provider and its managed configuration. Changes after preview require a new review; key cleanup is reported separately."],
   "仅停止管理…": [
     "仅停止管理…",
     "Stop managing only…"
@@ -754,10 +780,7 @@
     "移除供应商",
     "Remove provider"
   ],
-  "只读恢复期间不能修改连接": [
-    "只读恢复期间不能修改连接",
-    "Connections cannot be edited during read-only recovery"
-  ],
+  "只读恢复期间不能修改连接": ["只读恢复期间不能修改供应商","Providers cannot be edited during read-only recovery"],
   "模型行须包含模型 ID。": [
     "模型行须包含模型 ID。",
     "Each model row must include a model ID."
@@ -770,18 +793,12 @@
     "名称过长，请缩短后重试。",
     "The name is too long. Shorten it and try again."
   ],
-  "请填写连接名称。": [
-    "请填写连接名称。",
-    "Enter a connection name."
-  ],
+  "请填写连接名称。": ["请填写供应商名称。","Enter a provider name."],
   "保存连接": [
     "保存供应商",
     "Save provider"
   ],
-  "连接已保存，尚未发布到客户端。": [
-    "连接已保存，尚未发布到客户端。",
-    "Connection saved; not yet deployed to clients."
-  ],
+  "连接已保存，尚未发布到客户端。": ["供应商已保存，可发布到应用。","Provider saved and ready to publish to apps."],
   "保存中…": [
     "保存中…",
     "Saving…"
@@ -790,10 +807,7 @@
     "请填写必填项，并检查端点地址格式。",
     "Complete required fields and check the endpoint URL format."
   ],
-  "连接未保存。{0}": [
-    "连接未保存。{0}",
-    "Connection not saved. {0}"
-  ],
+  "连接未保存。{0}": ["供应商未保存。{0}","Provider not saved. {0}"],
   "允许匿名的端点可留空": [
     "允许匿名的端点可留空",
     "Leave blank if the endpoint allows anonymous access"
@@ -838,10 +852,7 @@
     "API 密钥",
     "API key"
   ],
-  "保存在系统凭据库，不写入连接配置文件。": [
-    "保存在系统凭据库，不写入连接配置文件。",
-    "Stored in the operating system credential store, not in the connection file."
-  ],
+  "保存在系统凭据库，不写入连接配置文件。": ["保存在系统凭据库。","Stored in the operating-system credential store."],
   "获取模型目录": [
     "获取模型目录",
     "Discover model catalog"
@@ -878,14 +889,8 @@
     "，名称可省略。",
     "; the display name is optional."
   ],
-  "首选模型": [
-    "首选模型",
-    "Preferred model"
-  ],
-  "CLI 写入 COPILOT_MODEL；其他客户端仅作本软件推荐，仍需在客户端选择。": [
-    "CLI 写入 COPILOT_MODEL；其他客户端仅作本软件推荐，仍需在客户端选择。",
-    "Writes COPILOT_MODEL for CLI. In other clients this is only a recommendation; select the model in the client."
-  ],
+  "首选模型": ["推荐模型","Recommended model"],
+  "首选模型仅作推荐，发布后请在客户端选择。": ["发布后在应用中选用模型。","Select the model in the app after publishing."],
   "高级选项：供应商类型、接口协议与请求头": [
     "高级选项：供应商类型、接口协议与请求头",
     "Advanced: provider type, protocol and headers"
@@ -954,10 +959,7 @@
     "用量数据库不可用： {0}",
     "Usage database unavailable: {0}"
   ],
-  "连接存储处于只读恢复： {0}": [
-    "连接存储处于只读恢复： {0}",
-    "Connection storage is in read-only recovery: {0}"
-  ],
+  "连接存储处于只读恢复： {0}": ["供应商存储处于只读恢复：{0}","Provider storage is in read-only recovery: {0}"],
   "可用（格式 v{0}）": [
     "可用（格式 v{0}）",
     "Available (schema v{0})"
@@ -1127,10 +1129,7 @@
     "浏览器试用 · 示例数据 · 不修改电脑",
     "Browser preview · sample data · no changes to your computer"
   ],
-  "独立的 Copilot 配置管理工具，处于预发布阶段，与 GitHub 无隶属关系。": [
-    "独立的 Copilot 配置管理工具，处于预发布阶段，与 GitHub 无隶属关系。",
-    "An independent Copilot configuration manager, currently pre-release and not affiliated with GitHub."
-  ],
+  "独立的 Copilot 配置管理工具，处于预发布阶段，与 GitHub 无隶属关系。": ["独立的 Copilot 配置管理工具。","An independent Copilot configuration manager."],
   "配置保存在本地，登录凭据留在各官方客户端。": [
     "配置保存在本地，登录凭据留在各官方客户端。",
     "Configuration stays local; sign-in credentials stay in the official clients."
@@ -1208,10 +1207,7 @@
     "模拟计划已变化，请重新预览",
     "Simulated plan changed; preview again"
   ],
-  "连接不存在": [
-    "连接不存在",
-    "Connection does not exist"
-  ],
+  "连接不存在": ["供应商不存在","Provider not found"],
   "预览已过期或已使用，请重新预览": [
     "预览已过期或已使用，请重新预览",
     "Preview expired or consumed; preview again"
@@ -1224,10 +1220,7 @@
     "发布目标不存在",
     "Deployment target does not exist"
   ],
-  "请先启用连接再发布": [
-    "请先启用连接再发布",
-    "Enable the connection before deploying"
-  ],
+  "请先启用连接再发布": ["请先允许该供应商发布","Enable publishing for this provider first"],
   "浏览器试用 has no native resource catalog": [
     "浏览器试用 has no native resource catalog",
     "Browser preview has no native resource catalog"
@@ -1597,9 +1590,9 @@
     "未检测到",
     "Not detected"
   ],
-  "使用所选供应商替换 CLI 当前环境配置。请主动勾选。": [
-    "使用所选供应商替换 CLI 当前环境配置。请主动勾选。",
-    "Replace the current CLI environment configuration with the selected provider. Select this target explicitly."
+  "写入 providers.json，保留其他供应商。请主动勾选。": [
+    "写入 providers.json，保留其他供应商。请主动勾选。",
+    "Write to providers.json and keep other providers. Select this target explicitly."
   ],
   "发布 {0}": [
     "发布 {0}",
@@ -2057,9 +2050,9 @@
     "请先重启此 IDE，再到客户端的模型选择器中选用刚发布的模型。",
     "Restart this IDE, then select the newly deployed model in its model picker."
   ],
-  "请新开终端和 CLI 会话，并核对实际选用的首选模型。": [
-    "请新开终端和 CLI 会话，并核对实际选用的首选模型。",
-    "Open a new terminal and CLI session, then verify the preferred model actually in use."
+  "请启动新的 CLI 会话，用 /model 选择供应商与模型。": [
+    "请启动新的 CLI 会话，用 /model 选择供应商与模型。",
+    "Start a new CLI session and use /model to select a provider and model."
   ],
   "此客户端保持手动配置，请到客户端页查看步骤。": [
     "此客户端保持手动配置，请到客户端页查看步骤。",
@@ -2133,10 +2126,7 @@
     "管理供应商",
     "Manage providers"
   ],
-  "没有启用的连接，请添加连接或到连接页重新启用。": [
-    "没有启用的连接，请添加连接或到连接页重新启用。",
-    "No enabled connections. Add one or enable an existing connection on the Connections page."
-  ],
+  "没有启用的连接，请添加连接或到连接页重新启用。": ["所有供应商均已暂停发布。","Publishing is paused for all providers."],
   "核对账号": [
     "核对账号",
     "Review accounts"
@@ -2177,22 +2167,16 @@
     "查看恢复状态",
     "View recovery status"
   ],
-  "连接存储进入只读恢复，暂不能修改或发布。": [
-    "连接存储进入只读恢复，暂不能修改或发布。",
-    "Connection storage is in read-only recovery; editing and deployment are unavailable."
-  ],
-  "单一环境路由": [
-    "单一环境路由",
-    "Single environment route"
+  "连接存储进入只读恢复，暂不能修改或发布。": ["供应商存储进入只读恢复，暂不能修改或发布。","Provider storage is in read-only recovery; editing and publishing are unavailable."],
+  "多供应商 · 多模型": [
+    "多供应商 · 多模型",
+    "Multiple providers · Multiple models"
   ],
   "已移除的连接": [
     "已移除的连接",
     "Removed connection"
   ],
-  " · 已停用，配置保留": [
-    " · 已停用，配置保留",
-    " · Disabled; configuration retained"
-  ],
+  " · 已停用，配置保留": [" · 发布已暂停"," · Publishing paused"],
   "无法核验": [
     "无法核验",
     "Cannot verify"
@@ -2229,14 +2213,8 @@
     "启用 {0}",
     "Enable {0}"
   ],
-  " · 已停用，客户端配置保留": [
-    " · 已停用，客户端配置保留",
-    " · Disabled; client configuration retained"
-  ],
-  "首选": [
-    "首选",
-    "Preferred"
-  ],
+  " · 已停用，客户端配置保留": [" · 发布已暂停，应用配置保留"," · Publishing paused; app configuration retained"],
+  "首选": ["推荐","Recommended"],
   "空目录：发布将移除本连接分组": [
     "空目录：发布将移除本连接分组",
     "Empty catalog: deployment removes this connection's group"
@@ -2285,9 +2263,9 @@
     "请在 Copilot App 中手动添加供应商。",
     "Add the provider manually in Copilot App."
   ],
-  "确认后替换 CLI 当前的供应商环境配置，并设置首选模型。完成后新开终端和 CLI 会话。": [
-    "确认后替换 CLI 当前的供应商环境配置，并设置首选模型。完成后新开终端和 CLI 会话。",
-    "Confirm to replace the current CLI provider environment and set the preferred model. Then open a new terminal and CLI session."
+  "确认后将此供应商及全部启用模型写入 providers.json，保留其他供应商。启动新的 CLI 会话后，用 /model 选择模型。": [
+    "确认后将此供应商及全部启用模型写入 providers.json，保留其他供应商。启动新的 CLI 会话后，用 /model 选择模型。",
+    "Confirm to write this provider and all enabled models to providers.json, preserving other providers. Start a new CLI session and select a model with /model."
   ],
   "已添加勾选模型，请核对后保存连接。": [
     "已添加勾选模型，请核对后保存连接。",
@@ -2325,10 +2303,7 @@
     "已存密钥缺失或不可访问，请解锁凭据库或重新输入。",
     "The saved key is missing or inaccessible. Unlock the credential store or re-enter it."
   ],
-  "连接设置已改变，请重新输入用于该端点的密钥。": [
-    "连接设置已改变，请重新输入用于该端点的密钥。",
-    "Connection settings changed. Re-enter the key for this endpoint."
-  ],
+  "连接设置已改变，请重新输入用于该端点的密钥。": ["供应商设置已改变，请重新输入用于该端点的密钥。","Provider settings changed. Re-enter the key for this endpoint."],
   "请检查端点、密钥和请求头；远程端点须使用 HTTPS。": [
     "请检查端点、密钥和请求头；远程端点须使用 HTTPS。",
     "Check the endpoint, key and headers. Remote endpoints require HTTPS."
@@ -2369,10 +2344,7 @@
     "首选模型不在启用列表中，请重新选择。",
     "The preferred model is not enabled. Select it again."
   ],
-  "每个连接最多 {0} 个模型，请减少勾选数量。": [
-    "每个连接最多 {0} 个模型，请减少勾选数量。",
-    "A connection supports at most {0} models. Select fewer models."
-  ],
+  "每个连接最多 {0} 个模型，请减少勾选数量。": ["每个供应商最多 {0} 个模型，请减少勾选数量。","Each provider supports up to {0} models. Select fewer models."],
   "目录包含格式不受支持的模型，请手动填写模型 ID。": [
     "目录包含格式不受支持的模型，请手动填写模型 ID。",
     "The catalog contains unsupported model formats. Enter model IDs manually."

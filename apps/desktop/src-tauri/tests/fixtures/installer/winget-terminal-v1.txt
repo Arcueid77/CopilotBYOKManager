@@ -1,0 +1,6 @@
+  512 KB / 2.00 MB
+Downloading https://example.test/fixture.zip
+  2.00 MB / 10.0 MB
+  4.00 MB / 10.0 MB
+已成功验证安装程序哈希
+正在提取存档...

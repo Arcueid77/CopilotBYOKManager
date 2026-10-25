@@ -19,12 +19,16 @@ use rusqlite::OptionalExtension;
 use serde::{Deserialize, Serialize};
 use tauri::State;
 
+pub mod manual;
+
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Preferences {
     pub connection_id: Option<String>,
     pub account_confirmation: Option<AccountConfirmation>,
     pub manual_connection_revision: Option<String>,
+    #[serde(default)]
+    pub manual_providers: std::collections::BTreeMap<String, manual::Confirmation>,
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -303,8 +307,8 @@ fn build(state: &ManagedState, accounts: AccountStatusSnapshot) -> Result<SetupS
         .map(|t| drift(t, selected, &records, deployment::fingerprint_target(t)))
         .collect();
     let manual_confirmed = selected
-        .and_then(|c| fingerprint::json("setup-connection-v1", c).ok())
-        .is_some_and(|r| preferences.manual_connection_revision.as_ref() == Some(&r));
+        .and_then(|c| manual::observe(&preferences, c).ok())
+        .is_some_and(|record| record.state == manual::ConfirmationState::UserConfirmed);
     Ok(SetupStatus {
         preferences,
         target,
@@ -340,24 +344,10 @@ pub fn select_setup_connection(
 pub fn confirm_manual_provider(
     state: State<'_, ManagedState>,
     connection_id: String,
+    expected_revision: String,
     confirmed: bool,
 ) -> Result<(), String> {
-    if !confirmed {
-        return Err("Confirm completing the app's manual provider setup".into());
-    }
-    let revision = {
-        let s = state.store().map_err(error)?;
-        fingerprint::json(
-            "setup-connection-v1",
-            &s.connection(&connection_id).map_err(error)?,
-        )
-        .map_err(error)?
-    };
-    with_db(&state, |db| {
-        let mut p = load(db)?;
-        p.manual_connection_revision = Some(revision);
-        save(db, &p)
-    })
+    manual::confirm(&state, &connection_id, &expected_revision, confirmed)
 }
 #[tauri::command(rename_all = "camelCase")]
 pub async fn confirm_account_alignment(

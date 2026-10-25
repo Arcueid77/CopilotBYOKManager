@@ -373,12 +373,8 @@ struct StdioRpc<'a> {
 }
 impl<'a> StdioRpc<'a> {
     fn start(cancel: &'a AtomicBool) -> RpcResult<Self> {
-        let executable = native_process::resolve_on_path(if cfg!(windows) {
-            &["copilot.exe"]
-        } else {
-            &["copilot"]
-        })
-        .ok_or(RuntimeError(
+        let executable = crate::adapters::copilot_cli::discovery::native_executable()
+            .ok_or(RuntimeError(
             DataStatus::Missing,
             "A native Copilot CLI executable was not found; npm shell wrappers are not executed",
         ))?;

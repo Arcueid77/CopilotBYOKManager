@@ -37,13 +37,13 @@ fn live_catalog_accepts_reordering_manual_edits_and_unmanaged_groups_without_aud
     groups.as_array_mut().unwrap().push(json!({"vendor":"customendpoint","name":"Manual provider","apiKey":"foreign-secret","models":[]}));
     let bytes = serde_json::to_vec(&groups).unwrap();
     fs::write(&path, &bytes).unwrap();
-    let current = observe(&[target(&path)], &[]);
+    let current = observe(&[target(&path)], &[], "fixture-owner");
     assert_eq!(current[0].state, ConfigurationState::Available);
     assert_eq!(current[0].sources.len(), 2);
     assert_eq!(current[0].sources[0].name, "Edited provider");
     assert_eq!(current[0].sources[0].model_count, 2);
     assert!(current[0].sources[0].connection_id.is_none());
-    let known = observe(&[target(&path)], &[connection()]);
+    let known = observe(&[target(&path)], &[connection()], "fixture-owner");
     assert_eq!(known[0].sources[0].connection_id.as_deref(), Some("one"));
     assert_eq!(current[0].sources[1].name, "Manual provider");
     assert_eq!(current[0].sources[1].model_count, 0);
@@ -68,16 +68,18 @@ fn deletion_is_empty_configuration_but_read_failure_is_unknown() {
     seed(&path);
     let target = target(&path);
     assert_eq!(
-        observe(std::slice::from_ref(&target), &[])[0].sources.len(),
+        observe(std::slice::from_ref(&target), &[], "fixture-owner")[0]
+            .sources
+            .len(),
         1
     );
     fs::write(&path, b"[]").unwrap();
-    let empty = observe(std::slice::from_ref(&target), &[]);
+    let empty = observe(std::slice::from_ref(&target), &[], "fixture-owner");
     assert_eq!(empty[0].state, ConfigurationState::Available);
     assert!(empty[0].sources.is_empty());
     fs::remove_file(&path).unwrap();
     assert_eq!(
-        observe(std::slice::from_ref(&target), &[])[0].state,
+        observe(std::slice::from_ref(&target), &[], "fixture-owner")[0].state,
         ConfigurationState::Available
     );
     for bytes in [
@@ -85,7 +87,7 @@ fn deletion_is_empty_configuration_but_read_failure_is_unknown() {
         br#"[{"vendor":"customendpoint","models":"secret"}]"#,
     ] {
         fs::write(&path, bytes).unwrap();
-        let current = observe(std::slice::from_ref(&target), &[]);
+        let current = observe(std::slice::from_ref(&target), &[], "fixture-owner");
         assert_eq!(current[0].state, ConfigurationState::Unavailable);
         assert!(current[0].sources.is_empty());
     }
@@ -103,7 +105,7 @@ fn shared_chat_and_agents_read_the_same_actual_catalog_without_historical_proofs
     let separate = target(&root.path().join("separate.json"));
     let mut unsupported = chat.clone();
     unsupported.supports_write = false;
-    let result = observe(&[chat, agents, separate, unsupported], &[]);
+    let result = observe(&[chat, agents, separate, unsupported], &[], "fixture-owner");
     assert_eq!(result[0].sources[0].model_count, 1);
     assert_eq!(result[1].sources[0].model_count, 1);
     assert!(result[2].sources.is_empty());
@@ -117,7 +119,7 @@ fn provider_display_metadata_is_bounded_and_known_keys_cannot_be_echoed_as_names
     let root = tempfile::tempdir().unwrap();
     let path = root.path().join("models.json");
     fs::write(&path, br#"[{"vendor":"customendpoint","name":"secret-value","apiKey":"secret-value","models":[]}]"#).unwrap();
-    let current = observe(&[target(&path)], &[]);
+    let current = observe(&[target(&path)], &[], "fixture-owner");
     assert_eq!(current[0].state, ConfigurationState::Available);
     assert!(!serde_json::to_string(&current)
         .unwrap()
@@ -136,7 +138,7 @@ fn provider_display_metadata_is_bounded_and_known_keys_cannot_be_echoed_as_names
 fn successful_publication_notices_do_not_claim_client_selection_or_account_verification() {
     assert!(selection_notice(ClientKind::VsCodeCopilot).contains("请到客户端的模型选择器"));
     assert!(selection_notice(ClientKind::JetBrainsCopilot).contains("重启相关 IDE"));
-    assert!(selection_notice(ClientKind::CopilotCli).contains("COPILOT_MODEL"));
+    assert!(selection_notice(ClientKind::CopilotCli).contains("/model"));
     assert!(selection_notice(ClientKind::GithubCopilotApp).contains("手动添加"));
     for kind in [
         ClientKind::VsCodeCopilot,

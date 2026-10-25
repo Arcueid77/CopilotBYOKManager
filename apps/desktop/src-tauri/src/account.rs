@@ -1082,14 +1082,7 @@ fn find_gh_executable() -> Option<PathBuf> {
 }
 
 fn find_copilot_executable() -> Option<PathBuf> {
-    #[cfg(windows)]
-    {
-        native_process::resolve_on_path(&["copilot.exe"])
-    }
-    #[cfg(not(windows))]
-    {
-        native_process::resolve_on_path(&["copilot"])
-    }
+    crate::adapters::copilot_cli::discovery::native_executable()
 }
 
 fn find_vscode_executable() -> Option<PathBuf> {

@@ -1,6 +1,8 @@
-# Current-interface screenshot provenance
+# Interface screenshot provenance
 
 Captured 2026-10-16 from `apps/desktop/web/`, based on `20562b2` plus the confirmed CLI replacement changes. These are **browser fallback previews with simulated data**.
+
+The 2026-10-24 product-consistency changes have not been recaptured. These images illustrate the four-page interface at the recorded source; current behavior is documented in the user guides.
 
 | Files | View |
 | --- | --- |

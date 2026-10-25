@@ -25,9 +25,9 @@
 
 > **v0.1** — [Download Windows and macOS packages](https://github.com/Arcueid77/CopilotBYOKManager/releases).
 
-![Overview — current browser preview with simulated data](docs/images/overview-en.png)
+![Overview — interface example with simulated data](docs/images/overview-en.png)
 
-*Current four-page interface, simulated browser preview. No real accounts, keys or client writes. [Capture details](docs/images/README.md).*
+*Four-page interface example, captured with simulated data. [Capture details](docs/images/README.md).*
 
 ## Why CopilotBYOKManager
 
@@ -50,7 +50,7 @@ Configure providers in these clients:
 | Client | Mode | Current boundary and next step |
 | --- | --- | --- |
 | VS Code Stable / Insiders / profiles | Automatic | Owned provider groups. Select the model in the correct profile, then test. [Detection details](docs/vscode-detection.md) |
-| GitHub Copilot CLI | Automatic | Replaces the current environment route after confirmation. Open a new terminal/session. [Client guide](docs/user-guide.md#5-select-and-verify-the-model-in-each-client) |
+| GitHub Copilot CLI | Automatic | Multiple providers and models in `providers.json`. Restart the CLI session and select with `/model`. [Client guide](docs/user-guide.md#5-select-and-verify-the-model-in-each-client) |
 | Reviewed JetBrains GitHub Copilot distributions | Automatic, version-pinned | Close/reopen IDEs, sign in separately, select and test. [Exact reviewed versions](docs/jetbrains-support.md#version-and-compatibility-boundary) |
 | GitHub Copilot App | Manual | No automatic provider writes or verification. Configure and verify inside the App. [Guide](docs/user-guide.md#5-select-and-verify-the-model-in-each-client) |
 
@@ -83,7 +83,7 @@ To explore now, open [the current browser frontend](apps/desktop/web/index.html)
 1. In **Providers**, add the provider endpoint and API key.
 2. Fetch models or enter model IDs manually; save the provider.
 3. Select your apps/profiles. CLI requires explicit selection.
-4. Click **Publish configuration** and read each target's result. **View changes** is optional; CLI replacement and removing a provider group require confirmation.
+4. Click **Publish configuration** and read each target's result. **View changes** is optional; CLI publication and removing a provider group require confirmation.
 5. Select the model in the client and send a minimal, non-sensitive test request.
 
 Requests may incur charges. See the [English user guide](docs/user-guide.md) or [中文手册](docs/user-guide.zh-CN.md) for fields, client steps, updates, revocation and recovery.
@@ -92,7 +92,7 @@ Requests may incur charges. See the [English user guide](docs/user-guide.md) or 
 
 | Feature | What it gives you |
 | --- | --- |
-| Central provider profiles | Endpoint, protocol, key reference, catalog and preferred model |
+| Central provider profiles | Endpoint, protocol, key reference, catalog and recommended model |
 | Multi-client publication | Explicit targets and persistent per-target results |
 | Review before write | Native-held, expiring, one-use plans and live target checks |
 | Ownership-aware revoke | Remove owned configuration, preserve other providers |
@@ -119,13 +119,13 @@ Read [SECURITY.md](SECURITY.md) before sharing diagnostics. Use the [security pa
 
 ## Known limits
 
-- CLI uses one managed environment route, not simultaneous provider routing.
+- CLI uses the default `~/.copilot/providers.json`; custom configuration-root overrides are not supported yet. [Registry details](docs/copilot-cli-support.md)
 - Copilot App is manual; JetBrains is limited to exact reviewed distributions.
 - Usage, Billing and Resources/MCP/Skills/Instructions are outside this edition. Existing data remains intact. [Feature availability](docs/feature-availability.md).
 
 ## Screenshots
 
-All images show the current browser frontend with **simulated data**. Overview appears above.
+Images show the four-page interface with **simulated data**. Overview appears above.
 
 | Provider editor · Light | Publication preview · Dark |
 | --- | --- |

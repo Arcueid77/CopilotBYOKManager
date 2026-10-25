@@ -13,6 +13,7 @@
   const pageSubtitle = document.querySelector("#page-subtitle");
   const addConnectionButton = document.querySelector("#add-connection-button");
   const refreshButton = document.querySelector("#refresh-button");
+  const overviewPublishButton = document.querySelector("#overview-publish-button");
   const runtimeLabel = document.querySelector("#runtime-label");
   const runtimeDetail = document.querySelector("#runtime-detail");
   const runtimeDot = document.querySelector(".runtime-dot");
@@ -27,7 +28,7 @@
   const routes = {
     overview: {
       get title() { return tr("总览"); },
-      get subtitle() { return tr("管理连接并发布到应用。"); },
+      get subtitle() { return tr("查看各应用的供应商配置与最近操作。"); },
       add: false,
     },
     connections: {
@@ -40,7 +41,7 @@
       get subtitle() { return tr("安装、官方登录与发布能力，按客户端逐个核对。"); },
       add: false,
     },
-    about: { get title() { return tr("关于"); }, subtitle: "CopilotBYOKManager", add: false },
+    about: { get title() { return tr("关于"); }, subtitle: "", add: false },
   };
 
   let route = "overview";
@@ -88,16 +89,50 @@
     select.disabled = windowSettingsBusy || data.windowBehavior?.preferencesAvailable !== true || data.windowBehavior?.trayAvailable !== true;
     content.querySelector("[data-window-explanation]").textContent = window.CopilotBYOKManagerCore.windowBehaviorDescription(data, isDesktop);
   }
-  const sectionVersions = {};
+  let installationExpanded = false, accountsExpanded = false;
+  let environmentLoading = false, accountsLoading = false;
+  const sectionLoader = window.CopilotBYOKManagerLoader.create({ invoke, data, onSettled(key) {
+    if (key === "windowBehavior") updateWindowSettingsUI();
+    if (key === "manualProviders" && snapshot) updateCurrentSources();
+    if (["components", "installRuns"].includes(key) && !window.CopilotBYOKManagerInstaller.busy) {
+      window.CopilotBYOKManagerInstaller.hydrate(data.components, data.installRuns, data.errors.components);
+      window.CopilotBYOKManagerInstaller.mount();
+    }
+    if (key === "setup") {
+      window.CopilotBYOKManagerAccount.hydrate(data.setup?.accounts);
+      window.CopilotBYOKManagerAccount.mount();
+      updateAccountSummary();
+    }
+  } });
   async function loadSections(sections) {
-    const versions = sections.map(([key]) => (sectionVersions[key] = (sectionVersions[key] ?? 0) + 1));
-    const results = await Promise.allSettled(sections.map(([, command, args]) => invoke(command, args)));
-    results.forEach((result, i) => {
-      const key = sections[i][0];
-      if (versions[i] !== sectionVersions[key]) return;
-      if (result.status === "fulfilled") { data[key] = result.value; delete data.errors[key]; }
-      else { data[key] = null; data.errors[key] = result.reason?.message ?? String(result.reason); }
-    });
+    return sectionLoader.load(sections);
+  }
+  function updateCurrentSources() {
+    const home = content.querySelector("[data-home-sources]");
+    if (home) home.innerHTML = window.CopilotBYOKManagerManager.sourceRows(snapshot, data);
+    for (const element of content.querySelectorAll("[data-app-sources]")) {
+      const client = snapshot.clients.find(value => value.id === element.dataset.appSources);
+      if (client) element.innerHTML = window.CopilotBYOKManagerManager.currentSources(client, snapshot, data);
+    }
+  }
+  function updateAccountSummary() {
+    const button = content.querySelector('[data-action="setup-accounts"]');
+    if (button) button.disabled = !isDesktop || !data.setup || accountsLoading;
+    const status = content.querySelector("[data-account-load-status]");
+    if (status) status.textContent = accountsLoading ? tr("读取账号状态中…") : data.errors.setup ? tr("账号状态读取失败，请重试。") : "";
+  }
+  async function loadEnvironment() {
+    if (environmentLoading || window.CopilotBYOKManagerInstaller.busy || window.CopilotBYOKManagerInstaller.checking) return;
+    environmentLoading = true;
+    window.CopilotBYOKManagerInstaller.setLoading(true);
+    try { await loadSections(window.CopilotBYOKManagerCore.environmentSections); }
+    finally { environmentLoading = false; window.CopilotBYOKManagerInstaller.setLoading(false); }
+  }
+  async function loadAccounts() {
+    if (accountsLoading) return;
+    accountsLoading = true; updateAccountSummary();
+    try { await loadSections(window.CopilotBYOKManagerCore.accountSections); }
+    finally { accountsLoading = false; updateAccountSummary(); }
   }
 
 
@@ -168,7 +203,7 @@
           id: "copilot-cli:user-environment",
           kind: "copilot-cli",
           name: "GitHub Copilot CLI",
-          detail: "User-level provider environment",
+          detail: "~/.copilot/providers.json · multiple providers and models",
           path: "/usr/local/bin/copilot",
           detected: true,
           supportsWrite: true,
@@ -228,6 +263,14 @@
         return structuredClone(demoState);
       case "get_install_runs":
         return [];
+      case "get_manual_provider_status":
+        return [];
+      case "get_installation_status":
+        return window.CopilotBYOKManagerInstaller.previewStatus();
+      case "get_setup_status":
+        return { accounts: window.CopilotBYOKManagerAccount.previewStatus(), preferences: {}, targets: [] };
+      case "get_window_behavior":
+        return { trayAvailable: false, preferencesAvailable: false };
       case "get_resources":
         return { resources: [], bindings: [], detail: tr("浏览器试用 has no native resource catalog") };
       case "upsert_connection": {
@@ -339,15 +382,15 @@
         for (const record of records.filter(record => record.status === "applied")) {
           let current = demoState.clientConfigurations.find(item => item.targetId === record.targetId);
           if (!current) { current = { targetId: record.targetId, state: "available", sources: [] }; demoState.clientConfigurations.push(current); }
-          current.sources = current.sources.filter(source => record.targetKind !== "copilot-cli" && source.connectionId !== connection.id);
-          const count = record.targetKind === "copilot-cli" ? 1 : connection.models.filter(model => model.enabled).length;
+          current.sources = current.sources.filter(source => source.connectionId !== connection.id);
+          const count = connection.models.filter(model => model.enabled).length;
           if (count) current.sources.push({ connectionId: connection.id, name: connection.name, modelCount: count });
         }
         saveDemoState();
         return { planId: plan.id, records };
       }
       default:
-        return window.CopilotBYOKManagerUsage.preview(command, demoState);
+        throw new Error(tr("此操作需要桌面软件"));
     }
   }
 
@@ -448,6 +491,7 @@
   }
 
   async function refresh() {
+    if (window.CopilotBYOKManagerInstaller.busy) { refreshQueued = true; return; }
     if (windowSettingsBusy) { refreshQueued = true; return; }
     if (!closeDeployment()) return;
     if (loading) { refreshQueued = true; return; }
@@ -456,15 +500,16 @@
     refreshButton.disabled = true;
     content.innerHTML = `<div class="loading"><div><div class="spinner"></div>${tr("读取本地状态…")}</div></div>`;
     try {
-      await loadSections(window.CopilotBYOKManagerCore.sections);
+      void loadSections(window.CopilotBYOKManagerCore.sections.filter(([key]) => key !== "dashboard"));
+      await loadSections(window.CopilotBYOKManagerCore.sections.filter(([key]) => key === "dashboard"));
       if (!data.dashboard) throw new Error(data.errors.dashboard);
       snapshot = data.dashboard;
       for (const id of appProviderChoices.keys()) if (!snapshot.clients.some(client => client.id === id)) appProviderChoices.delete(id);
-      window.CopilotBYOKManagerInstaller.hydrate(data.components, data.installRuns);
-      window.CopilotBYOKManagerAccount.hydrate(data.setup?.accounts);
       setRuntimeState();
       render();
       window.CopilotBYOKManagerUI.restore(content, focus);
+      if (route === "clients" && installationExpanded) void loadEnvironment();
+      if (route === "clients" && accountsExpanded) void loadAccounts();
     } catch (error) {
       content.innerHTML = `
         <div class="empty-state">
@@ -482,7 +527,7 @@
   }
 
   function setRoute(nextRoute) {
-    if (!window.CopilotBYOKManagerCore.routeIds.includes(nextRoute) || deploymentCleanup?.busy || dialogs.active) return false;
+    if (!window.CopilotBYOKManagerCore.routeIds.includes(nextRoute) || deploymentCleanup?.busy || dialogs.active || window.CopilotBYOKManagerInstaller.busy) return false;
     const changed = route !== nextRoute;
     route = nextRoute;
     document.querySelectorAll(".nav-item").forEach((button) => {
@@ -502,8 +547,11 @@
     const meta = routes[route];
     pageTitle.textContent = meta.title;
     pageSubtitle.textContent = meta.subtitle;
+    pageSubtitle.hidden = !meta.subtitle;
     addConnectionButton.hidden = !meta.add;
     addConnectionButton.disabled = Boolean(snapshot.stateRecovery || snapshot.deploymentRecovery);
+    overviewPublishButton.hidden = route !== "overview" || !snapshot.connections.some(connection => connection.enabled !== false);
+    overviewPublishButton.disabled = Boolean(snapshot.stateRecovery || snapshot.deploymentRecovery);
     const renderers = {
       overview: renderOverview,
       connections: renderConnections,
@@ -516,6 +564,7 @@
     window.CopilotBYOKManagerAccount.mount();
     window.CopilotBYOKManagerAppearance.apply();
     updateWindowSettingsUI();
+    updateAccountSummary();
     window.CopilotBYOKManagerUI.restore(content, focus);
   }
 
@@ -533,8 +582,8 @@
 
   function renderClients() {
     return `<div class="client-grid">${window.CopilotBYOKManagerClients.ordered(snapshot).map(clientCard).join("")}</div>
-      <details class="manager-section" ${isDesktop && data.components?.some(component => ["missing", "broken", "unknown"].includes(component.status)) ? "open" : ""}><summary>${tr("安装与更新")}</summary><section id="installation-panel" class="install-panel"></section></details>
-      <details class="manager-section"><summary>${tr("登录与账号检查（可选）")}</summary><p class="manager-meta">${tr("供应商发布不要求各应用使用同一账号。这里可以打开官方登录流程，或记录你已完成的账号核对。")}</p><section id="account-panel" class="account-panel"></section><button class="button ghost small" data-action="setup-accounts" ${!isDesktop ? "disabled" : ""}>${tr("记录已核对的账号")}</button></details>
+      <details class="manager-section" id="installation-details" ${installationExpanded ? "open" : ""}><summary>${tr("安装与更新")}</summary><section id="installation-panel" class="install-panel"></section></details>
+      <details class="manager-section" id="account-details" ${accountsExpanded ? "open" : ""}><summary>${tr("登录与账号检查（可选）")}</summary><p class="manager-meta" data-account-load-status></p><section id="account-panel" class="account-panel"></section><button class="button ghost small" data-action="setup-accounts" ${!isDesktop || !data.setup || accountsLoading ? "disabled" : ""}>${tr("记录已核对的账号")}</button><button class="button ghost small" data-action="reload-accounts">${tr("重新检测")}</button></details>
       <section class="manager-section"><h2 id="publication-result-title">${tr("最近一次发布")}</h2>${window.CopilotBYOKManagerManager.lastResult(snapshot, isDesktop)}</section>
       ${window.CopilotBYOKManagerCore.history(snapshot)}
     `;
@@ -605,7 +654,6 @@
   function clientCard(client) {
     const clientName = window.CopilotBYOKManagerClients.name(client);
     const capability = window.CopilotBYOKManagerClients.capability(client);
-    const published = window.CopilotBYOKManagerClients.sources(client, snapshot);
     const providers = snapshot.connections.filter(connection => connection.enabled !== false);
     const chosen = appProviderChoices.get(client.id);
     const providerId = appProviderChoices.has(client.id) ? (providers.some(provider => provider.id === chosen) ? chosen : "") : providers.length === 1 ? providers[0].id : "";
@@ -618,10 +666,11 @@
         </div>
         <p class="client-description">${escapeHtml(window.CopilotBYOKManagerClients.description(client))}</p>
         ${capability ? `<p class="manager-meta">${escapeHtml(capability)}</p>` : ""}
-        ${published.length ? `<p class="manager-meta">${tr("已配置 {0} 个供应商", published.length)}</p>` : ""}
-        <div class="app-configuration">${client.detected ? `<label class="app-provider-field"><span>${tr("使用供应商")}</span><select class="app-provider-select" aria-label="${tr("{0} 使用的供应商", escapeHtml(clientName))}" ${!providers.length || snapshot.stateRecovery || snapshot.deploymentRecovery ? "disabled" : ""}><option value="" ${!providerId ? "selected" : ""}>${providers.length ? tr("请选择供应商") : tr("请先添加供应商")}</option>${providers.map(connection => `<option value="${escapeHtml(connection.id)}" ${connection.id === providerId ? "selected" : ""}>${escapeHtml(connection.name)}</option>`).join("")}</select></label><button class="button primary small" data-action="deploy-client" data-client-id="${escapeHtml(client.id)}" ${!providerId || snapshot.stateRecovery || snapshot.deploymentRecovery || (!client.supportsWrite && client.kind !== "github-copilot-app") ? "disabled" : ""}>${client.supportsWrite ? tr("发布配置") : tr("手动配置")}</button>` : ""}</div>
+        <div class="app-current-config" data-app-sources="${escapeHtml(client.id)}">${window.CopilotBYOKManagerManager.currentSources(client, snapshot, data)}</div>
+        <div class="app-configuration">${client.detected ? `<label class="app-provider-field"><span>${client.kind === "github-copilot-app" ? tr("本次手动配置") : tr("本次发布")}</span><select class="app-provider-select" aria-label="${tr("发布到 {0} 的供应商", escapeHtml(clientName))}" ${!providers.length || snapshot.stateRecovery || snapshot.deploymentRecovery ? "disabled" : ""}><option value="" ${!providerId ? "selected" : ""}>${providers.length ? tr("请选择供应商") : tr("请先添加供应商")}</option>${providers.map(connection => `<option value="${escapeHtml(connection.id)}" ${connection.id === providerId ? "selected" : ""}>${escapeHtml(connection.name)}</option>`).join("")}</select></label><button class="button primary small" data-action="deploy-client" data-client-id="${escapeHtml(client.id)}" ${!providerId || snapshot.stateRecovery || snapshot.deploymentRecovery || (!client.supportsWrite && client.kind !== "github-copilot-app") ? "disabled" : ""}>${client.supportsWrite ? tr("发布配置") : tr("手动配置")}</button>` : ""}</div>
         <div class="app-card-footer"><details class="app-details"><summary>${tr("应用信息")}</summary><div class="path-line" title="${escapeHtml(client.path ?? client.diagnostic ?? "")}">${escapeHtml(client.path ?? client.diagnostic ?? tr("未提供本地路径"))}</div></details>
         ${client.kind === "jetbrains-copilot" && !client.supportsWrite ? `<button class="button ghost small" data-action="jetbrains-guide" data-id="${escapeHtml(client.id)}">${tr("配置指引")}</button>` : ""}
+        ${client.status === "not-installed" && ["copilot-cli", "github-copilot-app", "vs-code-copilot"].includes(client.kind) ? `<button class="button ghost small" data-action="show-installation">${tr("安装")}</button>` : ""}
         </div>
       </article>`;
   }
@@ -703,6 +752,7 @@
             <small>${tr("保存在系统凭据库，不写入连接配置文件。")}</small>
           </div>
           ${connection ? `<div class="form-field full"><label><input name="clearSecret" type="checkbox" style="width:auto;height:auto;margin-right:7px" />${tr("移除已保存的密钥")}</label></div>` : ""}
+          <div class="form-field full protocol-summary"><span>${tr("当前协议")}：<strong data-current-protocol></strong></span><button type="button" class="button ghost small" data-edit-protocol>${tr("更改协议")}</button></div>
           <div class="form-field full model-discovery" id="model-discovery">
             <div class="model-discovery-actions"><strong>${tr("获取模型目录")}</strong><button type="button" class="button ghost small" data-model-fetch>${tr("获取模型")}</button></div>
             <small data-model-status role="status" aria-live="polite"></small>
@@ -718,7 +768,7 @@
             <textarea id="models" name="models" required placeholder="model-id | Display Name">${escapeHtml(modelsText)}</textarea>
             <small>${tr("每行一个模型：")}<code>${tr("上游模型 ID | 显示名称")}</code>${tr("，名称可省略。")}</small>
           </div>
-          <div class="form-field full"><label for="preferred-model">${tr("首选模型")}</label><select id="preferred-model" name="preferredModel"></select><small>${tr("CLI 写入 COPILOT_MODEL；其他客户端仅作本软件推荐，仍需在客户端选择。")}</small></div>
+          <div class="form-field full"><label for="preferred-model">${tr("首选模型")}</label><select id="preferred-model" name="preferredModel"></select><small>${tr("首选模型仅作推荐，发布后请在客户端选择。")}</small></div>
           <details class="connection-advanced full" ${advanced ? "open" : ""}><summary>${tr("高级选项：供应商类型、接口协议与请求头")}</summary><div class="form-grid">
             <div class="form-field"><label for="provider-kind">${tr("供应商类型")}</label><select id="provider-kind" name="providerKind">${selectOptions(["openai", "azure", "anthropic", "local", "custom"], connection?.providerKind ?? "openai", { openai: tr("OpenAI 兼容"), azure: "Azure OpenAI", anthropic: "Anthropic", local: tr("本地端点"), custom: tr("自定义") })}</select></div>
             <div class="form-field"><label for="protocol">${tr("接口协议")}</label><select id="protocol" name="protocol">${selectOptions(["chat-completions", "responses", "messages"], connection?.protocol ?? "chat-completions", { "chat-completions": "Chat Completions", responses: "Responses", messages: "Messages" })}</select><small>${tr("按供应商文档选择；更改类型不会自动改写协议或端点。")}</small></div>
@@ -727,6 +777,10 @@
         </form>`,
       footer: `<button class="button ghost" data-modal-close>${tr("取消")}</button><button class="button primary" id="save-connection" type="submit" form="connection-form">${tr("保存连接")}</button>`,
       onOpen(root) {
+        const protocol = root.querySelector("#protocol");
+        const updateProtocol = () => { root.querySelector("[data-current-protocol]").textContent = protocol.selectedOptions[0]?.textContent ?? protocol.value; };
+        protocol.addEventListener("change", updateProtocol); updateProtocol();
+        root.querySelector("[data-edit-protocol]").addEventListener("click", () => { protocol.closest("details").open = true; protocol.focus(); });
         const preferred = root.querySelector("#preferred-model");
         const modelsField = root.querySelector("#models");
         function syncPreferred() {
@@ -967,15 +1021,33 @@
       <p class="manager-meta">${escapeHtml(window.CopilotBYOKManagerManager.policy("github-copilot-app"))}</p>
       <ol class="manual-steps"><li>${tr("在 Copilot App 中打开")} <strong>Model providers</strong> ${tr("设置。")}</li>
       <li>${tr("添加")} <strong>${escapeHtml(connection.name)}</strong>${tr("，端点")} <code>${escapeHtml(connection.baseUrl)}</code>${tr("，推荐模型")} <code>${escapeHtml(connection.models.find((m) => m.enabled)?.modelId ?? tr("未配置"))}</code>${tr("。如需密钥，请在 App 内输入。")}</li>
-      <li>${tr("在 App 内选择供应商和模型，并验证请求。")}</li></ol><p>${tr("完成 App 内配置后，保存你的确认。")}</p>`,
-      footer: `<button class="button ghost" data-modal-close>${tr("关闭")}</button><button class="button primary" id="confirm-manual" ${!isDesktop || snapshot.stateRecovery || snapshot.deploymentRecovery ? "disabled" : ""}>${tr("我已完成手动配置")}</button>`,
-      onOpen(root) { root.querySelector("#confirm-manual").addEventListener("click", async (event) => {
-        event.target.disabled = true;
-        dialogs.setBusy(true);
-        try { await invoke("confirm_manual_provider", { connectionId: connection.id, confirmed: true }); if (root.isConnected) closeModal(); await refresh(); }
-        catch (error) { showToast(error?.message ?? String(error), "error"); event.target.disabled = false; }
-        finally { if (root.isConnected) dialogs.setBusy(false); }
-      }); },
+      <li>${tr("在 App 内选择供应商和模型，并验证请求。")}</li></ol><p>${tr("完成 App 内配置后，保存你的确认。")}</p><p data-manual-status role="status">${isDesktop ? tr("读取确认记录…") : tr("浏览器试用，不保存手动确认。")}</p>`,
+      footer: `<button class="button ghost" data-modal-close>${tr("关闭")}</button><button class="button primary" id="confirm-manual" disabled>${tr("我已完成手动配置")}</button>`,
+      onOpen(root) {
+        const button = root.querySelector("#confirm-manual"), status = root.querySelector("[data-manual-status]");
+        let expectedRevision = null;
+        if (isDesktop && !snapshot.stateRecovery && !snapshot.deploymentRecovery) void invoke("get_manual_provider_status").then(records => {
+          if (!root.isConnected) return;
+          const record = records.find(value => value.connectionId === connection.id);
+          if (!record || record.providerUpdatedAt !== connection.updatedAt) throw new Error(tr("供应商已变化，请关闭后刷新。"));
+          expectedRevision = record.revision;
+          status.textContent = record.state === "userConfirmed" ? tr("已记录你的确认，可在应用页查看。") : record.state === "configurationChanged" ? tr("供应商已修改，请在 App 中更新后重新确认。") : tr("确认将关联到当前供应商配置。");
+          button.disabled = false;
+        }).catch(() => { if (root.isConnected) status.textContent = tr("确认记录无法读取，请关闭后刷新重试。"); });
+        button.addEventListener("click", async () => {
+          if (!expectedRevision || button.disabled) return;
+          button.disabled = true; dialogs.setBusy(true);
+          try {
+            await invoke("confirm_manual_provider", { connectionId: connection.id, expectedRevision, confirmed: true });
+            if (root.isConnected) closeModal();
+            showToast(tr("已记录 {0} 的手动配置确认。", connection.name));
+            await refresh();
+          } catch (error) {
+            if (root.isConnected) { status.textContent = tr("确认未保存，请关闭后刷新重试。"); status.setAttribute("role", "alert"); }
+            showToast(error?.message ?? String(error), "error");
+          } finally { if (root.isConnected) dialogs.setBusy(false); }
+        });
+      },
     });
   }
   async function openJetBrainsGuide(targetId) {
@@ -1062,6 +1134,12 @@
   });
 
   content.addEventListener("click", (event) => {
+    const section = event.target.closest("#installation-details > summary, #account-details > summary")?.parentElement;
+    if (section) queueMicrotask(() => {
+      if (!section.isConnected || !section.open) return;
+      if (section.id === "installation-details") void loadEnvironment();
+      else void loadAccounts();
+    });
     const help = event.target.closest("[data-help-link]");
     if (help && isDesktop) {
       event.preventDefault();
@@ -1073,6 +1151,14 @@
     if (!action || action.disabled || deploymentCleanup?.busy) return;
     const connection = snapshot?.connections.find((item) => item.id === action.dataset.id);
     switch (action.dataset.action) {
+      case "show-installation": {
+        const details = content.querySelector("#installation-details");
+        installationExpanded = true; details.open = true;
+        details.scrollIntoView({ block: "start" });
+        void loadEnvironment();
+        break;
+      }
+      case "reload-accounts": void loadAccounts(); break;
       case "view-planned-features":
         openModal({ title: tr("未推出功能记录"), body: window.CopilotBYOKManagerCore.planned(), footer: `<button class="button ghost" data-modal-close>${tr("关闭")}</button>` });
         break;
@@ -1140,7 +1226,20 @@
   });
 
   addConnectionButton.addEventListener("click", () => openConnectionForm());
+  overviewPublishButton.addEventListener("click", () => {
+    if (!setRoute("connections")) return;
+    const target = content.querySelector('[data-action="deploy-connection"]') ?? addConnectionButton;
+    target?.focus({ preventScroll: true });
+  });
   refreshButton.addEventListener("click", refresh);
+  content.addEventListener("toggle", event => {
+    if (event.target.id === "installation-details") {
+      installationExpanded = event.target.open;
+    }
+    if (event.target.id === "account-details") {
+      accountsExpanded = event.target.open;
+    }
+  }, true);
 
   languageSelect.addEventListener("change", () => {
     // Never discard a form or a reviewed/in-flight deployment to change copy.
@@ -1170,6 +1269,7 @@
         updateWindowSettingsUI(); return;
       }
       windowSettingsBusy = true;
+      sectionLoader.invalidate("windowBehavior");
       event.target.disabled = true;
       try { data.windowBehavior = await invokeNative("set_close_action", { action: event.target.value }); }
       catch { showToast(tr("关闭选项未保存，仍使用原选择。请刷新或重启后核对。"), "error"); }

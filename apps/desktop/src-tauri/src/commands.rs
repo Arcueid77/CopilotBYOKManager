@@ -138,13 +138,14 @@ fn command_error(error: AppError) -> String {
 pub async fn get_dashboard(state: State<'_, ManagedState>) -> Result<DashboardSnapshot, String> {
     let state = state.inner().clone();
     native_job(move || {
-        let (state_path, mut connections, deployments, state_recovery) = {
+        let (state_path, mut connections, deployments, state_recovery, owner_id) = {
             let store = state.store().map_err(command_error)?;
             (
                 store.path().to_string_lossy().to_string(),
                 store.connections().to_vec(),
                 store.deployments().to_vec(),
                 store.recovery().map(str::to_string),
+                store.installation_owner_id().to_string(),
             )
         };
         let credential_statuses = connections
@@ -175,7 +176,8 @@ pub async fn get_dashboard(state: State<'_, ManagedState>) -> Result<DashboardSn
                     .to_string()
             });
         let clients = adapters::discover_all();
-        let client_configurations = deployment::publication::observe(&clients, &connections);
+        let client_configurations =
+            deployment::publication::observe(&clients, &connections, &owner_id);
         Ok(DashboardSnapshot {
             client_configurations,
             credential_statuses,
@@ -241,6 +243,10 @@ pub async fn apply_install_plan(
             let progress = state.install_jobs.progress(&ticket.id, component, result)?;
             let _ = app.emit("copilot-byok-manager:install-progress", &progress);
             Ok(())
+        }, &mut |component, update| {
+            if let Ok(progress) = state.install_jobs.telemetry(&ticket.id, component, update) {
+                let _ = app.emit("copilot-byok-manager:install-progress", &progress);
+            }
         });
         let finished = state.install_jobs.finish(&ticket.id, &result, ticket.cancel.load(std::sync::atomic::Ordering::Acquire))
             .map_err(|_| "Installation may have changed components, but the final summary could not be saved. Rediscover and inspect interrupted history before retrying".to_string())?;

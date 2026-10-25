@@ -4,24 +4,26 @@ use crate::domain::{
 };
 use crate::error::{AppError, AppResult};
 use std::collections::BTreeMap;
-use std::env;
-#[cfg(windows)]
-use std::ffi::OsString;
 #[cfg(unix)]
-use std::path::Path;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use uuid::Uuid;
 
 mod current;
+pub(crate) mod discovery;
 #[cfg(any(windows, test))]
 mod env_snapshot;
 #[cfg(test)]
 mod ownership_tests;
 mod provider_registry;
+mod registry_schema;
 
 pub(crate) fn observe_current(
     connections: &[Connection],
+    owner: &str,
 ) -> AppResult<Vec<crate::deployment::publication::ConfiguredSource>> {
+    if let Some(sources) = provider_registry::observe(connections, owner)? {
+        return Ok(sources);
+    }
     current::observe(connections)
 }
 
@@ -31,6 +33,16 @@ pub(crate) fn routing_fingerprint() -> AppResult<String> {
 
 pub(crate) fn has_custom_home() -> AppResult<bool> {
     Ok(provider_registry::override_presence()?[0])
+}
+
+pub(crate) fn model_selection_id(
+    connection: &Connection,
+    owner: &str,
+) -> AppResult<Option<String>> {
+    let provider = provider_registry::provider_name(owner, &connection.id)?;
+    Ok(connection
+        .default_model()
+        .map(|m| format!("{provider}/{}", m.model_id)))
 }
 
 // Validate bounded existing configuration before preparing a transaction. In
@@ -75,26 +87,35 @@ const BLOCK_START: &str = "# >>> CopilotBYOKManager Copilot CLI >>>";
 const BLOCK_END: &str = "# <<< CopilotBYOKManager Copilot CLI <<<";
 
 pub fn discover_target() -> ClientTarget {
-    let executable = find_executable("copilot");
+    let resolved = discovery::executable();
+    let diagnostic = resolved
+        .as_ref()
+        .err()
+        .map(|e| crate::redact::redact_text(&e.to_string()));
+    let executable = resolved.ok().flatten();
     let detected = executable.is_some();
     ClientTarget {
         id: "copilot-cli:user-environment".to_string(),
         kind: ClientKind::CopilotCli,
         name: "GitHub Copilot CLI".to_string(),
-        detail: if detected {
-            "User-level provider environment".to_string()
-        } else {
-            "The copilot executable was not found on PATH".to_string()
-        },
+        detail: diagnostic.clone().unwrap_or_else(|| {
+            if detected {
+                "~/.copilot/providers.json · multiple providers and models".to_string()
+            } else {
+                "The copilot executable was not found in the current search paths".to_string()
+            }
+        }),
         path: executable.map(|path| path.to_string_lossy().to_string()),
         detected,
         supports_write: detected,
-        status: if detected {
+        status: if diagnostic.is_some() {
+            ClientStatus::Error
+        } else if detected {
             ClientStatus::Available
         } else {
             ClientStatus::NotInstalled
         },
-        diagnostic: None,
+        diagnostic,
     }
 }
 
@@ -108,14 +129,16 @@ pub fn preview(connection: &Connection, target: &ClientTarget) -> DeploymentOper
         target_id: target.id.clone(),
         target_kind: ClientKind::CopilotCli,
         title: format!("Activate {} for Copilot CLI", connection.name),
-        description: format!("Replace the single user-environment provider route and set the preferred model to {model}"),
+        description: format!(
+            "Publish {} enabled model(s) to ~/.copilot/providers.json",
+            connection.models.iter().filter(|m| m.enabled).count()
+        ),
         changes: vec![
-            "Confirmation replaces the current CLI provider environment, including configuration created outside this app".to_string(),
-            "Write COPILOT_PROVIDER_* routing variables".to_string(),
-            format!("Set COPILOT_MODEL and wire model to {model}"),
-            "Store the materialized credential only in the platform user environment".to_string(),
-            "New terminal processes will inherit the change".to_string(),
-            "Requires environment routing; providers.json precedence is checked before preview".to_string(),
+            "Update this provider and all enabled models; preserve other providers".to_string(),
+            "Store the materialized provider key in the private providers.json file".to_string(),
+            format!("Recommended model: {model}; select it with /model in a new CLI session"),
+            "Keep the current CLI default model and independent environment configuration"
+                .to_string(),
         ],
         supported: target.detected && target.supports_write,
         requires_restart: true,
@@ -217,7 +240,7 @@ pub(crate) fn prepare(
     connection: &Connection,
     secret: Option<&str>,
 ) -> AppResult<Vec<crate::transaction::PreparedWrite>> {
-    provider_registry::ensure_environment_is_effective()?;
+    provider_registry::ensure_default_root()?;
     validate_existing_configuration()?;
     let values = desired_environment(connection, secret)?;
     #[cfg(windows)]
@@ -268,7 +291,11 @@ pub(crate) fn prepare(
     }
 }
 
-pub(crate) fn observed_resources() -> AppResult<Vec<crate::transaction::Resource>> {
+fn legacy_resources() -> AppResult<Vec<crate::transaction::Resource>> {
+    #[cfg(test)]
+    if provider_registry::test_active() {
+        return Ok(Vec::new());
+    }
     #[cfg(windows)]
     {
         Ok(MANAGED_VARIABLES
@@ -291,7 +318,51 @@ pub(crate) fn observed_resources() -> AppResult<Vec<crate::transaction::Resource
     }
 }
 
+pub(crate) fn observed_resources() -> AppResult<Vec<crate::transaction::Resource>> {
+    let mut resources = legacy_resources()?;
+    resources.push(provider_registry::resource()?);
+    Ok(resources)
+}
+
 pub(crate) fn prepare_owned(
+    connection: &Connection,
+    secret: Option<&str>,
+    owner_id: &str,
+    proofs: &[crate::deployment::ownership::TargetOwnership],
+    revoke: bool,
+) -> AppResult<(
+    Vec<crate::transaction::PreparedWrite>,
+    String,
+    Option<String>,
+)> {
+    use crate::deployment::ownership;
+    let legacy = proofs.iter().any(|p| {
+        p.owner_id == owner_id
+            && p.connection_id == connection.id
+            && p.resource_id == ownership::cli_resource_id()
+    });
+    if revoke && legacy {
+        return Ok((
+            prepare_legacy_owned(connection, secret, owner_id, proofs, true)?,
+            ownership::cli_resource_id(),
+            None,
+        ));
+    }
+    let (write, projection) =
+        provider_registry::prepare_owned(connection, secret, owner_id, proofs, revoke)?;
+    let resource_id = ownership::resource_id(&write.resource);
+    let mut writes = vec![write];
+    // Upgrade only this Connection's durably owned environment route. Foreign
+    // routes and other Connections stay untouched; all cleanup is journaled.
+    if !revoke && legacy {
+        writes.extend(prepare_legacy_owned(
+            connection, None, owner_id, proofs, true,
+        )?);
+    }
+    Ok((writes, resource_id, projection))
+}
+
+fn prepare_legacy_owned(
     connection: &Connection,
     secret: Option<&str>,
     owner_id: &str,
@@ -300,7 +371,7 @@ pub(crate) fn prepare_owned(
 ) -> AppResult<Vec<crate::transaction::PreparedWrite>> {
     let writes = if revoke {
         validate_existing_configuration()?;
-        observed_resources()?
+        legacy_resources()?
             .into_iter()
             .map(|resource| {
                 let before = resource.read()?;
@@ -535,44 +606,6 @@ fn render_headers(connection: &Connection, secret: Option<&str>) -> String {
         })
         .collect::<Vec<_>>()
         .join("\n")
-}
-
-fn find_executable(name: &str) -> Option<PathBuf> {
-    #[cfg(feature = "local-e2e")]
-    if crate::test_support::active() {
-        return crate::test_support::executable(name);
-    }
-
-    let path = env::var_os("PATH")?;
-    let extensions = executable_extensions();
-    for directory in env::split_paths(&path) {
-        for extension in &extensions {
-            let candidate = directory.join(format!("{name}{extension}"));
-            if candidate.is_file() {
-                return Some(candidate);
-            }
-        }
-    }
-    None
-}
-
-fn executable_extensions() -> Vec<String> {
-    #[cfg(windows)]
-    {
-        let raw = env::var_os("PATHEXT").unwrap_or_else(|| OsString::from(".COM;.EXE;.BAT;.CMD"));
-        let mut extensions = raw
-            .to_string_lossy()
-            .split(';')
-            .map(|value| value.trim().to_ascii_lowercase())
-            .filter(|value| !value.is_empty())
-            .collect::<Vec<_>>();
-        extensions.insert(0, String::new());
-        extensions
-    }
-    #[cfg(not(windows))]
-    {
-        vec![String::new()]
-    }
 }
 
 /// Writable user-environment backend. Production uses the Windows registry;

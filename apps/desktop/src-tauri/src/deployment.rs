@@ -83,21 +83,13 @@ pub(super) fn prepare_writes(
                 prepared.push(write);
                 (prepared, resource_id, projection)
             }
-            ClientKind::CopilotCli => {
-                let prepared = adapters::copilot_cli::prepare_owned(
-                    connection,
-                    secret,
-                    &context.owner_id,
-                    &context.ownership,
-                    revoke,
-                )?;
-                let projection = if revoke {
-                    None
-                } else {
-                    Some(ownership::cli_projection(&prepared, true)?)
-                };
-                (prepared, ownership::cli_resource_id(), projection)
-            }
+            ClientKind::CopilotCli => adapters::copilot_cli::prepare_owned(
+                connection,
+                secret,
+                &context.owner_id,
+                &context.ownership,
+                revoke,
+            )?,
             ClientKind::JetBrainsCopilot => {
                 // Native metadata must still match the reviewed schema/target.
                 adapters::jetbrains::ensure_writable(target)?;
@@ -118,8 +110,13 @@ pub(super) fn prepare_writes(
             }
         };
         ownership_after.retain(|proof| {
+            if target.kind == ClientKind::CopilotCli {
+                return !(proof.target_kind == ClientKind::CopilotCli
+                    && proof.target_id == target.id
+                    && proof.connection_id == connection.id);
+            }
             !(proof.resource_id == resource_id
-                && (target.kind == ClientKind::CopilotCli || proof.connection_id == connection.id)
+                && proof.connection_id == connection.id
                 && (target.kind != ClientKind::JetBrainsCopilot || proof.target_id == target.id))
         });
         if let Some(projection_fingerprint) = projection {
@@ -135,6 +132,21 @@ pub(super) fn prepare_writes(
             });
         }
         let changed = prepared.iter().filter(|write| write.changed()).count();
+        if !revoke && target.kind == ClientKind::CopilotCli {
+            if let Some(id) =
+                adapters::copilot_cli::model_selection_id(connection, &context.owner_id)?
+            {
+                operation
+                    .changes
+                    .push(format!("CLI model selection ID: {id}"));
+            }
+            if prepared
+                .iter()
+                .any(|w| w.resource.key() != prepared[0].resource.key())
+            {
+                operation.changes.push("Remove this Connection's durably owned legacy environment route in the same transaction; open a new terminal afterward".into());
+            }
+        }
         operation.changes.push(format!(
             "{changed} physical resource(s) require changes; identical data is not rewritten"
         ));

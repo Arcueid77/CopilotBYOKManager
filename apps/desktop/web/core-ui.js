@@ -8,10 +8,11 @@
   const escape = value => String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#039;");
   const routeIds = Object.freeze(["overview", "connections", "clients", "about"]);
   const sections = Object.freeze([
-    ["dashboard", "get_dashboard"], ["components", "get_installation_status"],
-    ["installRuns", "get_install_runs"], ["setup", "get_setup_status"],
+    ["dashboard", "get_dashboard"], ["manualProviders", "get_manual_provider_status"],
     ["windowBehavior", "get_window_behavior"],
   ].map(section => Object.freeze(section)));
+  const environmentSections = Object.freeze([["components", "get_installation_status"], ["installRuns", "get_install_runs"]].map(Object.freeze));
+  const accountSections = Object.freeze([["setup", "get_setup_status"]].map(Object.freeze));
   const statuses = () => ({ applied: tr("配置变更已应用"), skipped: tr("未自动处理"), failed: tr("失败，请核对"), rolledBack: tr("已回滚"), "rolled-back": tr("已回滚"), interrupted: tr("已中断，待恢复"), partial: tr("部分完成"), prepared: tr("已准备"), applying: tr("处理中") });
   function recovery(snapshot, native) {
     if (!snapshot.stateRecovery && !snapshot.deploymentRecovery) return "";
@@ -25,8 +26,9 @@
     return '<details class="manager-section core-history" id="publication-history"><summary>' + tr("发布与撤销记录") + '</summary>' +
       (records.length ? '<ul class="manager-result-targets">' + records.map(record => {
         const client = snapshot.clients.find(client => client.id === record.targetId);
+        const provider = snapshot.connections.find(connection => connection.id === record.connectionId);
         const date = Number.isNaN(Date.parse(record.createdAt)) ? tr("时间未知") : new Date(record.createdAt).toLocaleString(i18n.locale());
-        return '<li><strong>' + escape(client?.name ?? record.targetId ?? tr("目标未知")) + '</strong><span>' + escape(labels[record.status] ?? record.status) + '</span><p>' + escape(date) + '</p>' + (record.detail ? '<p>' + escape(record.detail) + '</p>' : '') + '</li>';
+        return '<li><strong>' + escape(provider?.name ?? record.connectionId ?? tr("供应商已移除")) + ' → ' + escape(client?.name ?? record.targetId ?? tr("目标未知")) + '</strong><span>' + escape(labels[record.status] ?? record.status) + '</span><p>' + escape(date) + '</p>' + (record.detail ? '<details><summary>' + tr("操作明细") + '</summary><p>' + escape(record.detail) + '</p></details>' : '') + '</li>';
       }).join('') + '</ul>' : '<p class="manager-meta">' + tr("尚无发布记录") + '</p>') + '</details>';
   }
   function windowBehaviorDescription(data, native) {
@@ -43,8 +45,8 @@
     const closeAction = data.windowBehavior?.closeAction === "exit" ? "exit" : "tray";
     const closeControl = native ? '<label class="appearance-picker"><span>' + tr("关闭窗口时") + '</span><select data-close-action aria-label="' + tr("关闭窗口时") + '" ' + (data.windowBehavior?.preferencesAvailable === true && data.windowBehavior?.trayAvailable === true ? '' : 'disabled') + '><option value="tray" ' + (closeAction === "tray" ? 'selected' : '') + '>' + tr("收起到系统托盘") + '</option><option value="exit" ' + (closeAction === "exit" ? 'selected' : '') + '>' + tr("退出程序") + '</option></select></label>' : '';
     return '<div class="core-about-grid"><section class="manager-section core-about core-about-intro"><img src="assets/app-icon.png" alt="" width="64" height="64" /><div><h2>CopilotBYOKManager</h2><p class="manager-meta">' + tr("一次配置供应商，用于多个 Copilot 应用。") + '</p><p class="manager-meta">' + tr("核心配置版 · 预发布 · 0.1.0") + '</p><p class="manager-boundary">' + tr("独立的 Copilot 配置管理工具，处于预发布阶段，与 GitHub 无隶属关系。") + '</p></div></section>' +
-      '<section class="manager-section core-about"><h2>' + tr("界面与窗口") + '</h2><div class="core-window-settings"><label class="appearance-picker"><span>' + tr("外观") + '</span><select data-appearance-select aria-label="' + tr("外观") + '"><option value="system">' + tr("跟随系统") + '</option><option value="light">' + tr("浅色") + '</option><option value="dark">' + tr("深色") + '</option></select></label>' + closeControl + '</div><p class="manager-meta" data-window-explanation>' + behavior + '</p></section>' +
-      '<section class="manager-section core-about"><h2>' + tr("帮助与反馈") + '</h2><nav class="manager-help-links" aria-label="' + tr("帮助与反馈") + '">' + [["manual", tr("英文使用手册")], ["manual-zh", tr("中文使用手册")], ["issues", tr("反馈问题")]].map(([key, label]) => '<a data-help-link="' + key + '" href="' + escape(urls[key]) + '" target="_blank" rel="noopener noreferrer">' + label + '</a>').join('') + '</nav><button class="button ghost small" data-action="view-planned-features">' + tr("未推出功能记录") + '</button><p class="manager-meta">' + tr("用量、账单与共享资源暂未开放，已有数据保留。规划记录不承诺上线日期。") + '</p><p class="manager-boundary">' + tr("反馈前请删除密钥、账号认证与对话内容。") + '</p></section>' +
+      '<section class="manager-section core-about"><h2>' + tr("窗口行为") + '</h2><div class="core-window-settings">' + closeControl + '</div><p class="manager-meta" data-window-explanation>' + behavior + '</p></section>' +
+      '<section class="manager-section core-about"><h2>' + tr("帮助与反馈") + '</h2><nav class="manager-help-links" aria-label="' + tr("帮助与反馈") + '">' + [["manual", tr("英文使用手册")], ["manual-zh", tr("中文使用手册")], ["issues", tr("反馈问题")]].map(([key, label]) => '<a data-help-link="' + key + '" href="' + escape(urls[key]) + '" target="_blank" rel="noopener noreferrer">' + label + '</a>').join('') + '</nav><button class="button ghost small" data-action="view-planned-features">' + tr("未推出功能记录") + '</button><p class="manager-boundary">' + tr("反馈前请删除密钥、账号认证与对话内容。") + '</p></section>' +
       '<details class="manager-section core-about core-about-storage"><summary>' + tr("本地存储与安全") + '</summary><p class="manager-meta">' + tr("配置保存在本地，登录凭据留在各官方客户端。") + '</p><p class="manager-meta">' + tr("状态文件") + ': ' + escape(snapshot.statePath) + '</p><p class="manager-meta">' + tr("状态版本") + ': v' + escape(snapshot.version) + '</p><p class="manager-meta">' + tr("状态恢复") + ': ' + (snapshot.stateRecovery ? tr("只读恢复") : tr("正常")) + '</p></details></div>';
   }
   function planned() {
@@ -54,9 +56,8 @@
       [tr("MCP、Markdown Skills 和 Instructions"), tr("已有实现，待真实应用消费验收")],
       [tr("独立统一活动页"), tr("页面暂未开放，发布记录本版保留")],
       [tr("Copilot App 直接下载安装策略"), tr("已规划，尚未实现")],
-      [tr("正式签名 Windows 安装包"), tr("待正式交付和干净 Windows 验收")],
     ];
     return '<p class="manager-meta">' + tr("仅记录现有规划，不承诺上线日期；隐藏能力的数据和后端测试保留。") + '</p><ul class="manager-result-targets">' + rows.map(([name, state]) => '<li><strong>' + name + '</strong><p>' + state + '</p></li>').join('') + '</ul>';
   }
-  return Object.freeze({ routeIds, sections, recovery, history, about, planned, windowBehaviorDescription });
+  return Object.freeze({ routeIds, sections, environmentSections, accountSections, recovery, history, about, planned, windowBehaviorDescription });
 });

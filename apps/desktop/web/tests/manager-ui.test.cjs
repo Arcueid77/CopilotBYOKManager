@@ -14,7 +14,7 @@ test("Home uses approved section order, hides disabled cards but retains publish
   assert.ok(html.indexOf("应用配置状态") < html.indexOf('<h2>供应商概况</h2>'));
   assert.ok(html.indexOf('<h2>供应商概况</h2>') < html.indexOf("最近一次发布"));
   assert.match(html, /供应商 A · 3 个模型/); // Observed count, not newly edited 1-model catalog.
-  assert.match(html, /供应商 B · 2 个模型 · 已停用，配置保留/);
+  assert.match(html, /供应商 B · 2 个模型 · 发布已暂停/);
   assert.doesNotMatch(html, /data-connection-id="b"/);
   assert.match(html, /应用配置状态/);
   assert.match(html, />查看应用<\/button>/);
@@ -50,9 +50,9 @@ test("current configuration follows manual edits and deletion; read failures rem
   assert.match(manager.sourceRows(snapshot), /配置读取失败/);
 });
 
-test("copy scopes the exclusive CLI environment projection, manual app boundary and model pickers", () => {
-  assert.match(manager.policy("copilot-cli"), /确认后替换 CLI 当前.*环境配置.*首选模型/);
-  assert.match(manager.policy("copilot-cli"), /新开终端/);
+test("copy describes the CLI multi-provider registry, manual app boundary and model pickers", () => {
+  assert.match(manager.policy("copilot-cli"), /全部启用模型.*providers.json.*保留其他供应商/);
+  assert.match(manager.policy("copilot-cli"), /新的 CLI 会话.*\/model/);
   assert.equal(manager.policy("github-copilot-app"), "请在 Copilot App 中手动添加供应商。");
   assert.match(manager.policy("jetbrains-copilot"), /保留其他来源.*共享.*重启/);
   const snapshot = fixture(); snapshot.deployments.push({ planId: "p", connectionId: "a", targetKind: "vs-code-copilot", status: "applied", createdAt: "2026-10-12T00:00:00Z" });
@@ -97,7 +97,9 @@ test("first connection and publication actions are discoverable without removing
   assert.match(html, /添加第一个供应商/);
   assert.doesNotMatch(html, /账号尚未对齐|data-action="setup-accounts"/);
   assert.doesNotMatch(manager.renderHome({ ...empty, stateRecovery: 'Read only' }, data, true), /manager-start|添加第一个供应商/);
-  assert.ok(manager.renderHome(fixture(), data, true).indexOf('data-action="jump-connections"') < manager.renderHome(fixture(), data, true).indexOf('应用配置状态'));
+  const shell = require('node:fs').readFileSync(require('node:path').join(__dirname, '../index.html'), 'utf8');
+  assert.ok(shell.indexOf('id="overview-publish-button"') < shell.indexOf('id="content"'));
+  assert.doesNotMatch(manager.renderHome(fixture(), data, true), /manager-health|多供应商 · 多模型/);
 });
 
 test("client review and manual publication follow-ups carry the exact client and connection", () => {

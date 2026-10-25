@@ -17,8 +17,8 @@
     root.setAttribute("aria-label", tr("发布配置"));
     root.innerHTML = `<header class="manager-section-head"><h2>${tr("发布 {0}", escape(connection.name))}</h2><button class="button ghost small" data-deployment-close>${tr("收起")}</button></header>
       ${native ? "" : `<p class="preview-banner">${tr("模拟发布，不修改客户端")}</p>`}
-      <p class="manager-meta">${tr("选择应用后发布，完成后显示结果。覆盖 CLI 环境配置或移除模型时会先请你确认。")}</p>
-      <div class="manager-targets">${targets.map((target, index) => `<label class="manager-target"><input type="checkbox" name="deployment-target" id="target-${escape(target.id)}" value="${escape(target.id)}" data-target-index="${index}" ${target.detected && target.supportsWrite && (selectedIds ? selectedIds.includes(target.id) : target.kind !== "copilot-cli") ? "checked" : ""} ${!target.detected ? "disabled" : ""} /><span><strong>${escape(globalThis.CopilotBYOKManagerClients.name(target))}</strong><small>${!target.detected ? tr("未检测到") : target.supportsWrite ? tr("可自动发布") : tr("仅手动处理")}</small>${target.kind === "copilot-cli" && target.supportsWrite ? `<small class="manager-route-warning">${tr("使用所选供应商替换 CLI 当前环境配置。请主动勾选。")}</small>` : ""}</span></label>`).join("")}</div>
+      <p class="manager-meta">${tr("选择应用后发布，完成后显示结果。发布到 CLI 或移除模型时会先请你确认。")}</p>
+      <div class="manager-targets">${targets.map((target, index) => `<label class="manager-target"><input type="checkbox" name="deployment-target" id="target-${escape(target.id)}" value="${escape(target.id)}" data-target-index="${index}" ${target.detected && target.supportsWrite && (selectedIds ? selectedIds.includes(target.id) : target.kind !== "copilot-cli") ? "checked" : ""} ${!target.detected ? "disabled" : ""} /><span><strong>${escape(globalThis.CopilotBYOKManagerClients.name(target))}</strong><small>${!target.detected ? tr("未检测到") : target.supportsWrite ? tr("可自动发布") : tr("仅手动处理")}</small>${target.kind === "copilot-cli" && target.supportsWrite ? `<small class="manager-route-warning">${tr("写入 providers.json，保留其他供应商。请主动勾选。")}</small>` : ""}</span></label>`).join("")}</div>
       <div id="deployment-preview" role="status"><p class="manager-meta">${tr("选择应用后即可发布。")}</p></div>
       <footer class="manager-preview-actions"><button class="button ghost" id="preview-deployment">${tr("查看变更")}</button><button class="button primary" id="apply-deployment">${tr("发布配置")}</button></footer>`;
     container.append(root);
@@ -92,7 +92,7 @@
         const plan = review.plan ?? await generatePreview();
         if (disposed || !plan || !plan.operations.some(operation => operation.supported)) return;
         // Normal publication is one click. Keep a reviewed confirmation for
-        // replacing the CLI's exclusive route or removing a provider group.
+        // CLI credential-file publication or removing a provider group.
         if (!alreadyReviewed && (!connection.models.some(model => model.enabled)
           || plan.operations.some(operation => operation.supported && operation.targetKind === "copilot-cli"))) return;
         const request = review.apply();

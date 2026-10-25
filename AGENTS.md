@@ -22,7 +22,7 @@ The maintainer-approved 2026-10-15 v0.1 release scope exposes only Overview / Pr
 
 Read `docs/release-engineering.md`, `docs/release-criteria.md` and `docs/release-secrets.md` before release work. The maintainer's 2026-10-17 decision permits Windows x64 current-user NSIS and macOS Universal DMG publication without publisher signing or completed manual acceptance. Keep exact source SHA, version and SHA256SUMS. Release notes and download copy should describe features and installation, without signing or acceptance notices; never claim unperformed checks passed. Developer ID signing is optional and explicitly selected. Strict `vX.Y.Z` tags create Drafts; public promotion preserves verified Draft bytes and requires maintainer authorization, which may already be given in the current task. Local engineering alone does not authorize remote publication or settings/secret changes.
 
-CLI publication replaces its existing user-environment configuration after preview and explicit confirmation, regardless of prior ownership. Do not restore an ownership prerequisite for CLI apply. Keep stale-plan checks, private before/after snapshots, conditional rollback and new ownership recording; CLI revocation and other clients retain their ownership checks.
+CLI publication updates its installation/Connection-scoped provider and all enabled models in `~/.copilot/providers.json` after preview and explicit confirmation, without requiring prior ownership. Preserve other providers, models and the selected default. Keep stale-plan checks, private snapshots, conditional rollback and new ownership recording; revocation requires the durable binding and matching provider identity. Upgrade only the same Connection's durably owned legacy environment route, transactionally; independent routes remain untouched. Custom configuration-root overrides remain unsupported. See `docs/copilot-cli-support.md` for the pinned registry contract.
 
 ## Branch policy
 
@@ -37,9 +37,9 @@ The checked-in implementation is a pre-release desktop application with connecte
 - discovery of VS Code Stable/Insiders profiles, GitHub Copilot CLI, the GitHub Copilot app and reviewed JetBrains plugin profiles;
 - native-held, expiring, one-shot deployment plans, live fingerprints, durable ownership, prepare-all transactions, private journals, conditional rollback and reviewed revocation;
 - VS Code Custom Endpoint projection that preserves non-CopilotBYOKManager groups and creates an original backup;
-- Copilot CLI provider activation through the user environment on Windows and managed shell files on macOS/Linux;
+- Copilot CLI multi-provider/model publication through its public `providers.json` registry, with retained legacy-route revocation and same-Connection upgrade;
 - a read-only/manual boundary for GitHub Copilot app provider configuration;
-- pinned Windows component installation plans, persisted outcomes, cancellation and post-install rediscovery;
+- pinned Windows installation plans, fresh PATH/WinGet portable discovery, typed hidden-terminal download progress, scoped cancellation, preserved partial outcomes and post-install rediscovery (see `docs/installer-support.md`);
 - official client account flows, safe CLI identity follow-up and separate GitHub personal-usage authorization;
 - `state.json` schema v2 and migration-safe `usage.sqlite3` schema v3, explicit recovery, exact monetary arithmetic and metadata-only local usage;
 - runtime quota/model observations, personal Billing, opt-in usage import, immutable price catalogs and connected Usage views;
@@ -52,6 +52,8 @@ The maintainer requires automatic JetBrains GitHub Copilot BYOK deployment, not 
 Core clean-Windows/Mac installation, native desktop behavior and real-client/request acceptance remain open. Resource-consumption/usage/Billing acceptance and the unimplemented direct Copilot app asset-download fallback belong to the retained extended milestone; they do not block v0.1. Unsupported upstream interfaces remain explicit limitations. Rider runtime work is deferred by maintainer direction.
 
 The 2026-10-13 UX changes passed web/Rust and isolated browser checks. NativeIsolated B00–B32 last passed on the earlier 2026-10-12 closeout source; the changed suite was only syntax-checked for `3791283`. See `docs/implementation-status.md` and `docs/local-validation-plan.md`.
+
+The 2026-10-24 core UX update loads dashboard/manual-confirmation/window metadata independently; component and account probes are lazy. Manual App confirmations are per Connection, bound to native revisions and kept in the existing setup preference payload. Ordinary unit/source checks and synthetic-shell tests passed; browser/native UI automation was not rerun. The latest NativeCore 20-case PASS is the previous 2026-10-23 installer source. Keep those evidence layers separate.
 
 ## Required scope boundary
 

@@ -175,6 +175,17 @@ h1 { font-size: 26px; font-weight: 650; line-height: 1.25; margin-bottom: 8px; l
 .manager-switch[aria-checked="true"] { background: var(--accent); }
 .manager-switch[aria-checked="true"] span { transform: translateX(14px); }
 .manager-switch:disabled { opacity: .5; cursor: not-allowed; }
+.manager-publish-toggle { display: flex; align-items: center; gap: 8px; flex-shrink: 0; font-size: 12px; color: var(--muted); }
+.protocol-summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.app-current-config { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border-soft); }
+.app-current-state { min-width: 0; }
+.app-current-state > .manager-meta { margin: 0 0 8px; }
+.app-current-state > .manager-meta:last-child { margin-bottom: 0; }
+.app-current-state[data-configuration-state="unavailable"] > .manager-meta,
+.manager-source[data-source-state="configurationChanged"] { color: var(--warning); }
+.manager-source[data-source-state="userConfirmed"] { border-style: dashed; }
+.manager-home-summary .button.primary { margin-top: 12px; }
+.manager-result-targets strong { overflow-wrap: anywhere; }
 .manager-result { font-size: 12px; color: var(--muted); display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .manager-inline-preview { margin: 20px 0; border: 1px solid var(--preview-border); border-radius: 12px; background: var(--panel); padding: 24px; scroll-margin-top: 90px; }
 .manager-inline-preview h2 { font-size: 15px; margin: 0; }

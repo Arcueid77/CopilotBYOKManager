@@ -168,6 +168,7 @@ pub fn run() {
             usage::commands::get_github_billing,
             usage::commands::refresh_personal_github_usage,
             setup::get_setup_status,
+            setup::manual::get_manual_provider_status,
             setup::select_setup_connection,
             setup::confirm_account_alignment,
             setup::confirm_manual_provider,

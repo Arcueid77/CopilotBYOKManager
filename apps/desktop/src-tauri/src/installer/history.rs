@@ -36,6 +36,8 @@ pub struct InstallRun {
     pub current_component_id: Option<String>,
     pub results: Vec<InstallOperationResult>,
     pub detail: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub progress: Option<super::progress::InstallProgress>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -143,6 +145,7 @@ fn validate(document: &Document) -> AppResult<()> {
 struct Active {
     id: String,
     cancel: Arc<AtomicBool>,
+    progress: Option<(String, super::progress::InstallProgress)>,
 }
 pub struct InstallJobs {
     history: Mutex<History>,
@@ -176,7 +179,7 @@ impl InstallJobs {
             .lock()
             .map_err(|_| AppError::Lock)?
             .as_ref()
-            .map(|value| value.id.clone());
+            .map(|value| (value.id.clone(), value.progress.clone()));
         let history = self.history.lock().map_err(|_| AppError::Lock)?;
         if history.recovery.is_some() {
             return Err(AppError::Config(
@@ -185,10 +188,19 @@ impl InstallJobs {
         }
         let mut runs = history.document.runs.clone();
         for run in &mut runs {
-            if run.status == InstallRunStatus::Running && active.as_deref() != Some(&run.id) {
+            if run.status == InstallRunStatus::Running
+                && active.as_ref().map(|a| a.0.as_str()) != Some(run.id.as_str())
+            {
                 run.status = InstallRunStatus::Interrupted;
                 run.detail = "The run is no longer active and its final summary is unavailable; rediscover before retrying".into();
                 run.current_component_id = None;
+                run.progress = None;
+            } else if run.status == InstallRunStatus::Running {
+                run.progress = active
+                    .as_ref()
+                    .and_then(|a| a.1.as_ref())
+                    .filter(|(component, _)| run.current_component_id.as_ref() == Some(component))
+                    .map(|(_, p)| p.clone());
             }
         }
         Ok(runs)
@@ -209,6 +221,7 @@ impl InstallJobs {
             results: Vec::new(),
             detail: "Installation started; completed operations are not automatically rolled back"
                 .into(),
+            progress: None,
         };
         let mut history = self.history.lock().map_err(|_| AppError::Lock)?;
         let mut next = history.document.clone();
@@ -219,6 +232,7 @@ impl InstallJobs {
         *active = Some(Active {
             id: run.id.clone(),
             cancel: cancel.clone(),
+            progress: None,
         });
         Ok((
             InstallTicket {
@@ -259,6 +273,37 @@ impl InstallJobs {
         history.save(next)?;
         Ok(value)
     }
+    pub fn telemetry(
+        &self,
+        run_id: &str,
+        component_id: &str,
+        update: super::progress::InstallProgress,
+    ) -> AppResult<InstallRun> {
+        let mut run = {
+            let history = self.history.lock().map_err(|_| AppError::Lock)?;
+            history
+                .document
+                .runs
+                .iter()
+                .find(|r| {
+                    r.id == run_id
+                        && r.status == InstallRunStatus::Running
+                        && r.current_component_id.as_deref() == Some(component_id)
+                })
+                .cloned()
+                .ok_or(AppError::PlanUnavailable)?
+        };
+        {
+            let mut active = self.active.lock().map_err(|_| AppError::Lock)?;
+            let active = active
+                .as_mut()
+                .filter(|a| a.id == run_id)
+                .ok_or(AppError::PlanUnavailable)?;
+            active.progress = Some((component_id.into(), update.clone()));
+        }
+        run.progress = Some(update);
+        Ok(run)
+    }
     pub fn finish(
         &self,
         run_id: &str,
@@ -286,16 +331,14 @@ impl InstallJobs {
                 )
             })
             .count();
-        run.status = if cancelled {
-            InstallRunStatus::Cancelled
-        } else if success > 0 && (success < run.component_ids.len() || result.is_err()) {
-            InstallRunStatus::Partial
-        } else if result.is_err() || success == 0 && !run.component_ids.is_empty() {
-            InstallRunStatus::Failed
-        } else if success == run.component_ids.len() {
+        run.status = if success == run.component_ids.len() && result.is_ok() {
             InstallRunStatus::Complete
-        } else {
+        } else if success > 0 {
             InstallRunStatus::Partial
+        } else if cancelled {
+            InstallRunStatus::Cancelled
+        } else {
+            InstallRunStatus::Failed
         };
         run.detail = match run.status {
             InstallRunStatus::Complete => "Every requested component was verified ready",
@@ -309,6 +352,7 @@ impl InstallJobs {
         }
         .into();
         run.current_component_id = None;
+        run.progress = None;
         run.finished_at = Some(Utc::now());
         let value = run.clone();
         history.save(next)?;
@@ -393,6 +437,63 @@ mod tests {
         assert_eq!(
             finished.results[0].status,
             InstallResultStatus::CompletedAndVerified
+        );
+    }
+
+    #[test]
+    fn cancelling_remaining_components_preserves_partial_success_and_live_progress_is_ephemeral() {
+        use super::super::progress::{InstallPhase, InstallProgress};
+        let root = tempfile::tempdir().unwrap();
+        let path = root.path().join("history.json");
+        let jobs = InstallJobs::open(path.clone());
+        let mut plan = plan();
+        plan.requested_component_ids
+            .push(super::super::COMPONENT_COPILOT_APP.into());
+        let (_ticket, run) = jobs.begin(&plan).unwrap();
+        let ready = InstallOperationResult {
+            component_id: super::super::COMPONENT_COPILOT_CLI.into(),
+            status: InstallResultStatus::CompletedAndVerified,
+            detail: "fixture".into(),
+        };
+        jobs.progress(&run.id, &ready.component_id, Some(ready.clone()))
+            .unwrap();
+        jobs.progress(&run.id, super::super::COMPONENT_COPILOT_APP, None)
+            .unwrap();
+        let before = std::fs::read(&path).unwrap();
+        let update = InstallProgress {
+            phase: InstallPhase::Downloading,
+            downloaded_bytes: Some(12),
+            total_bytes: Some(40),
+            elapsed_seconds: 2,
+        };
+        jobs.telemetry(&run.id, super::super::COMPONENT_COPILOT_APP, update.clone())
+            .unwrap();
+        assert_eq!(jobs.runs().unwrap()[0].progress, Some(update.clone()));
+        assert_eq!(std::fs::read(&path).unwrap(), before);
+        assert!(jobs
+            .telemetry(&run.id, super::super::COMPONENT_COPILOT_CLI, update)
+            .is_err());
+        jobs.cancel(&run.id).unwrap();
+        let cancelled = InstallOperationResult {
+            component_id: super::super::COMPONENT_COPILOT_APP.into(),
+            status: InstallResultStatus::Cancelled,
+            detail: "fixture".into(),
+        };
+        let result = Ok(InstallApplyResult {
+            plan_id: plan.id.clone(),
+            results: vec![ready, cancelled],
+            observations: vec![],
+        });
+        let finished = jobs.finish(&run.id, &result, true).unwrap();
+        assert_eq!(finished.status, InstallRunStatus::Partial);
+        assert!(finished.progress.is_none());
+        assert_eq!(
+            finished.results[0].status,
+            InstallResultStatus::CompletedAndVerified
+        );
+        assert_eq!(
+            InstallJobs::open(path).runs().unwrap()[0].status,
+            InstallRunStatus::Partial
         );
     }
 }

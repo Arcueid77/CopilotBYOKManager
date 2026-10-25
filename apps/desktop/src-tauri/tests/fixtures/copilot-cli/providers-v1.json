@@ -1,0 +1,8 @@
+{
+  "providers": [
+    {"name":"manual","type":"openai","baseUrl":"https://manual.example.test/v1","apiKey":"fixture-manual-key","headers":{"X-Fixture":"manual"},"metadata":{"exact":12345678901234567890.123456789}}
+  ],
+  "models": [
+    {"id":"shared-model","provider":"manual","wireModel":"manual-wire","metadata":{"exact":0.1234567890123456789}}
+  ]
+}

@@ -60,7 +60,7 @@ pub fn selection_notice(kind: ClientKind) -> &'static str {
             "重启相关 IDE 后，请到客户端的模型选择器中选用刚发布的模型。"
         }
         ClientKind::CopilotCli => {
-            "CLI 用户环境路由已替换，首选模型写入 COPILOT_MODEL；请新开终端并重启 CLI 会话。"
+            "供应商与模型已写入 providers.json；请启动新的 CLI 会话，在 /model 中选择模型。"
         }
         ClientKind::GithubCopilotApp => {
             "没有已审核的自动写入接口，请在 App 内手动添加供应商并选择模型。"
@@ -68,7 +68,11 @@ pub fn selection_notice(kind: ClientKind) -> &'static str {
     }
 }
 
-pub fn observe(targets: &[ClientTarget], connections: &[Connection]) -> Vec<ClientConfiguration> {
+pub fn observe(
+    targets: &[ClientTarget],
+    connections: &[Connection],
+    owner: &str,
+) -> Vec<ClientConfiguration> {
     // Read shared catalogs once. Audit/ownership fingerprints are not current state.
     let mut catalogs: HashMap<(ClientKind, String), AppResult<Vec<ConfiguredSource>>> =
         HashMap::new();
@@ -88,7 +92,7 @@ pub fn observe(targets: &[ClientTarget], connections: &[Connection]) -> Vec<Clie
                 ClientKind::JetBrainsCopilot => adapters::jetbrains::byok::store_path()
                     .ok()
                     .map(|p| p.to_string_lossy().into_owned()),
-                ClientKind::CopilotCli => Some("user-environment".into()),
+                ClientKind::CopilotCli => Some("providers.json".into()),
                 ClientKind::GithubCopilotApp => None,
             };
             result.state = ConfigurationState::Unavailable;
@@ -103,7 +107,7 @@ pub fn observe(targets: &[ClientTarget], connections: &[Connection]) -> Vec<Clie
                             adapters::jetbrains::byok::observe_current(Path::new(&path))
                         }
                         ClientKind::CopilotCli => {
-                            adapters::copilot_cli::observe_current(connections)
+                            adapters::copilot_cli::observe_current(connections, owner)
                         }
                         ClientKind::GithubCopilotApp => unreachable!(),
                     });
@@ -117,6 +121,8 @@ pub fn observe(targets: &[ClientTarget], connections: &[Connection]) -> Vec<Clie
                         }
                     }
                     result.state = ConfigurationState::Available;
+                } else if matches!(sources, Err(crate::error::AppError::Unsupported(_))) {
+                    result.state = ConfigurationState::Unsupported;
                 }
             }
             result

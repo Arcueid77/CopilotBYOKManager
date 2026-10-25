@@ -18,8 +18,11 @@ mod catalog;
 pub(crate) mod history;
 #[cfg(windows)]
 mod identity;
+pub(crate) mod progress;
 #[cfg(windows)]
 mod source;
+#[cfg(windows)]
+mod terminal;
 
 const INSTALL_PLAN_TTL_SECONDS: i64 = 15 * 60;
 
@@ -233,17 +236,18 @@ pub fn execute_plan(
     plan: InstallPlan,
     cancel: Arc<AtomicBool>,
     progress: &mut dyn FnMut(&str, Option<InstallOperationResult>) -> AppResult<()>,
+    telemetry: &mut dyn FnMut(&str, self::progress::InstallProgress),
 ) -> AppResult<InstallApplyResult> {
     #[cfg(windows)]
     {
         let mut runner = NativeRunner {
             cancel: cancel.clone(),
         };
-        apply_windows_plan(&plan, &mut runner, &cancel, progress)
+        apply_windows_plan(&plan, &mut runner, &cancel, progress, telemetry)
     }
     #[cfg(not(windows))]
     {
-        let _ = (cancel, progress);
+        let _ = (cancel, progress, telemetry);
         Ok(InstallApplyResult {
             plan_id: plan.id,
             results: plan
@@ -264,7 +268,7 @@ pub fn execute_plan(
 #[cfg(windows)]
 fn discover_windows_components() -> Vec<InstallComponentObservation> {
     let code = vscode_install::find_executable();
-    let copilot = find_on_path("copilot.exe").or_else(|| find_on_path("copilot.cmd"));
+    let copilot = crate::adapters::copilot_cli::discovery::executable();
     let app = github_app::installation_path();
     let cli = code.as_deref().map(VsCodeCli::resolve);
     let extension = match cli.as_ref() {
@@ -289,12 +293,21 @@ fn discover_windows_components() -> Vec<InstallComponentObservation> {
     vec![
         code_observation,
         extension,
-        verified_observation(
-            COMPONENT_COPILOT_CLI,
-            "GitHub Copilot CLI",
-            copilot,
-            cli_version,
-        ),
+        match copilot {
+            Ok(path) => verified_observation(
+                COMPONENT_COPILOT_CLI,
+                "GitHub Copilot CLI",
+                path,
+                cli_version,
+            ),
+            Err(_) => InstallComponentObservation {
+                id: COMPONENT_COPILOT_CLI.into(),
+                name: "GitHub Copilot CLI".into(),
+                status: InstallComponentStatus::Unknown,
+                detail: "Current Windows CLI search paths could not be read safely".into(),
+                version: None,
+            },
+        },
         verified_observation(
             COMPONENT_COPILOT_APP,
             "GitHub Copilot app",
@@ -531,8 +544,11 @@ fn cli_version(path: &Path) -> AppResult<String> {
     }
     let output = crate::native_process::run_capture_bounded(
         path,
-        &[std::ffi::OsStr::new("--version")],
-        std::time::Duration::from_secs(10),
+        &[
+            std::ffi::OsStr::new("--no-auto-update"),
+            std::ffi::OsStr::new("--version"),
+        ],
+        std::time::Duration::from_secs(30),
         8192,
     )?;
     if !output.status.success() || output.stdout_truncated || output.stderr_truncated {
@@ -551,6 +567,9 @@ fn parse_cli_version(text: &str) -> AppResult<String> {
         .and_then(|s| s.split_whitespace().next())
         .unwrap_or_default()
         .trim_start_matches('v');
+    // Reviewed CLI v1.0.90 terminates its version sentence with one period.
+    // Keep the product prefix and strict version validation for unknown output.
+    let version = version.strip_suffix('.').unwrap_or(version);
     if !valid_version(version) || text.len() > 8192 {
         return Err(AppError::Unsupported(
             "Unsupported Copilot CLI version-output schema".into(),
@@ -595,9 +614,7 @@ fn executable_bindings(
         for id in requested {
             let path = match id.as_str() {
                 COMPONENT_VSCODE | COMPONENT_VSCODE_COPILOT => vscode_install::find_executable(),
-                COMPONENT_COPILOT_CLI => {
-                    find_on_path("copilot.exe").or_else(|| find_on_path("copilot.cmd"))
-                }
+                COMPONENT_COPILOT_CLI => crate::adapters::copilot_cli::discovery::executable()?,
                 COMPONENT_COPILOT_APP => github_app::installation_path(),
                 _ => None,
             };
@@ -645,6 +662,16 @@ trait ProcessRunner {
         args: &[&std::ffi::OsStr],
         mode: CaptureMode,
     ) -> AppResult<CapturedOutput>;
+
+    fn run_winget(
+        &mut self,
+        executable: &Path,
+        args: &[&std::ffi::OsStr],
+        _url: &'static str,
+        _progress: &mut dyn FnMut(progress::InstallProgress),
+    ) -> AppResult<CapturedOutput> {
+        self.run(executable, args, CaptureMode::Standard)
+    }
 }
 
 #[cfg(windows)]
@@ -654,6 +681,31 @@ struct NativeRunner {
 
 #[cfg(windows)]
 impl ProcessRunner for NativeRunner {
+    fn run_winget(
+        &mut self,
+        executable: &Path,
+        args: &[&std::ffi::OsStr],
+        url: &'static str,
+        progress: &mut dyn FnMut(progress::InstallProgress),
+    ) -> AppResult<CapturedOutput> {
+        #[cfg(feature = "local-e2e")]
+        if crate::test_support::active() {
+            return crate::test_support::installer_process(
+                executable,
+                args,
+                &self.cancel,
+                progress,
+            );
+        }
+        terminal::run(
+            executable,
+            args,
+            url,
+            std::time::Duration::from_secs(20 * 60),
+            &self.cancel,
+            progress,
+        )
+    }
     fn run(
         &mut self,
         executable: &Path,
@@ -677,6 +729,7 @@ fn apply_windows_plan(
     runner: &mut dyn ProcessRunner,
     cancel: &AtomicBool,
     progress: &mut dyn FnMut(&str, Option<InstallOperationResult>) -> AppResult<()>,
+    telemetry: &mut dyn FnMut(&str, self::progress::InstallProgress),
 ) -> AppResult<InstallApplyResult> {
     let mut results = Vec::new();
     let winget = if plan
@@ -723,6 +776,10 @@ fn apply_windows_plan(
             continue;
         }
         progress(&operation.component_id, None)?;
+        telemetry(
+            &operation.component_id,
+            self::progress::InstallProgress::new(self::progress::InstallPhase::Preparing),
+        );
         let before = discover_windows_components();
         if observation(&before, &operation.component_id)?.status == InstallComponentStatus::Ready {
             record_result(
@@ -781,16 +838,21 @@ fn apply_windows_plan(
                     continue;
                 }
                 let arguments = catalog::arguments(&operation.component_id)?;
-                runner.run(
+                runner.run_winget(
                     winget,
                     &arguments
                         .iter()
                         .map(std::ffi::OsStr::new)
                         .collect::<Vec<_>>(),
-                    CaptureMode::Standard,
+                    catalog::package(&operation.component_id)?.download_url,
+                    &mut |update| telemetry(&operation.component_id, update),
                 )
             }
             InstallStrategy::VsCodeExtension => {
+                telemetry(
+                    &operation.component_id,
+                    self::progress::InstallProgress::new(self::progress::InstallPhase::Installing),
+                );
                 let Some(code) = vscode_install::find_executable() else {
                     record_result(&mut results, InstallOperationResult {
                         component_id: operation.component_id.clone(),
@@ -817,24 +879,49 @@ fn apply_windows_plan(
                 }
             }
         };
+        telemetry(
+            &operation.component_id,
+            self::progress::InstallProgress::new(self::progress::InstallPhase::Verifying),
+        );
+        let after = discover_windows_components();
+        let verified =
+            observation(&after, &operation.component_id)?.status == InstallComponentStatus::Ready;
         let output = match output {
             Ok(output) => output,
             Err(error) => {
-                record_result(&mut results, InstallOperationResult {
-                    component_id: operation.component_id.clone(), status: match error {
-                        AppError::Cancelled => InstallResultStatus::Cancelled,
-                        AppError::TimedOut => InstallResultStatus::TimedOut,
-                        _ => InstallResultStatus::Failed,
+                record_result(
+                    &mut results,
+                    InstallOperationResult {
+                        component_id: operation.component_id.clone(),
+                        status: if verified {
+                            InstallResultStatus::CompletedAndVerified
+                        } else {
+                            match error {
+                                AppError::Cancelled => InstallResultStatus::Cancelled,
+                                AppError::TimedOut => InstallResultStatus::TimedOut,
+                                _ => InstallResultStatus::Failed,
+                            }
+                        },
+                        detail: if verified {
+                            "Component installation was verified before cancellation finished"
+                                .into()
+                        } else {
+                            match error {
+                                AppError::Cancelled => "Installation cancelled".into(),
+                                AppError::TimedOut => "Installer timed out".into(),
+                                _ => crate::redact::redact_text(&error.to_string())
+                                    .chars()
+                                    .take(200)
+                                    .collect(),
+                            }
+                        },
                     },
-                    detail: "Installer stopped or failed within its safety limits. Completed effects are not uninstalled; rediscover before retrying".into(),
-                }, progress)?;
+                    progress,
+                )?;
                 continue;
             }
         };
 
-        let after = discover_windows_components();
-        let verified =
-            observation(&after, &operation.component_id)?.status == InstallComponentStatus::Ready;
         let process_ok = output.status.success();
         record_result(
             &mut results,
@@ -1011,6 +1098,13 @@ mod tests {
     #[test]
     fn version_output_is_bounded_typed_and_never_exposes_raw_failed_output() {
         assert_eq!(
+            parse_cli_version(include_str!(
+                "../tests/fixtures/installer/copilot-version-v1.txt"
+            ))
+            .unwrap(),
+            "1.0.90"
+        );
+        assert_eq!(
             parse_cli_version("GitHub Copilot CLI 1.0.90\nCommit: fixture").unwrap(),
             "1.0.90"
         );
@@ -1023,6 +1117,7 @@ mod tests {
             "private-fixture",
             "GitHub Copilot CLI invalid-private-fixture",
             "GitHub Copilot CLI 1.2.3.4",
+            "GitHub Copilot CLI 1.0.90..",
         ] {
             let error = parse_cli_version(output).unwrap_err().to_string();
             assert!(!error.contains("private-fixture"));

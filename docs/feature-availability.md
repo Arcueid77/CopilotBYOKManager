@@ -1,6 +1,6 @@
 # CopilotBYOKManager feature availability
 
-Updated 2026-10-15. The **v0.1 release-candidate scope** is the core configuration edition with four pages: **Overview, Providers, Apps and About**. Configure one provider, review selected targets, publish safely, inspect results and revoke owned configuration. The product remains unreleased.
+Updated 2026-10-24. The **v0.1 release-candidate scope** is the core configuration edition with four pages: **Overview, Providers, Apps and About**. Configure providers, publish to selected targets, inspect results and revoke owned configuration. Packages and versions are listed on [Releases](https://github.com/Arcueid77/CopilotBYOKManager/releases).
 
 ## Available in the current interface
 
@@ -30,7 +30,7 @@ This is a frontend availability change, not removal of native services. Normal s
 
 ## Acceptance work is not another feature
 
-Windows x64 current-user NSIS and macOS Universal DMG are the required v0.1 delivery formats. Windows is an **Unsigned community build** (Authenticode is not required). Formal Mac packages require Developer ID, Hardened Runtime, notarization and stapled tickets; dry-run is explicitly ad-hoc testing only. See [release engineering](release-engineering.md).
+Windows x64 current-user NSIS and macOS Universal DMG are the required v0.1 delivery formats. Publisher signing and completed manual acceptance are optional under the maintainer's 2026-10-17 release decision. Mac packages retain both architectures and Hardened Runtime; explicitly selected Developer ID builds also require notarization and stapling. Dry-run artifacts cannot be promoted. See [release engineering](release-engineering.md).
 
 Current-source native integration, Windows tray behavior, clean Windows installation and real app/provider requests require their own evidence. JetBrains/Rider runtime acceptance remains deferred until the maintainer resumes it. A browser fixture, passing unit test or compiled EXE cannot substitute for these checks.
 
@@ -56,6 +56,6 @@ Organization/enterprise Billing, provider invoices, cloud usage synchronization,
 
 隐藏入口不会删除已有数据，也不会在四页刷新时加载这些模块。规划记录不承诺日期，验收缺口不算通过。组织/企业账单、Provider 发票、云同步、超额付费设置和复制客户端凭据不属于计划。
 
-维护者已批准四页版为 v0.1 首发范围，隐藏功能的真实用量/账单/资源验收延期到扩展版，不再阻塞本版，也不记为通过。本版交付要求为 Windows x64 NSIS（明确未签名，不要求 Authenticode）和正式签名、公证的 macOS Universal DMG；双平台安装、桌面行为及真实请求仍待验收。
+维护者已批准四页版为 v0.1 首发范围，隐藏功能的真实用量/账单/资源验收延期到扩展版。本版交付 Windows x64 NSIS 和 macOS Universal DMG；按 2026-10-17 决定，发布者签名与完成手工验收不是发布前置条件。Mac 保留双架构和 Hardened Runtime，选择 Developer ID 模式时须完成公证。手工验收结果继续单独跟踪。
 
 这是界面开放范围的调整，不是删除原生服务：正常打开存储、检查版本与恢复状态、返回数据库健康元数据仍保留；四页界面不会自动发起隐藏功能的查询或操作。

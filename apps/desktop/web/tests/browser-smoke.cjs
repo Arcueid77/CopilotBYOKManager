@@ -52,6 +52,13 @@ async function nativeFixture() {
   let catalogStatus = "available";
   window.__setCatalogStatus = status => { catalogStatus = status; };
   let resourcePlan = null;
+  let installRun = null, finishInstall;
+  window.__enableInstallerFixture = () => components.push({id:"github-copilot-app",name:"Copilot App",status:"missing",detail:"Fixture",version:null});
+  window.__finishInstallerCancellation = () => {
+    installRun.status = "partial"; installRun.finishedAt = new Date().toISOString(); installRun.currentComponentId = null; installRun.progress = null;
+    installRun.results.push({componentId:"github-copilot-app",status:"cancelled",detail:"fixture"});
+    finishInstall({planId:"install-fixture",results:structuredClone(installRun.results),observations:structuredClone(components)});
+  };
   window.__delayCommand = cmd => delayed.set(cmd, {});
   window.__releaseCommand = (cmd, fail = false) => { const pending = delayed.get(cmd); delayed.delete(cmd); if (fail) pending.reject?.(Error("Synthetic isolated operation failure")); else pending.resolve?.(); };
   window.__emptyConnections = () => { connections.splice(0); publications.splice(0); };
@@ -78,6 +85,8 @@ async function nativeFixture() {
   const identity = { login: "fixture", host: "github.com", userId: 1 };
   const accounts = { anchor: { state: "verified", identity, evidence: "Fake anchor", detail: "Fake API identity", observedAt: now }, surfaces: ["vsCodeCopilot", "copilotCli", "githubCopilotApp"].map((surface) => ({ surface, state: "actionRequired", identity: null, evidence: "Manual confirmation needed", detail: "Fixture", observedAt: now })), observedAt: now, loginRuns: [] };
   const setup = { scannedAt: now, target: identity, alignment: "partiallyVerified", evidenceFingerprint: "fixture-evidence", accounts, preferences: { connectionId: connection.id }, targets: clients.map((c) => ({ targetId: c.id, state: c.supportsWrite ? "notDeployed" : "manual", detail: "Fixture" })), manualConfirmed: false };
+  const manualConfirmations = new Map();
+  const manualRevision = async value => Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify(value))))).map(byte => byte.toString(16).padStart(2, '0')).join('');
   const totals = { records: 1, requests: 1, inputReported: 1000, normalizedInput: 1000, freshInput: 200, cacheRead: 800, cacheWrite: 0, output: 40, cacheHitRate: "0.8", cacheCoveredRecords: 1, estimateUsd: "0.00075", pricedRecords: 1, unpricedRecords: 0, unresolvedModels: 0, unknownSemantics: 0, pricedTokens: 1040, unpricedTokens: null, priceSnapshots: ["fixture-price"], pricedRequests: 1, unpricedRequests: null };
   const record = { id: "hashed-record", rawModel: "gpt-5", canonicalModel: "openai/gpt-5", counterKind: "requestDelta", sourceId: "vscode-otel", route: "unknown", confidence: "unknown", inputReported: 1000, output: 40, estimateUsd: "0.00075", priceSnapshotId: "fixture-price", startedAt: now, finishedAt: now, surfaces: ["vs-code-copilot"], quality: [] };
   const sources = ["copilot-session-events", "vscode-otel", "github-copilot-app"].map((id) => ({ id, name: id, enabled: false, status: id === "github-copilot-app" ? "unsupported" : "disabled", detail: "Isolated UI fixture", pathHint: "Fixed fixture inbox", setupPath: id === "vscode-otel" ? "C:\\Fixture\\vscode-otel.jsonl" : null, parser: "fixture-v1", recordCount: 0 }));
@@ -113,7 +122,14 @@ async function nativeFixture() {
     const pending = delayed.get(cmd);
     if (pending) await new Promise((resolve, reject) => { pending.resolve = resolve; pending.reject = reject; });
     if (cmd === "get_dashboard") return structuredClone({ version: 2, connections, clients, deployments, clientConfigurations: clients.map(client => ({ targetId: client.id, state: configurationErrors.has(client.id) ? "unavailable" : client.supportsWrite ? "available" : "unsupported", sources: publications.filter(source => source.targetId === client.id).map(source => ({ connectionId: source.connectionId, name: source.name ?? connections.find(connection => connection.id === source.connectionId)?.name, modelCount: source.modelCount })) })), stateRecovery, deploymentRecovery, statePath: "Fixture only", usageDb: { state: "available", schemaVersion: 2 } });
-    if (cmd === "get_install_runs") return [];
+    if (cmd === "get_install_runs") return installRun ? structuredClone([installRun]) : [];
+    if (cmd === "preview_install") return { id:"install-fixture",requestedComponentIds:["copilot-cli","github-copilot-app"],createdAt:now,expiresAt:new Date(Date.now()+900000).toISOString(),operations:["copilot-cli","github-copilot-app"].map(componentId=>({componentId,componentName:componentId,source:"Fixture",version:"fixture",architecture:"x64",dependencies:[],description:"Synthetic installation"})) };
+    if (cmd === "apply_install_plan") {
+      installRun = { id:"install-run",planId:"install-fixture",status:"running",startedAt:new Date().toISOString(),finishedAt:null,componentIds:["copilot-cli","github-copilot-app"],currentComponentId:"github-copilot-app",results:[{componentId:"copilot-cli",status:"completedAndVerified",detail:"fixture"}],progress:{phase:"downloading",downloadedBytes:2*1024**2,totalBytes:10*1024**2,elapsedSeconds:1} };
+      components[0].status = "ready";
+      return new Promise(resolve => { finishInstall = resolve; });
+    }
+    if (cmd === "cancel_install_run") { assertNative(args.runId === "install-run"); installRun.progress.phase = "cancelling"; return true; }
     if (cmd === "get_window_behavior") return structuredClone(windowBehavior);
     if (cmd === "set_close_action") {
       assertNative(["tray", "exit"].includes(args.action) && Object.keys(args).length === 1);
@@ -139,6 +155,10 @@ async function nativeFixture() {
     if (cmd === "discover_connection_models") return { status: catalogStatus, detail: "Untrusted fixture catalog detail", models: [{ modelId: "gpt-5", name: "GPT-5" }, { modelId: "fixture-new", name: "New model" }, { modelId: "fixture-unselected", name: "Do not auto-add" }], parserVersion: 1 };
     if (cmd === "get_installation_status") return components;
     if (cmd === "get_setup_status") return structuredClone(setup);
+    if (cmd === "get_manual_provider_status") return Promise.all(connections.map(async value => {
+      const revision = await manualRevision(value), saved = manualConfirmations.get(value.id);
+      return { connectionId: value.id, revision, providerUpdatedAt: value.updatedAt, confirmedAt: saved?.confirmedAt ?? null, state: !saved ? 'notConfirmed' : saved.revision === revision ? 'userConfirmed' : 'configurationChanged' };
+    }));
     if (cmd === "get_github_authorization_status") return authorization;
     if (cmd === "get_usage_sources") return structuredClone(sources);
     if (cmd === "get_usage_runs") return [];
@@ -147,7 +167,12 @@ async function nativeFixture() {
     if (cmd === "get_price_catalog") return catalog;
     if (cmd === "get_usage_overview") return { start: args.query.start, end: args.query.end, status: "partial", totals, records: [record], totalRecords: 1, coverageStart: now, coverageEnd: now, lastImported: now, models: [{ ...record, totals }], days: [{ key: day, totals }], routes: [], surfaces: [], providers: [] };
     if (cmd === "confirm_account_alignment") { assertNative(args.confirmed && args.evidenceFingerprint === "fixture-evidence"); setup.alignment = "userConfirmedSameAccount"; setup.preferences.accountConfirmation = { confirmedAt: now }; return; }
-    if (cmd === "confirm_manual_provider") { setup.manualConfirmed = true; return; }
+    if (cmd === "confirm_manual_provider") {
+      const provider = connections.find(value => value.id === args.connectionId);
+      assertNative(provider && args.confirmed && args.expectedRevision === await manualRevision(provider));
+      manualConfirmations.set(provider.id, { revision: args.expectedRevision, confirmedAt: new Date().toISOString() });
+      setup.manualConfirmed = true; return;
+    }
     if (cmd === "set_usage_source_enabled") { const source = sources.find((s) => s.id === args.sourceId); source.enabled = args.enabled; source.status = args.enabled ? "missing" : "disabled"; return; }
     if (cmd === "clear_local_usage") { assertNative(args.confirmed); sources.find((s) => s.id === args.sourceId).enabled = false; return; }
     if (cmd === "sync_local_usage" || cmd === "cancel_usage_sync") return [];
@@ -185,7 +210,7 @@ async function fixturePage(browser, url, errors, locale = "en-US", width = 1180)
   const page = await browser.newPage({ locale, viewport: { width, height: width === 960 ? 640 : 760 }, colorScheme: "light" });
   page.on("pageerror", error => errors.push(String(error)));
   await page.addInitScript(nativeFixture);
-  await page.goto(url); await page.locator(".manager-health").waitFor();
+  await page.goto(url); await page.locator("[data-home-sources]").waitFor();
   return page;
 }
 async function route(page, name) {
@@ -218,7 +243,8 @@ async function checkShell(browser, url, errors) {
     assert.equal(await page.locator("#content").getAttribute("data-route"), "about");
     assert.equal(await page.evaluate(() => window.__calls.length), calls);
     await page.locator("#interface-theme").selectOption("light");
-    await page.locator('#content [data-appearance-select]').selectOption("dark");
+    assert.equal(await page.locator('#content [data-appearance-select]').count(), 0);
+    await page.locator('#interface-theme').selectOption("dark");
     assert.equal(await page.locator("#interface-theme").inputValue(), "dark");
     assert.equal(await page.evaluate(() => window.__calls.length), calls, "Appearance is CSS-only");
     await page.emulateMedia({ colorScheme: "dark" });
@@ -232,7 +258,7 @@ async function checkShell(browser, url, errors) {
     assert.equal(await page.locator("#interface-theme").inputValue(), "dark");
     await page.waitForFunction(() => window.__trayLocale === document.querySelector('#interface-language').value);
     assert.equal(await page.evaluate(start => window.__calls.slice(start).every(call => call.cmd === "set_tray_locale"), calls), true, "Language only updates native menu labels, never persisted settings or client operations");
-    await page.reload(); await page.locator(".manager-health").waitFor();
+    await page.reload(); await page.locator("[data-home-sources]").waitFor();
     assert.equal(await page.locator("#interface-theme").inputValue(), "dark");
     assert.equal(await page.locator("#interface-language").inputValue(), locale === "en-US" ? "zh-CN" : "en");
     await route(page, "about");
@@ -310,7 +336,7 @@ async function checkCliReplacementConfirmation(browser, url, errors) {
     await open();
     assert.equal(await page.locator("#target-cli").isChecked(), true);
     await page.locator(".manager-operation").waitFor();
-    assert.match(await page.locator(".manager-operation").innerText(), locale === "en" ? /Confirm to replace the current CLI provider environment/ : /确认后替换 CLI 当前的供应商环境配置/);
+    assert.match(await page.locator(".manager-operation").innerText(), locale === "en" ? /providers.json.*preserving other providers/ : /providers.json，保留其他供应商/);
     assert.equal((await applications()).length, 0, "Preview must not apply");
     await page.locator("[data-deployment-close]").click();
     assert.equal((await applications()).length, 0, "Closing review must not apply");
@@ -319,6 +345,78 @@ async function checkCliReplacementConfirmation(browser, url, errors) {
     await page.locator("#apply-deployment").click();
     await page.waitForFunction(() => !document.querySelector("#inline-deployment"));
     assert.deepEqual((await applications()).map(call => call.args), [{ planId: "reviewed-plan", confirmed: true }]);
+    await page.close();
+  }
+}
+async function checkCliRegistryPreview(browser, url, errors) {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 1024 } });
+  await context.route('**/*', request => request.request().url().startsWith(url) ? request.continue() : request.abort());
+  const page = await context.newPage();
+  page.on('pageerror', error => errors.push(String(error)));
+  await page.addInitScript(() => {
+    const now = '2026-10-22T00:00:00Z';
+    const models = count => Array.from({ length: count }, (_, i) => ({ id: `model-${i}`, modelId: ['example-code', 'example-chat', 'example-vision'][i], name: ['Code', 'Chat', 'Vision'][i], enabled: true, capabilities: {} }));
+    sessionStorage.setItem('copilot-byok-manager-demo', JSON.stringify({ version: 2,
+      connections: ['Northstar', 'Local Lab'].map((name, i) => ({ id: `provider-${i}`, name, enabled: true, baseUrl: i ? 'http://127.0.0.1:11434/v1' : 'https://provider.example.test/v1', providerKind: i ? 'local' : 'openai', protocol: 'chat-completions', headers: {}, models: models(i + 2), hasSecret: false, createdAt: now, updatedAt: now })),
+      clients: [{ id: 'cli', name: 'GitHub Copilot CLI', kind: 'copilot-cli', detail: 'Synthetic fixture', path: '~/.copilot/providers.json', detected: true, supportsWrite: true, status: 'available' }], deployments: [],
+      clientConfigurations: [{ targetId: 'cli', state: 'available', sources: [{ name: 'Manual provider', connectionId: null, modelCount: 1 }] }],
+    }));
+  });
+  try {
+    await page.goto(url); await page.locator('.preview-banner').waitFor();
+    await page.locator('#interface-language').selectOption('zh-CN');
+    await page.locator('#interface-theme').selectOption('dark'); await route(page, 'clients');
+    for (const id of ['provider-0', 'provider-1']) {
+      await page.locator('.app-provider-select').selectOption(id);
+      await page.locator('[data-action="deploy-client"]').click(); await page.locator('.manager-operation').waitFor();
+      const before = await page.evaluate(() => JSON.parse(sessionStorage.getItem('copilot-byok-manager-demo')).clientConfigurations[0].sources.length);
+      assert.equal(before, id === 'provider-0' ? 1 : 2, 'Preview does not publish');
+      await page.locator('#apply-deployment').click(); await page.waitForFunction(() => !document.querySelector('#inline-deployment'));
+      await page.getByText(id === 'provider-0' ? '已配置 2 个供应商' : '已配置 3 个供应商', { exact: true }).waitFor();
+    }
+    const sources = await page.evaluate(() => JSON.parse(sessionStorage.getItem('copilot-byok-manager-demo')).clientConfigurations[0].sources);
+    assert.deepEqual(sources.map(s => [s.name, s.modelCount]), [['Manual provider', 1], ['Northstar', 2], ['Local Lab', 3]]);
+    await route(page, 'overview');
+    assert.equal(await page.locator('.manager-source').count(), 3);
+    await page.waitForFunction(() => !document.querySelector('#toast-root .toast'));
+    for (const locale of ['zh-CN', 'en']) {
+      await page.locator('#interface-language').selectOption(locale);
+      await page.screenshot({ path: path.join(output, `cli-registry-overview-${locale}.png`) });
+    }
+    await page.locator('#interface-language').selectOption('zh-CN'); await route(page, 'clients');
+    await page.locator('.app-provider-select').selectOption('provider-0'); await page.locator('[data-action="deploy-client"]').click();
+    await page.locator('.manager-operation').waitFor();
+    await page.locator('#inline-deployment').screenshot({ path: path.join(output, 'cli-registry-review-zh-CN.png') });
+    await page.locator('[data-deployment-close]').click();
+    assert.equal(await page.evaluate(() => JSON.parse(sessionStorage.getItem('copilot-byok-manager-demo')).deployments.length), 2, 'Cancel does not publish');
+  } finally { await context.close(); }
+}
+async function checkInstallerCancellation(browser, url, errors) {
+  for (const locale of ['zh-CN','en']) {
+    const page = await fixturePage(browser,url,errors);
+    await page.locator('#interface-language').selectOption(locale);
+    await page.evaluate(() => window.__enableInstallerFixture()); await page.locator('#refresh-button').click(); await route(page,'clients');
+    await page.locator('[data-install-action="install-all"]').click();
+    await page.locator('[data-install-confirm]').click();
+    await page.locator('.install-modal progress[value="20"]').waitFor();
+    assert.match(await page.locator('.install-modal').innerText(), /2 MiB.*10 MiB/);
+    await page.locator('.install-modal').screenshot({path:path.join(output,`installer-progress-${locale}.png`)});
+    assert.equal(await page.locator('.install-modal [data-install-modal-close]').first().isDisabled(),true);
+    await page.keyboard.press('Escape'); assert.equal(await page.locator('.install-modal').count(),1);
+    await page.locator('[data-install-cancel-run]').click();
+    assert.equal(await page.locator('[data-install-cancel-run]').isDisabled(),true);
+    const callsBefore = await page.evaluate(() => window.__calls.filter(c=>c.cmd==='get_install_runs').length);
+    await page.waitForFunction(count => window.__calls.filter(c=>c.cmd==='get_install_runs').length > count, callsBefore);
+    assert.equal(await page.locator('[data-install-cancel-run]').isDisabled(),true,'Polling must not re-enable an accepted cancellation');
+    await page.evaluate(() => window.__finishInstallerCancellation());
+    await page.locator('.install-modal .install-result-list').waitFor();
+    const result = await page.locator('.install-modal').innerText();
+    assert.match(result,locale==='en'?/Verified after install/:/安装后已核验/);
+    assert.match(result,locale==='en'?/Canceled|Cancelled/:/已取消/);
+    await page.screenshot({path:path.join(output,`installer-cancel-${locale}.png`)});
+    await page.locator('.install-modal [data-install-modal-close]').first().click();
+    assert.equal(await page.locator('.app-shell').evaluate(e=>e.inert),false);
+    await route(page,'overview'); assert.equal(await page.locator('#primary-nav [data-route]').count(),4);
     await page.close();
   }
 }
@@ -426,6 +524,7 @@ async function checkPublicationGuardsAndSharedApps(browser, url, errors) {
   await chat.getByRole("button", { name: "View app", exact: true }).click();
   assert.equal(await shared.evaluate(() => document.activeElement.dataset.clientId), "vscode:stable:default");
   const component = shared.locator('.install-card[data-component-id="vscode"]');
+  await shared.locator('#installation-details > summary').click();
   await component.waitFor();
   assert.match(await component.innerText(), /Fixture version metadata unavailable/);
   assert.equal(await component.locator('[data-install-action="install-one"]').count(), 0);
@@ -535,6 +634,8 @@ async function checkTrayLocale(browser, url, errors) {
     await checkEditor(browser, url, errors);
     await checkPublication(browser, url, errors);
     await checkCliReplacementConfirmation(browser, url, errors);
+    await checkCliRegistryPreview(browser, url, errors);
+    await checkInstallerCancellation(browser, url, errors);
     await checkPublicationGuardsAndSharedApps(browser, url, errors);
     await checkCatalogCopy(browser, url, errors);
     await checkRecovery(browser, url, errors);
@@ -553,6 +654,6 @@ async function checkTrayLocale(browser, url, errors) {
     assert.equal(await preview.locator('.manager-connection h3').innerText(), 'Existing browser provider');
     await preview.close();
     assert.deepEqual(errors, []);
-    console.log(JSON.stringify({ status: "passed", scenarios: ["four core routes", "Chinese and English", "light and dark contrast", "system appearance changes", "preference persistence", "no hidden feature queries", "unsupported route rejection", "draft/focus/save guards", "catalog check-save and invalidation", "concise bilingual catalog results and failure recovery", "one-click app publication", "failed preflight and empty-catalog confirmation", "shared Agents/Chat visibility and optional accounts", "CLI replacement explicit confirmation in both languages", "busy/error/fresh-preview lifecycle", "manual app exact provider", "reviewed JetBrains fixture", "persistent history", "read-only/recovery visibility", "close preference success/failure/recovery", "bounded tray locale only", "browser preview boundaries"], output }));
+    console.log(JSON.stringify({ status: "passed", scenarios: ["four core routes", "Chinese and English", "light and dark contrast", "system appearance changes", "preference persistence", "no hidden feature queries", "unsupported route rejection", "draft/focus/save guards", "catalog check-save and invalidation", "concise bilingual catalog results and failure recovery", "one-click app publication", "failed preflight and empty-catalog confirmation", "shared Agents/Chat visibility and optional accounts", "CLI registry explicit confirmation in both languages", "CLI multi-provider/model preview and preservation", "busy/error/fresh-preview lifecycle", "manual app exact provider", "reviewed JetBrains fixture", "persistent history", "read-only/recovery visibility", "close preference success/failure/recovery", "bounded tray locale only", "installer progress and cancellation in both languages", "browser preview boundaries"], output }));
   } finally { await browser.close(); server.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; server.close(); });

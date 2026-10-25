@@ -4,7 +4,7 @@ CopilotBYOKManager manages developer-tool configuration, may launch allowlisted 
 
 The v0.1 four-page core edition does not expose or automatically query Usage, Billing, separate personal-usage authorization or Resources. Their existing data and backend security contracts remain protected; the sections below cover retained code as well as currently exposed features.
 
-The product has not had a public release. Its dedicated configuration directory and credential namespace are not permission to adopt other applications' secrets or client authentication material.
+The dedicated configuration directory and credential namespace must not adopt other applications' secrets or client authentication material.
 
 ## Do not publish secrets or private workspace content
 
@@ -82,7 +82,7 @@ These rules concern **third-party client/component installers launched by the ma
 ## Manager release artifacts
 
 - The Windows x64 NSIS/standalone community build is explicitly **Unsigned community build**. Authenticode is not required for v0.1; do not imply a verified Windows publisher or instruct users to disable SmartScreen.
-- Formal macOS Universal DMGs require Developer ID Application, Hardened Runtime, notarization and stapled tickets. Ad-hoc/not-notarized testing artifacts are named separately and cannot be promoted as formal packages.
+- macOS Universal DMGs retain both architectures and Hardened Runtime. Developer ID signing is optional; selecting it requires notarization and stapled tickets. Fresh ad-hoc release builds are permitted, while separately named dry-run artifacts cannot be promoted. Exact results remain in package metadata.
 - Check the precise source SHA, version, architecture and SHA-256 list. A checksum verifies agreement with the published bytes, not authorship by itself or runtime correctness.
 - Draft-first publication verifies the complete asset set, downloads and checks hashes before public promotion, and refuses already-public asset replacement. No auto-updater is enabled.
 - P12/P8 files, certificate passwords, private signing identities, API identifiers and signing-key material must never appear in the repository, reports or attachments. Secrets belong only in the maintainer's protected release environment; see [release secrets](docs/release-secrets.md).
