@@ -38,7 +38,7 @@ The checked-in implementation is a pre-release desktop application with connecte
 - native-held, expiring, one-shot deployment plans, live fingerprints, durable ownership, prepare-all transactions, private journals, conditional rollback and reviewed revocation;
 - VS Code Custom Endpoint projection that preserves non-CopilotBYOKManager groups and creates an original backup;
 - Copilot CLI multi-provider/model publication through its public `providers.json` registry, with retained legacy-route revocation and same-Connection upgrade;
-- a read-only/manual boundary for GitHub Copilot app provider configuration;
+- current read-only/manual GitHub Copilot app provider configuration; default-off experimental SQLite synchronization is approved for implementation, not yet shipped (see `docs/copilot-app-sqlite-sync.md`);
 - pinned Windows installation plans, fresh PATH/WinGet portable discovery, typed hidden-terminal download progress, scoped cancellation, preserved partial outcomes and post-install rediscovery (see `docs/installer-support.md`);
 - official client account flows, safe CLI identity follow-up and separate GitHub personal-usage authorization;
 - `state.json` schema v2 and migration-safe `usage.sqlite3` schema v3, explicit recovery, exact monetary arithmetic and metadata-only local usage;
@@ -54,6 +54,10 @@ Core clean-Windows/Mac installation, native desktop behavior and real-client/req
 The 2026-10-13 UX changes passed web/Rust and isolated browser checks. NativeIsolated B00–B32 last passed on the earlier 2026-10-12 closeout source; the changed suite was only syntax-checked for `3791283`. See `docs/implementation-status.md` and `docs/local-validation-plan.md`.
 
 The 2026-10-24 core UX update loads dashboard/manual-confirmation/window metadata independently; component and account probes are lazy. Manual App confirmations are per Connection, bound to native revisions and kept in the existing setup preference payload. Ordinary unit/source checks and synthetic-shell tests passed; browser/native UI automation was not rerun. The latest NativeCore 20-case PASS is the previous 2026-10-23 installer source. Keep those evidence layers separate.
+
+## Copilot App SQLite synchronization decision (2026-10-31)
+
+The maintainer permits an experimental App provider/model SQLite adapter under `docs/copilot-app-sqlite-sync.md`; a documented public write API is no longer a prerequisite for this narrowly scoped integration. It is default-off and requires a user-enabled switch plus an explicit risk confirmation before automatic synchronization of selected Connections. The confirmation must disclose plaintext provider-key storage in the App database, WAL/journal and backups when using the Authorization-header route. Preserve version/schema gates, owned-row-only writes, safe transactions and conditional recovery. This does not authorize reading/copying client login credentials, sessions or usage from private tables. Current `github_app.rs` remains read-only until implementation and acceptance; this documentation decision is not evidence of runtime support.
 
 ## Required scope boundary
 

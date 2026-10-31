@@ -12,7 +12,7 @@ The checked-in code contains connected native deployment/recovery, installation,
 
 ## 2. Product goal
 
-For v0.1, configure a provider's endpoint/key/models once, fetch or manually enter models, choose apps, review native-held changes, publish, inspect results, revoke owned configuration and recover safely. Saving a provider, publishing configuration, selecting a model in the client and completing a request remain four distinct states. English/Chinese and Light/Dark/System are included; desktop behaviors require platform-specific acceptance. Copilot App is manual-only; JetBrains compatibility records identify the exact plugin version and completed validation. The core promise is: **Configure one provider. Publish it safely across your Copilot clients.**
+For v0.1, configure a provider's endpoint/key/models once, fetch or manually enter models, choose apps, review native-held changes, publish, inspect results, revoke owned configuration and recover safely. Saving a provider, publishing configuration, selecting a model in the client and completing a request remain four distinct states. English/Chinese and Light/Dark/System are included; desktop behaviors require platform-specific acceptance. The current Copilot App adapter is manual-only; the approved default-off SQLite sync plan below is not yet implemented; JetBrains compatibility records identify the exact plugin version and completed validation. The core promise is: **Configure one provider. Publish it safely across your Copilot clients.**
 
 The retained extended milestone additionally targets this clean Windows 11 x64 flow:
 
@@ -40,6 +40,10 @@ The product manages these logical surfaces:
 A logical surface may share a physical package/runtime/source with another surface. The system must model both logical surfaces and physical components so installation and usage are not duplicated.
 
 JetBrains does not add a mandatory IDE/plugin installation to the original three-surface clean-machine workflow. The maintainer requires automatic BYOK deployment, not manual instructions as the completed integration. Project verified runtime versions into the dedicated `github-copilot/byok.json` namespace using normal reviewed one-shot plans, prepare-all, durable ownership, private journals, atomic writes and conditional rollback. Preserve unmanaged providers and deduplicate IDEs sharing the physical file. Materialize only the Connection's own provider key; never read Password Safe, private authentication XML/databases, client OAuth tokens or conversation stores. Unknown versions/schema and incompatible endpoints must refuse automatic writes explicitly. Disk publication is separate from IDE restart/model-picker refresh, sign-in and provider execution. Each enabled profile still needs an official per-IDE account check; changed profiles invalidate manual confirmation, and Copilot app confirmation cannot cover JetBrains. Resources/OTel import require separately verified paths/parsers; unsupported coverage stays unknown, not zero. See `jetbrains-support.md` for the reviewed automatic-write contract, fixtures and boundaries.
+
+### 3.2a Approved Copilot App SQLite synchronization plan (2026-10-31)
+
+Implement the narrow experimental provider/model adapter specified in [Copilot App SQLite sync](copilot-app-sqlite-sync.md). It starts disabled for new and upgraded installations. The user must manually enable it and accept a concrete risk dialog before selected Connections synchronize automatically. The approved design permits materializing the manager's own provider key as a plaintext Authorization header in the App's reviewed provider rows, with explicit disclosure and target-scoped consent; it never imports App-owned credentials. Lack of a public write API alone no longer excludes this adapter. Unknown schemas, running App processes, conflicts or missing consent must stop writes. Manual guidance remains the fallback. This is approved work, not a claim that the current adapter or v0.1.0 package can write App configuration.
 
 ### 3.2 Retained capability contracts
 
@@ -76,7 +80,7 @@ Do not implement, scaffold, advertise, or add placeholder controls for:
 - parsing private/opaque Copilot app credential or authentication databases;
 - copying any client OAuth token, refresh token, cookie, SecretStorage value, password, passkey, or session secret between clients;
 - automatically signing a client out;
-- force-writing undocumented GitHub Copilot app provider state.
+- force-writing unsupported App state or bypassing the opt-in, schema, ownership and risk-confirmation gates in [the approved SQLite plan](copilot-app-sqlite-sync.md).
 
 Existing macOS/Linux discovery and supported deployment behavior must not regress, but Windows 11 x64 is the required clean-machine installation acceptance platform.
 

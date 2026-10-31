@@ -52,7 +52,7 @@
 | VS Code Stable / Insiders / 配置档案 | 自动 | 受管供应商分组。在对应档案选用模型并测试。[检测细节](docs/vscode-detection.md) |
 | GitHub Copilot CLI | 自动 | 通过 `providers.json` 同时配置多个供应商和模型。重启 CLI 会话后用 `/model` 选择。[客户端手册](docs/user-guide.zh-CN.md#5-到客户端里选用并验证) |
 | 已审核的 JetBrains GitHub Copilot 插件发行版 | 自动，固定版本 | 关闭后重开 IDE，分别登录、选用和测试。[确切版本表](docs/jetbrains-support.md#version-and-compatibility-boundary) |
-| GitHub Copilot App | 手动 | 无自动写入或验证，在 App 内配置并核对。[指引](docs/user-guide.zh-CN.md#5-到客户端里选用并验证) |
+| GitHub Copilot App | 当前版本手动 | 在 App 内配置并核对；默认关闭的[实验性 SQLite 同步](docs/copilot-app-sqlite-sync.md)已列入方案，尚未实现。[指引](docs/user-guide.zh-CN.md#5-到客户端里选用并验证) |
 
 JetBrains 支持上方版本表中列出的插件发行版；共用运行时目录的 IDE 可能看到同一份配置。客户端政策、订阅和供应商权限要求仍然适用。
 

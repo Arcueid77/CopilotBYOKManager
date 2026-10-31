@@ -1,6 +1,6 @@
 # CopilotBYOKManager feature availability
 
-Updated 2026-10-24. The **v0.1 release-candidate scope** is the core configuration edition with four pages: **Overview, Providers, Apps and About**. Configure providers, publish to selected targets, inspect results and revoke owned configuration. Packages and versions are listed on [Releases](https://github.com/Arcueid77/CopilotBYOKManager/releases).
+Updated 2026-10-31. The **v0.1 release-candidate scope** is the core configuration edition with four pages: **Overview, Providers, Apps and About**. Configure providers, publish to selected targets, inspect results and revoke owned configuration. Packages and versions are listed on [Releases](https://github.com/Arcueid77/CopilotBYOKManager/releases).
 
 ## Available in the current interface
 
@@ -11,6 +11,10 @@ Updated 2026-10-24. The **v0.1 release-candidate scope** is the core configurati
 - Windows close-to-tray by default, saved Tray/Exit choice on About, left-click restore, localized right-click Open main window / Exit menu and repeated-launch wakeup. Ordinary minimize stays on the taskbar. Unavailable tray, hide failure or unreadable preferences keep normal close. Browser preview and other platforms do not claim Windows tray behavior.
 
 See [implementation status](implementation-status.md) for the evidence attached to this source.
+
+## Approved next App integration (not implemented)
+
+[Copilot App SQLite synchronization](copilot-app-sqlite-sync.md) is approved as a default-off experimental integration. The user must enable it manually and confirm the plaintext-key/database risks before selected Connections synchronize automatically. Current code and v0.1.0 still use manual App setup; no automatic App support is advertised until implementation and version/platform acceptance. This is separate from the hidden extended services below.
 
 ## Planned capabilities not offered in this edition
 
@@ -38,9 +42,11 @@ Extended NativeIsolated UI cases that navigate to hidden Usage/Resources/Setting
 
 ## Scope that is not planned
 
-Organization/enterprise Billing, provider invoices, cloud usage synchronization, multi-user allocation, purchasing/changing overage settings, uploading logs, copying client credentials and undocumented private App writes remain excluded. Do not list them as coming soon.
+Organization/enterprise Billing, provider invoices, cloud usage synchronization, multi-user allocation, purchasing/changing overage settings, uploading logs, copying client credentials and arbitrary private App writes remain excluded. The narrow, consent-gated provider/model SQLite plan above is the approved exception, not permission to read authentication/session/usage tables. Do not list them as coming soon.
 
 ## 中文功能记录
+
+2026-10-31 已批准 Copilot App 的[实验性 SQLite 同步方案](copilot-app-sqlite-sync.md)：默认关闭，用户手动开启并确认明文密钥、数据库兼容与恢复风险后，自动同步所选连接的供应商与模型。当前代码和 v0.1.0 仍为手动指引；方案尚未实现或实机验收，不得宣传为已支持。仅解除此受限方案的禁止写入约束，不开放认证、会话或用量私有表。
 
 当前为四页核心配置版：**总览、供应商、应用、关于**。先做好供应商配置、选择应用、直接发布或查看变更、结果核对和安全撤销。中英文、浅色/深色/跟随系统，以及 Windows 关闭到托盘属于本版界面能力。托盘采用 CC Switch 式规则：默认关闭至托盘，可在关于页改为直接退出；左键打开主窗口，右键显示本语言菜单，再次启动唤回已有实例。托盘和真实应用是否通过验收，以[实现状态](implementation-status.md)为准。
 

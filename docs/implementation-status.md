@@ -2,6 +2,10 @@
 
 Updated 2026-10-24 for consistent multi-provider presentation, per-provider manual confirmations, independent core loading and concise installation results. Initial release engineering started at `83a82db3555eb0defa278bd6e042b7c55a76088f`; source and evidence are recorded below. The [specification §21](mvp-implementation-spec.md#21-final-acceptance) and [feature availability](feature-availability.md) separate the core release from the retained extended milestone. Public versions and their exact build metadata are on [Releases](https://github.com/Arcueid77/CopilotBYOKManager/releases).
 
+## 2026-10-31 documentation decision: experimental App sync
+
+Approved the [Copilot App SQLite synchronization plan](copilot-app-sqlite-sync.md): disabled by default, manually enabled after a concrete risk confirmation, then automatic synchronization of selected Connections. This removes the categorical requirement to wait for a public App provider-write interface. It does not change `github_app.rs`, `supports_write`, manual confirmation behavior, any database or credential, or the v0.1.0 package. Implementation, schema/platform fixtures and real-client acceptance remain outstanding; no runtime PASS is claimed by this documentation change.
+
 ## Current implementation
 
 | Area | Implemented behavior | Current boundary |
@@ -11,7 +15,7 @@ Updated 2026-10-24 for consistent multi-provider presentation, per-provider manu
 | VS Code | Stable/Insiders/profile discovery; owned `chatLanguageModels.json` groups coexist with other suppliers | Select the model in the client; sign-in only focuses an existing Windows editor or gives manual instructions |
 | Copilot CLI | Confirmed merge of each provider and all enabled models into `providers.json`; independent durable claims, current multi-provider observations and scoped revoke; same-Connection owned legacy-route upgrade | Default path only; start a new session and select with `/model`; custom-root overrides unsupported; saved default unchanged |
 | JetBrains | Automatic dedicated shared BYOK projection for reviewed 1.19 distributions, with per-profile proofs and deduplicated writes | Unknown versions unsupported; per-IDE login, picker visibility and actual requests are separate acceptance steps |
-| Copilot app | Component discovery, official-flow/manual account steps and provider runbook | Provider writes and a separate private local-usage source are unsupported |
+| Copilot app | Component discovery, official-flow/manual account steps and provider runbook | Provider writes remain unimplemented; [default-off SQLite sync](copilot-app-sqlite-sync.md) is approved next work. Private usage/authentication extraction remains excluded |
 | Installation | Pinned WinGet plans and identity checks; fresh PATH/portable CLI discovery, hidden-terminal phase/download progress, scoped cancellation, preserved partial results and rediscovery | Unknown progress is indeterminate; direct app asset-download fallback and clean-machine package acceptance are not complete |
 | Accounts and GitHub authorization | Official client workflows, protocol-3 CLI identity follow-up, manual/verified distinction, separate OS-held GitHub authorization | No copying client credentials; actual runtime/Billing capability depends on the installed client and account |
 | Resources | Native MCP, Markdown-only Skills and Instructions authoring/publication/revoke on reviewed public paths | Named profiles, custom roots, local-command/secret-bearing MCP, app and JetBrains resource gaps remain manual |

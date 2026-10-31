@@ -68,6 +68,12 @@ Do not attach a real token or raw session log. Extract the smallest synthetic re
 - URL, header, process, tracing, and panic diagnostics must be tested for secret leakage.
 - Editor focus/dirty-state tracking must not copy field values or serialize passwords into drafts. Closing a credential dialog clears its password fields; failed saves retain input only in the current editor.
 
+## Planned opt-in Copilot App database projection
+
+The [approved SQLite sync plan](docs/copilot-app-sqlite-sync.md) is not implemented in the current release. It permits only the manager's selected BYOK provider/model projection, never importing client authentication material. It is disabled by default and requires explicit user enablement and a target-scoped risk confirmation. The chosen Authorization-header route stores the selected provider key in plaintext in App SQLite rows; SQLite WAL/rollback journals and filesystem backups may retain it too. Manager-side OS credential storage does not encrypt these target copies. Users must be told this before enabling automatic synchronization; file permissions are not encryption, and Windows requires real ACL checks rather than a POSIX chmod claim.
+
+Keys must stay out of previews, logs, diagnostics, exports, issues and screenshots. Restrict reads to reviewed schema metadata and bounded configuration rows; never enumerate account, session or conversation tables. Recovery data must be scoped, private and documented; do not silently copy the full App database. Unknown versions/schema, unsafe paths, lock contention, a running App or external edits fail closed. Disabling sync stops future writes but neither removes existing target keys nor guarantees erasure from journals/backups; show separate, reviewed owned-configuration revocation and key-rotation guidance. The exact invariants and acceptance gates are in the linked plan.
+
 ## Installer handling expectations
 
 These rules concern **third-party client/component installers launched by the manager**, not an Authenticode requirement on the manager's own first Windows package.

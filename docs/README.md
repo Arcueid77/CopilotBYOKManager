@@ -35,6 +35,7 @@ The first release is the four-page v0.1 core, not the complete extended MVP. The
 
 | Document | Purpose |
 | --- | --- |
+| [Copilot App SQLite sync](copilot-app-sqlite-sync.md) | Approved default-off provider/model synchronization plan, risk consent and acceptance; not implemented |
 | [JetBrains support](jetbrains-support.md) | Reviewed plugin versions, automatic shared BYOK writes and per-IDE acceptance |
 | [VS Code detection](vscode-detection.md) | Versioned launcher/capability detection and no-surprise-window behavior |
 | [Provider model discovery](provider-model-discovery.md) | Connection form, read-only catalog queries and saved-key binding |

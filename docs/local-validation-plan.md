@@ -17,7 +17,7 @@
 - Mac：本 Windows 环境不能验证构建、公证或桌面行为。由 GitHub macOS runner 及真实 Intel/Apple Silicon 分别完成签名、DMG 安装、Finder 启动、Keychain CRUD、CLI 检测、模型发布/请求、关闭窗口和 Cmd+Q，详见[Apple 与真机清单（英文）](release-secrets.md)。
 - 原生核心：`pwsh -NoProfile -File scripts/verify-local.ps1 -Mode NativeCore` 执行 B00–B08、B19–B22、B26–B29、B31–B32，保留恢复/密钥/事务不变量，并验证手动修改后的当前配置、读取失败、一键发布和受管撤销；B09–B18、B23–B25、B30 明确跳过，扩展页面不得为过验收而重新开放。
 - CLI 注册表：`scripts/check-cli-registry.cjs` 使用固定哈希的官方 1.0.101 Windows 二进制、全新隔离目录和本地假接口，核对多供应商/同名模型/带斜杠冒号的模型 ID，以及拒绝对象式供应商配置；入口和来源见 [CLI 说明](copilot-cli-support.md)。NativeCore 的 B04 覆盖注册表共存/定向撤销，B08 按日志定位实际已写入文件来测试恢复冲突；修改后的原生套件须另行复跑。
-- 真实客户端：精确版本、模型可见、选用、最小请求和安全撤销分别记录；只发经授权的不含项目内容的短消息。App 仍手动；JetBrains/Rider 未恢复授权前继续延期。
+- 真实客户端：精确版本、模型可见、选用、最小请求和安全撤销分别记录；只发经授权的不含项目内容的短消息。当前 App 仍手动；已批准的[SQLite 同步方案](copilot-app-sqlite-sync.md#acceptance-before-enabling-the-feature)须在实现后单独验收，本文不授权操作真实数据库或凭据。JetBrains/Rider 未恢复授权前继续延期。
 
 下文为既有分层工具和历史记录。C1/完整 C2 会访问扩展配额/用量接口，不应不加筛选地作为本版核心验收执行。扩展项延期不减少安全回归，也不允许删已有数据。当前源自动/模拟检查、包生成、真实桌面、干净安装和真实请求是五种不同证据。
 

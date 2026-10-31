@@ -513,7 +513,7 @@ CLI publication merges one stable installation/Connection-scoped provider and al
 
 ### GitHub Copilot app
 
-Provider projection remains detection/manual guidance until a stable external interface exists. CopilotBYOKManager may launch official sign-in and consume supported non-secret identity/usage interfaces. Missing support remains unknown/partial; it does not justify parsing private credential state.
+The current provider adapter remains detection/manual guidance. The 2026-10-31 approved next implementation is [default-off experimental SQLite synchronization](copilot-app-sqlite-sync.md), not contingent on a public write API. A versioned App adapter may project only manager-owned provider/model rows after explicit user enablement and risk confirmation. Keep this database adapter separate from CLI `providers.json`, the manager's Usage DB and account/usage services. The Authorization-header credential route is plaintext in the App database; consent and redaction are mandatory, not a claim of OS-keychain protection. CopilotBYOKManager may launch official sign-in and consume supported non-secret identity/usage interfaces, but must not parse/copy client login credentials, session content or unrelated private state.
 
 CLI and app may share runtime/session data. Deduplication must use physical source identity so the same record is not counted twice.
 

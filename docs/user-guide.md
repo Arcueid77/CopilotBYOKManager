@@ -181,6 +181,8 @@ Reopen the relevant IDE, complete official GitHub Copilot sign-in, and select th
 
 **Copilot App**
 
+The steps below describe the current release. [Experimental SQLite sync](copilot-app-sqlite-sync.md) is approved but not implemented: it will be off by default and require manual enablement plus a risk confirmation before automatic synchronization. Do not look for an enable switch in v0.1.0.
+
 On its Apps card, choose **Provider to configure manually (本次手动配置)**, then **Manual setup (手动配置)**. Confirmations are saved separately for each provider and displayed as **Confirmed by you (你已确认)**. Editing a provider changes its record to **Confirm updated configuration (修改后待确认)**. Reopen the guide after updating the App and confirm again.
 
 In the App's **Model providers**, add the provider using the displayed endpoint and model, and enter its key inside the App. Then click **I have completed manual setup (我已完成手动配置)** in the manager's guide.

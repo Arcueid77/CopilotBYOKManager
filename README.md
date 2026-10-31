@@ -52,7 +52,7 @@ Configure providers in these clients:
 | VS Code Stable / Insiders / profiles | Automatic | Owned provider groups. Select the model in the correct profile, then test. [Detection details](docs/vscode-detection.md) |
 | GitHub Copilot CLI | Automatic | Multiple providers and models in `providers.json`. Restart the CLI session and select with `/model`. [Client guide](docs/user-guide.md#5-select-and-verify-the-model-in-each-client) |
 | Reviewed JetBrains GitHub Copilot distributions | Automatic, version-pinned | Close/reopen IDEs, sign in separately, select and test. [Exact reviewed versions](docs/jetbrains-support.md#version-and-compatibility-boundary) |
-| GitHub Copilot App | Manual | No automatic provider writes or verification. Configure and verify inside the App. [Guide](docs/user-guide.md#5-select-and-verify-the-model-in-each-client) |
+| GitHub Copilot App | Manual in current release | Configure and verify inside the App. Default-off [experimental SQLite sync](docs/copilot-app-sqlite-sync.md) is planned, not implemented. [Guide](docs/user-guide.md#5-select-and-verify-the-model-in-each-client) |
 
 JetBrains supports the exact plugin distributions listed above; IDEs sharing a runtime directory may see the same configuration. Client policies, subscriptions and provider access requirements still apply.
 
