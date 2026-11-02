@@ -487,7 +487,7 @@
                   (item) => `
                     <div class="install-result-row">
                       <span class="install-status ${statusClass(item.status)}">${escapeHtml(statusLabel(item.status))}</span>
-                      <div><strong>${escapeHtml(componentName(item.componentId))}</strong>${["completedAndVerified", "skippedAlreadyReady", "cancelled"].includes(item.status) ? "" : `<details><summary>${tr("详细原因")}</summary><p>${escapeHtml(item.detail)}</p></details>`}</div>
+                      <div><strong>${escapeHtml(componentName(item.componentId))}</strong>${window.CopilotBYOKManagerInstallProgress.failureHint(item) ? `<p class="inline-error" role="alert">${window.CopilotBYOKManagerInstallProgress.failureHint(item)}</p>` : ""}${["completedAndVerified", "skippedAlreadyReady", "cancelled"].includes(item.status) ? "" : `<details><summary>${tr("详细原因")}</summary><p>${escapeHtml(item.detail)}</p></details>`}${isDesktop && ["failed", "timedOut", "processSucceededVerificationFailed"].includes(item.status) ? `<button class="button ghost small" data-install-retry="${escapeHtml(item.componentId)}">${tr("重新检测并重试")}</button>` : ""}</div>
                     </div>`,
                 )
                 .join("")}
@@ -499,6 +499,12 @@
         </section>
       </div>`;
     dialog().mount();
+    modalRoot.querySelectorAll("[data-install-retry]").forEach(button => button.addEventListener("click", () => {
+      const id = button.dataset.installRetry;
+      if (!componentOrder.includes(id) || activeInstall) return;
+      closeModal();
+      void preview([id]);
+    }));
     modalRoot
       .querySelectorAll("[data-install-modal-close]")
       .forEach((button) => button.addEventListener("click", closeModal));

@@ -38,6 +38,14 @@
       ${status?.enabled ? selected.map(id => `<button class="button ghost small" data-action="app-sync-review" data-id="${escape(id)}" ${disabled || !snapshot.connections.some(c => c.id === id && c.enabled !== false) ? "disabled" : ""}>${tr("核对 {0} 的变更", escape(snapshot.connections.find(c => c.id === id)?.name ?? id))}</button>`).join("") : ""}
       ${owned.length ? `<details class="app-sync-revoke"><summary>${tr("移除 App 中的受管配置")}</summary><p class="manager-meta">${tr("关闭同步会保留配置。移除需单独预览，管理器中的供应商会保留。")}</p>${owned.map(id => `<button class="button ghost small" data-action="app-sync-revoke" data-id="${escape(id)}" ${disabled ? "disabled" : ""}>${tr("移除 {0}", escape(snapshot.connections.find(c => c.id === id)?.name ?? id))}</button>`).join("")}</details>` : ""}</section>`;
   }
+  function selectionBody(providers) {
+    return `<p class="app-sync-intro">${tr("选择要同步到 Copilot App 的供应商。")}</p><div class="app-sync-selection-meta"><span>${tr("供应商")}</span><span data-sync-count role="status" aria-live="polite">${tr("已选 {0} / 16", 0)}</span></div><div class="app-sync-choices">${providers.map(c => {
+      let endpoint = "";
+      try { const url = new URL(c.baseUrl); endpoint = `${url.host}${url.pathname.replace(/\/$/, "")}`; } catch { /* Saved providers are validated natively; omit unavailable display metadata. */ }
+      const count = (c.models ?? []).filter(model => model.enabled !== false).length;
+      return `<label class="app-sync-choice"><input type="checkbox" data-sync-provider value="${escape(c.id)}"><span class="app-sync-choice-content"><strong>${escape(c.name)}</strong><span class="app-sync-choice-meta">${tr("{0} 个启用模型", count)}${endpoint ? `<span aria-hidden="true"> · </span><span class="app-sync-choice-endpoint">${escape(endpoint)}</span>` : ""}</span></span></label>`;
+    }).join("")}</div><p class="app-sync-close-hint">${tr("请先关闭 Copilot App，再继续。")}</p><div class="app-sync-error" data-sync-error role="alert" hidden></div>`;
+  }
   function create({ invoke, snapshot, setStatus, openModal, closeModal, setBusy, refresh, onError, openDeployment }) {
     let busy = false;
     async function perform(task) {
@@ -48,7 +56,7 @@
       finally { busy = false; }
     }
     function risk(preview) {
-      openModal({ title: tr("启用实验性 Copilot App 同步？"), body: riskBody(preview), footer: `<button class="button ghost" data-modal-close>${tr("取消")}</button><button class="button primary" data-sync-confirm>${tr("我理解风险并启用")}</button>`, onOpen(root) {
+      openModal({ title: tr("启用实验性 Copilot App 同步？"), compact: true, body: riskBody(preview), footer: `<button class="button ghost" data-modal-close>${tr("取消")}</button><button class="button primary" data-sync-confirm>${tr("我理解风险并启用")}</button>`, onOpen(root) {
         let planId = preview.id;
         root.querySelector("[data-sync-confirm]").addEventListener("click", () => perform(async () => {
           if (!planId || !root.isConnected) return;
@@ -60,14 +68,29 @@
     }
     function choose() {
       const providers = snapshot().connections.filter(c => c.enabled !== false);
-      openModal({ title: tr("选择自动同步的供应商"), body: `<p>${tr("仅同步勾选的已保存供应商，最多 16 个。先关闭 Copilot App，再核对写入计划。")}</p><div class="app-sync-choices">${providers.map(c => `<label class="checkbox-row"><input type="checkbox" data-sync-provider value="${escape(c.id)}"><span>${escape(c.name)}</span></label>`).join("")}</div><p data-sync-error role="status"></p>`, footer: `<button class="button ghost" data-modal-close>${tr("取消")}</button><button class="button primary" data-sync-preview>${tr("核对范围与风险")}</button>`, onOpen(root) {
-        root.querySelector("[data-sync-preview]").addEventListener("click", () => perform(async () => {
-          const ids = [...root.querySelectorAll("[data-sync-provider]")].filter(e => e.checked).map(e => e.value);
-          if (!ids.length || ids.length > 16) { root.querySelector("[data-sync-error]").textContent = tr("请选择 1 至 16 个供应商。"); return; }
-          setBusy(true);
+      openModal({ title: tr("选择自动同步的供应商"), compact: true, body: selectionBody(providers), footer: `<button class="button ghost" data-modal-close>${tr("取消")}</button><button class="button primary" data-sync-preview disabled>${tr("下一步：核对风险")}</button>`, onOpen(root) {
+        const inputs = [...root.querySelectorAll("[data-sync-provider]")], button = root.querySelector("[data-sync-preview]"), status = root.querySelector("[data-sync-error]");
+        let preparing = false;
+        const selected = () => inputs.filter(e => e.checked).map(e => e.value);
+        function update() {
+          const count = selected().length, counter = root.querySelector("[data-sync-count]");
+          if (counter) counter.textContent = tr("已选 {0} / 16", count);
+          button.disabled = preparing || count === 0 || count > 16;
+          status.hidden = count <= 16;
+          if (count > 16) status.textContent = tr("请选择 1 至 16 个供应商。");
+        }
+        inputs.forEach(input => input.addEventListener("change", update)); update();
+        button.addEventListener("click", () => perform(async () => {
+          const ids = selected();
+          if (!ids.length || ids.length > 16) { update(); return; }
+          preparing = true; setBusy(true); inputs.forEach(input => { input.disabled = true; }); button.disabled = true; button.textContent = tr("正在核对…"); status.hidden = true;
           let preview;
           try { preview = await invoke("preview_app_sync_enable", { connectionIds: ids }); }
-          finally { setBusy(false); }
+          catch (error) {
+            if (root.isConnected) { status.hidden = false; status.innerHTML = `<p>${tr("无法生成同步预览，请稍后重试。")}</p><details><summary>${tr("详细原因")}</summary><p>${escape(error?.message ?? String(error))}</p></details>`; }
+            return;
+          }
+          finally { preparing = false; setBusy(false); inputs.forEach(input => { input.disabled = false; }); button.disabled = selected().length === 0 || selected().length > 16; button.textContent = tr("下一步：核对风险"); }
           if (root.isConnected) risk(preview);
         }));
       } });
@@ -105,5 +128,5 @@
     }
     return { handle };
   }
-  return { label, panel, removalReview, riskBody, create };
+  return { label, panel, removalReview, riskBody, selectionBody, create };
 });

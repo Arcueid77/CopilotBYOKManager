@@ -2,7 +2,14 @@
 
 一次配置供应商，将模型发布到多个 Copilot 客户端。
 
-## 本版功能
+## 本次修复
+
+- 安装失败时直接显示下载服务器解析失败或连接超时的原因及处理步骤。
+- 安装结果增加“重新检测并重试”，重新核对组件并生成新的安装预览。
+- 安装器退出码改为标准十六进制；兼容已有安装记录，保留已完成组件。
+- 优化 Copilot App 供应商选择弹窗：紧凑列表、正常尺寸复选框、模型与端点摘要、选中计数和行内错误。
+
+## 功能
 
 - 集中管理供应商地址、API Key 和模型，支持获取模型列表或手动添加。
 - 发布到 Copilot Chat（VS Code）和支持的 JetBrains 插件；Copilot CLI 使用 `providers.json` 保存多个供应商及其全部启用模型。
@@ -24,6 +31,13 @@
 保存供应商并发布后，在客户端选择相应模型。CLI 配置在新终端和新会话中生效；JetBrains 仅支持应用中标示的插件版本。
 
 ## English
+
+This patch makes download name-resolution and connection-timeout failures visible
+in installation results, with a concrete next step. **Detect again and retry**
+checks the component again and creates a fresh installation preview. Exit codes
+use hexadecimal notation. Existing history and completed components are retained.
+Copilot App provider selection now uses a compact list with correctly sized
+checkboxes, model/endpoint summaries, a selection count and inline errors.
 
 Configure providers, API keys and models once, then publish to Copilot Chat in
 VS Code and supported JetBrains plugins. Copilot CLI now uses `providers.json`

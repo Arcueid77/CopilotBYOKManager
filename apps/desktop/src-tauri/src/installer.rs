@@ -15,6 +15,7 @@ use std::sync::atomic::Ordering;
 use std::sync::{atomic::AtomicBool, Arc};
 use uuid::Uuid;
 mod catalog;
+pub(crate) mod failure;
 pub(crate) mod history;
 #[cfg(windows)]
 mod identity;
@@ -104,6 +105,8 @@ pub struct InstallOperationResult {
     pub component_id: String,
     pub status: InstallResultStatus,
     pub detail: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub failure_kind: Option<failure::InstallFailureKind>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -254,6 +257,7 @@ pub fn execute_plan(
                 .requested_component_ids
                 .iter()
                 .map(|component_id| InstallOperationResult {
+                    failure_kind: None,
                     component_id: component_id.clone(),
                     status: InstallResultStatus::Unsupported,
                     detail: "One-click installation is currently supported only on Windows"
@@ -751,6 +755,7 @@ fn apply_windows_plan(
             record_result(
                 &mut results,
                 InstallOperationResult {
+                    failure_kind: None,
                     component_id: id.clone(),
                     status: InstallResultStatus::SkippedAlreadyReady,
                     detail:
@@ -767,6 +772,7 @@ fn apply_windows_plan(
             record_result(
                 &mut results,
                 InstallOperationResult {
+                    failure_kind: None,
                     component_id: operation.component_id.clone(),
                     status: InstallResultStatus::Cancelled,
                     detail: "Not started because cancellation was requested".into(),
@@ -785,6 +791,7 @@ fn apply_windows_plan(
             record_result(
                 &mut results,
                 InstallOperationResult {
+                    failure_kind: None,
                     component_id: operation.component_id.clone(),
                     status: InstallResultStatus::SkippedAlreadyReady,
                     detail: "Component became ready before this operation ran".to_string(),
@@ -797,6 +804,7 @@ fn apply_windows_plan(
             record_result(
                 &mut results,
                 InstallOperationResult {
+                    failure_kind: None,
                     component_id: operation.component_id.clone(),
                     status: InstallResultStatus::Failed,
                     detail: "Component detection became unknown; no installer was launched".into(),
@@ -812,6 +820,7 @@ fn apply_windows_plan(
                     record_result(
                         &mut results,
                         InstallOperationResult {
+                            failure_kind: None,
                             component_id: operation.component_id.clone(),
                             status: InstallResultStatus::Failed,
                             detail:
@@ -834,7 +843,8 @@ fn apply_windows_plan(
                     return Err(AppError::InvalidInput("WinGet repository changed after review; installation stopped before this step".into()));
                 }
                 if operation.component_id == COMPONENT_COPILOT_CLI && !powershell_ready() {
-                    record_result(&mut results, InstallOperationResult { component_id: operation.component_id.clone(), status: InstallResultStatus::SkippedDependencyFailed, detail: "The reviewed CLI package requires PowerShell 7 or newer. Install this prerequisite manually and preview again; no automatic dependency command was executed".into() }, progress)?;
+                    record_result(&mut results, InstallOperationResult {
+                    failure_kind: None, component_id: operation.component_id.clone(), status: InstallResultStatus::SkippedDependencyFailed, detail: "The reviewed CLI package requires PowerShell 7 or newer. Install this prerequisite manually and preview again; no automatic dependency command was executed".into() }, progress)?;
                     continue;
                 }
                 let arguments = catalog::arguments(&operation.component_id)?;
@@ -855,6 +865,7 @@ fn apply_windows_plan(
                 );
                 let Some(code) = vscode_install::find_executable() else {
                     record_result(&mut results, InstallOperationResult {
+                    failure_kind: None,
                         component_id: operation.component_id.clone(),
                         status: InstallResultStatus::SkippedDependencyFailed,
                         detail:
@@ -892,6 +903,7 @@ fn apply_windows_plan(
                 record_result(
                     &mut results,
                     InstallOperationResult {
+                        failure_kind: None,
                         component_id: operation.component_id.clone(),
                         status: if verified {
                             InstallResultStatus::CompletedAndVerified
@@ -922,25 +934,14 @@ fn apply_windows_plan(
             }
         };
 
-        let process_ok = output.status.success();
         record_result(
             &mut results,
-            InstallOperationResult {
-                component_id: operation.component_id.clone(),
-                status: match (process_ok, verified) {
-                    (_, true) => InstallResultStatus::CompletedAndVerified,
-                    (true, false) => InstallResultStatus::ProcessSucceededVerificationFailed,
-                    (false, false) => InstallResultStatus::Failed,
-                },
-                detail: if verified {
-                    "Installation completed and the component was re-detected".to_string()
-                } else {
-                    format!(
-                        "Installer exited with code {:?}; component verification did not pass",
-                        output.status.code()
-                    )
-                },
-            },
+            failure::process_result(
+                &operation.component_id,
+                output.status.success(),
+                output.status.code(),
+                verified,
+            ),
             progress,
         )?;
     }

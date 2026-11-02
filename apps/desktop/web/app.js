@@ -707,7 +707,7 @@
     setStatus(status) { sectionLoader.invalidate("appSync"); data.appSync = status; delete data.errors.appSync; updateAppSyncPanel(); },
     openModal, closeModal, setBusy: value => dialogs.setBusy(value), refresh,
     onError: error => showToast(error?.message ?? String(error), "error"), openDeployment });
-  function openModal({ title, body, footer = "", wide = false, onOpen }) {
+  function openModal({ title, body, footer = "", wide = false, compact = false, onOpen }) {
     if (deploymentCleanup?.busy) return;
     if (!dialogs.prepare()) return;
     closeDeployment();
@@ -715,7 +715,7 @@
     modalCleanup = null;
     modalRoot.innerHTML = `
       <div class="modal-backdrop" role="presentation">
-        <section class="modal ${wide ? "wide" : ""}" role="dialog" aria-modal="true" aria-label="${escapeHtml(title)}">
+        <section class="modal ${wide ? "wide" : ""} ${compact ? "compact" : ""}" role="dialog" aria-modal="true" aria-label="${escapeHtml(title)}">
           <header class="modal-header"><h2>${escapeHtml(title)}</h2><button class="icon-button" data-modal-close aria-label="${tr("关闭")}">×</button></header>
           <div class="modal-body">${body}</div>
           ${footer ? `<footer class="modal-footer">${footer}</footer>` : ""}

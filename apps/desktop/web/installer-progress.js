@@ -24,6 +24,12 @@
     const counts = summarize(results);
     return [tr("{0} 个已完成", counts.completed), counts.cancelled ? tr("{0} 个已取消", counts.cancelled) : "", counts.attention ? tr("{0} 个需处理", counts.attention) : ""].filter(Boolean).join(" · ");
   }
+  function failureHint(result) {
+    if (!["failed", "timedOut"].includes(result?.status)) return "";
+    if (result.failureKind === "nameResolution") return tr("无法解析下载服务器。请检查网络或代理后，重新检测并重试。");
+    if (result.failureKind === "networkTimeout") return tr("连接下载服务器超时。请检查网络后，重新检测并重试。");
+    return "";
+  }
   function render(run, { componentName, statusLabel }, now = Date.now()) {
     if (!run) return "";
     const end = run.finishedAt ? Date.parse(run.finishedAt) : now;
@@ -39,8 +45,8 @@
       const active = !result && run.status === "running" && run.currentComponentId === id;
       const label = result ? statusLabel(result.status) : active ? phaseLabel(progress.phase ?? "preparing") : run.status === "running" ? tr("等待安装") : tr("未完成");
       const percent = known ? Math.min(100, Math.floor(progress.downloadedBytes / progress.totalBytes * 100)) : null;
-      return `<section class="install-progress-step ${active ? "is-active" : ""}"><div><strong>${escape(componentName(id))}</strong><span>${escape(label)}</span></div>${active ? `<progress max="100" ${progress.phase === "downloading" && known ? `value="${percent}"` : ""} aria-label="${escape(label)}"></progress>${progress.phase === "downloading" && known ? `<p>${tr("约 {0} / {1} · {2}%", escape(size(progress.downloadedBytes)), escape(size(progress.totalBytes)), percent)}</p>` : ""}` : ""}</section>`;
+      return `<section class="install-progress-step ${active ? "is-active" : ""}"><div><strong>${escape(componentName(id))}</strong><span>${escape(label)}</span></div>${failureHint(result) ? `<p class="inline-error" role="alert">${failureHint(result)}</p>` : ""}${active ? `<progress max="100" ${progress.phase === "downloading" && known ? `value="${percent}"` : ""} aria-label="${escape(label)}"></progress>${progress.phase === "downloading" && known ? `<p>${tr("约 {0} / {1} · {2}%", escape(size(progress.downloadedBytes)), escape(size(progress.totalBytes)), percent)}</p>` : ""}` : ""}</section>`;
     }).join("")}</div>`;
   }
-  return { render, phaseLabel, summarize, summaryText };
+  return { render, phaseLabel, summarize, summaryText, failureHint };
 });

@@ -5,6 +5,16 @@
   if (typeof module === "object" && module.exports) module.exports = messages;
   else root.CopilotBYOKManagerMessages = messages;
 })(globalThis, () => ({
+  "选择要同步到 Copilot App 的供应商。": ["选择要同步到 Copilot App 的供应商。", "Choose providers to sync with Copilot App."],
+  "已选 {0} / 16": ["已选 {0} / 16", "{0} / 16 selected"],
+  "{0} 个启用模型": ["{0} 个启用模型", "{0} enabled models"],
+  "请先关闭 Copilot App，再继续。": ["请先关闭 Copilot App，再继续。", "Close Copilot App before continuing."],
+  "下一步：核对风险": ["下一步：核对风险", "Next: review risks"],
+  "正在核对…": ["正在核对…", "Checking…"],
+  "无法生成同步预览，请稍后重试。": ["无法生成同步预览，请稍后重试。", "Could not prepare the sync preview. Please try again shortly."],
+  "无法解析下载服务器。请检查网络或代理后，重新检测并重试。": ["无法解析下载服务器。请检查网络或代理后，重新检测并重试。", "The download server name could not be resolved. Check your network or proxy, then detect again and retry."],
+  "连接下载服务器超时。请检查网络后，重新检测并重试。": ["连接下载服务器超时。请检查网络后，重新检测并重试。", "The connection to the download server timed out. Check your network, then detect again and retry."],
+  "重新检测并重试": ["重新检测并重试", "Detect again and retry"],
   "未开启": ["未开启", "Off"],
   "模型移除需要确认": ["模型移除需要确认", "Model removal needs review"],
   "最近同步结果": ["最近同步结果", "Last synchronization results"],
@@ -154,7 +164,7 @@
   "关闭窗口收起到系统托盘；点击托盘图标恢复，右键菜单可退出。普通最小化仍留在任务栏。": ["关闭窗口收起到系统托盘；点击托盘图标恢复，右键菜单可退出。普通最小化仍留在任务栏。", "Closing the window hides it to the system tray. Left-click to open the main window, or right-click and choose Exit CopilotBYOKManager. Ordinary minimize stays on the taskbar."],
   "系统托盘不可用，关闭窗口将正常退出。": ["系统托盘不可用，关闭窗口将正常退出。", "System tray is unavailable. Closing the window exits normally."],
   "一次配置供应商，用于多个 Copilot 应用。": ["一次配置供应商，用于多个 Copilot 应用。", "Configure a provider once, reuse it across Copilot apps."],
-  "核心配置版 · 预发布 · 0.2.1": ["核心配置版 · 预发布 · 0.2.1", "Core configuration edition · Pre-release · 0.2.1"],
+  "核心配置版 · 预发布 · 0.2.2": ["核心配置版 · 预发布 · 0.2.2", "Core configuration edition · Pre-release · 0.2.2"],
   "界面与窗口": ["界面与窗口", "Appearance and window"],
   "未推出功能记录": ["未推出功能记录", "Planned feature status"],
   "用量、账单与共享资源暂未开放，已有数据保留。规划记录不承诺上线日期。": ["用量、账单与共享资源暂未开放，已有数据保留。规划记录不承诺上线日期。", "Usage, Billing and shared resources are not available in this edition. Existing data is retained. The feature record promises no release dates."],

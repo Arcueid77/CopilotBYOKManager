@@ -6,6 +6,8 @@ The maintainer authorized the `v0.2.0` Pre-release on 2026-11-02: align versions
 
 The first 0.2.0 packaging run built its Windows executable/installer but correctly stopped when Tauri's CRLF-to-LF manifest rewrite made the worktree appear dirty. Reproduction confirmed an unchanged Git content hash. A targeted LF attribute fixes fresh Windows checkouts without relaxing source checks. The used `v0.2.0` tag stays fixed; the corrected candidate is `v0.2.1`.
 
+`v0.2.1` was published with its verified original Draft files. The next authorized patch is `v0.2.2`, covering typed installation-network failures and reviewed retry. It follows the same fixed-source, two-platform Draft/verification/promotion process and retains previous public assets.
+
 Configure one provider. Publish it safely across your Copilot clients.
 
 ## Outputs and identities
@@ -109,14 +111,14 @@ gh workflow run release.yml --ref main -f ref=main -f platform=all -f mode=dry-r
 gh workflow run release.yml --ref main -f ref=<FULL_REVIEWED_SHA> -f platform=macos -f mode=dry-run
 
 # Only after version alignment and approval to create/push the actual tag:
-git tag -a v0.2.1 <FULL_REVIEWED_SHA> -m "CopilotBYOKManager v0.2.1 core candidate"
-git push origin v0.2.1
+git tag -a v0.2.2 <FULL_REVIEWED_SHA> -m "CopilotBYOKManager v0.2.2 core candidate"
+git push origin v0.2.2
 
 # A tag push defaults to Draft. Explicitly rerun/update a Draft if needed:
-gh workflow run release.yml --ref main -f ref=v0.2.1 -f platform=all -f mode=draft
+gh workflow run release.yml --ref main -f ref=v0.2.2 -f platform=all -f mode=draft
 
 # After verifying the Draft files, with maintainer publication authorization:
-gh workflow run release.yml --ref main -f ref=v0.2.1 -f platform=all -f mode=publish
+gh workflow run release.yml --ref main -f ref=v0.2.2 -f platform=all -f mode=publish
 ```
 
 Download and inspect Draft assets, SHA256SUMS and metadata before promotion. Update the [release notes template](release-notes-template.md) **before tagging**. Internal evidence stays truthful; release notes need no signing or acceptance notices. The workflow does not change repository settings or create Apple credentials. Stable/Latest promotion remains a separate maintainer decision.

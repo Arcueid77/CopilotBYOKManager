@@ -426,6 +426,7 @@ mod tests {
             &run.id,
             super::super::COMPONENT_COPILOT_CLI,
             Some(InstallOperationResult {
+                failure_kind: None,
                 component_id: super::super::COMPONENT_COPILOT_CLI.into(),
                 status: InstallResultStatus::CompletedAndVerified,
                 detail: "Verified fixture".into(),
@@ -451,6 +452,7 @@ mod tests {
             .push(super::super::COMPONENT_COPILOT_APP.into());
         let (_ticket, run) = jobs.begin(&plan).unwrap();
         let ready = InstallOperationResult {
+            failure_kind: None,
             component_id: super::super::COMPONENT_COPILOT_CLI.into(),
             status: InstallResultStatus::CompletedAndVerified,
             detail: "fixture".into(),
@@ -475,6 +477,7 @@ mod tests {
             .is_err());
         jobs.cancel(&run.id).unwrap();
         let cancelled = InstallOperationResult {
+            failure_kind: None,
             component_id: super::super::COMPONENT_COPILOT_APP.into(),
             status: InstallResultStatus::Cancelled,
             detail: "fixture".into(),

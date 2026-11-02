@@ -227,6 +227,13 @@ h1 { font-size: 26px; font-weight: 650; line-height: 1.25; margin-bottom: 8px; l
 .modal-backdrop { background: var(--backdrop); z-index: 30; }
 .modal { display: flex; flex-direction: column; overflow: hidden; color: var(--text); background: var(--panel); border-color: var(--border); border-radius: 14px; box-shadow: var(--shadow); max-height: calc(100vh - 48px); }
 .modal.wide { width: min(800px, 94vw); }
+.modal.compact { width: min(560px, calc(100vw - 32px)); }
+.modal.compact .modal-header { padding: 16px 20px; }
+.modal.compact .modal-body { padding: 20px; }
+.modal.compact .modal-footer { padding: 14px 20px; }
+.modal-header h2:focus { outline: none; }
+.modal-backdrop:has(.modal.compact) { backdrop-filter: blur(4px); }
+html:has(.modal-backdrop) { overflow: hidden; scrollbar-gutter: stable; }
 .modal-header, .modal-footer { flex: 0 0 auto; padding: 20px 24px; background: var(--panel); }
 .modal-header h2 { font-size: 17px; line-height: 1.5; }
 .modal-body { min-height: 0; overflow: auto; padding: 24px; scrollbar-gutter: stable; }
@@ -332,7 +339,24 @@ summary { cursor: pointer; }
 .app-sync-target { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 8px 14px; }
 .app-sync-target dd { margin: 0; overflow-wrap: anywhere; }
 .app-sync-risk, .app-sync-removal { padding: 12px; border: 1px solid var(--border); border-radius: 8px; }
-.app-sync-choices { display: grid; gap: 12px; }
+.checkbox-row { display: flex; align-items: flex-start; gap: 10px; }
+.checkbox-row input[type="checkbox"] { flex: 0 0 17px; width: 17px; height: 17px; min-height: 0; padding: 0; margin: 3px 0 0; accent-color: var(--accent); box-shadow: none; }
+.checkbox-row > span { min-width: 0; line-height: 1.65; }
+.app-sync-intro { margin: 0 0 20px; font-size: 14px; color: var(--muted); }
+.app-sync-selection-meta { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 10px; color: var(--muted); font-size: 12px; }
+.app-sync-choices { display: grid; gap: 8px; }
+.app-sync-choice { display: flex; align-items: flex-start; gap: 12px; padding: 14px; border: 1px solid var(--border); border-radius: 9px; background: var(--panel-2); cursor: pointer; }
+.app-sync-choice:hover { border-color: var(--accent); }
+.app-sync-choice:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
+.app-sync-choice:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+.app-sync-choice > input[type="checkbox"] { flex: 0 0 17px; width: 17px; height: 17px; min-height: 0; padding: 0; margin: 3px 0 0; accent-color: var(--accent); box-shadow: none; }
+.app-sync-choice-content { display: grid; gap: 4px; min-width: 0; }
+.app-sync-choice-content strong { font-size: 14px; font-weight: 600; line-height: 1.5; overflow-wrap: anywhere; }
+.app-sync-choice-meta { color: var(--muted); font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
+.app-sync-close-hint { margin: 16px 0 0; color: var(--muted); font-size: 12px; }
+.app-sync-error { margin-top: 14px; color: var(--danger); font-size: 13px; overflow-wrap: anywhere; }
+.app-sync-error > p { margin: 0 0 6px; }
+.app-sync-error details { color: var(--muted); }
 .app-sync-revoke { margin-top: 12px; }
 @media (max-width: 620px) {
   .sidebar { height: auto; min-height: 86px; grid-template-columns: 1fr; padding: 10px 14px 5px; }

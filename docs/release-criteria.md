@@ -6,6 +6,8 @@
 
 原定 `v0.2.0` 的构建被源码清洁检查拦截，未公开发布。换行格式修复保留原检查与原标签，本次修正包使用 `v0.2.1`。
 
+`v0.2.1` 已按原始 Draft 附件公开。本次安装错误提示与重新检测重试补丁发布为 `v0.2.2`，维护者已授权提交发布；仍沿用双平台检查、原包核验和 Pre-release 晋升。
+
 [规范 §21](mvp-implementation-spec.md#21-final-acceptance)定义本版范围；本文定义证据门槛。[发行工程](release-engineering.md)是英文操作入口，[实现状态](implementation-status.md)记录结果，[本机验证](local-validation-plan.md)记录分层测试方法。
 
 ## 1. 版本和支持承诺
@@ -17,7 +19,7 @@
 | 公开 v0.2 候选 | GitHub Pre-release，不设为 Latest | 自动检查通过，下载核验 Draft 原始文件，维护者已授权 publish；无未解决 P0/P1 |
 | 扩大推广 / 稳定承诺 | 独立维护者决定 | G8 完成；不是当前流水线自动执行的操作 |
 
-所有发布标签严格采用 `vX.Y.Z`，本次为 `v0.2.1`；不使用 `-rc.N` 标签。候选状态由 GitHub Pre-release 表达。修复已公开版本时递增版本，不能复用标签或替换公开附件。本流水线不会直接产生 Latest 稳定版。
+所有发布标签严格采用 `vX.Y.Z`，本次为 `v0.2.2`；不使用 `-rc.N` 标签。候选状态由 GitHub Pre-release 表达。修复已公开版本时递增版本，不能复用标签或替换公开附件。本流水线不会直接产生 Latest 稳定版。
 
 最小正式产物为 Windows x64 current-user NSIS Setup、macOS Universal DMG 和 `SHA256SUMS.txt`，另含源码/工具链元数据与发布说明；Windows standalone ZIP 可选。没有 Linux、Windows ARM64、MSI、商店发行或自动更新。
 
