@@ -245,9 +245,6 @@ fn replacement_refuses_changes_after_review_before_write_and_before_rollback() {
     for stage in 0..3 {
         let (root, writes) = transaction_fixture();
         let journal = root.path().join("journal.json");
-        #[cfg(unix)]
-        let Resource::File(path) = &writes[0].resource;
-        #[cfg(windows)]
         let path = match &writes[0].resource {
             Resource::File(path) => path,
             _ => unreachable!(),

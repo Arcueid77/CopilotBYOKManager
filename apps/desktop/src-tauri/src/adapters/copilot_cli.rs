@@ -451,7 +451,9 @@ fn finish_preparation(
                         write.before.clone()
                     };
                 }
-                let crate::transaction::Resource::File(path) = &write.resource;
+                let crate::transaction::Resource::File(path) = &write.resource else {
+                    return Err(ownership::conflict());
+                };
                 use std::os::unix::fs::PermissionsExt;
                 write.restore_mode = std::fs::metadata(path)
                     .ok()

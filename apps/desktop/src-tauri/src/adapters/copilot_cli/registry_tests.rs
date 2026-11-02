@@ -17,9 +17,6 @@ fn connection(id: &str) -> Connection {
     c
 }
 fn persist(write: &PreparedWrite) {
-    #[cfg(not(windows))]
-    let transaction::Resource::File(path) = &write.resource;
-    #[cfg(windows)]
     let path = match &write.resource {
         transaction::Resource::File(path) => path,
         _ => panic!("file only"),

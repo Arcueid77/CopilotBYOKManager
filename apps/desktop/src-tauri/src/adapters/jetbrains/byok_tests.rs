@@ -54,7 +54,6 @@ fn write_after(write: &transaction::PreparedWrite) {
             fs::create_dir_all(path.parent().unwrap()).unwrap();
             fs::write(path, write.after.as_ref().unwrap()).unwrap();
         }
-        #[cfg(windows)]
         _ => panic!("not a file"),
     }
 }
