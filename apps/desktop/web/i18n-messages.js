@@ -154,7 +154,7 @@
   "关闭窗口收起到系统托盘；点击托盘图标恢复，右键菜单可退出。普通最小化仍留在任务栏。": ["关闭窗口收起到系统托盘；点击托盘图标恢复，右键菜单可退出。普通最小化仍留在任务栏。", "Closing the window hides it to the system tray. Left-click to open the main window, or right-click and choose Exit CopilotBYOKManager. Ordinary minimize stays on the taskbar."],
   "系统托盘不可用，关闭窗口将正常退出。": ["系统托盘不可用，关闭窗口将正常退出。", "System tray is unavailable. Closing the window exits normally."],
   "一次配置供应商，用于多个 Copilot 应用。": ["一次配置供应商，用于多个 Copilot 应用。", "Configure a provider once, reuse it across Copilot apps."],
-  "核心配置版 · 预发布 · 0.2.0": ["核心配置版 · 预发布 · 0.2.0", "Core configuration edition · Pre-release · 0.2.0"],
+  "核心配置版 · 预发布 · 0.2.1": ["核心配置版 · 预发布 · 0.2.1", "Core configuration edition · Pre-release · 0.2.1"],
   "界面与窗口": ["界面与窗口", "Appearance and window"],
   "未推出功能记录": ["未推出功能记录", "Planned feature status"],
   "用量、账单与共享资源暂未开放，已有数据保留。规划记录不承诺上线日期。": ["用量、账单与共享资源暂未开放，已有数据保留。规划记录不承诺上线日期。", "Usage, Billing and shared resources are not available in this edition. Existing data is retained. The feature record promises no release dates."],

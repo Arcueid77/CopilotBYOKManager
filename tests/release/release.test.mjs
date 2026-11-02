@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { execFileSync } from 'node:child_process';
 import { checkReleaseVersion, ROOT } from '../../scripts/check-release-version.mjs';
 import { APPLE_SECRET_NAMES, assetNames, releaseRequest, requireAppleCredentials } from '../../scripts/release-policy.mjs';
 import { assembleRelease, assertWindowsGuiApplication, fileDigest, peArchitecture, verifyReleaseDirectory } from '../../scripts/release-artifacts.mjs';
@@ -12,7 +13,10 @@ import Ajv from 'ajv';
 const sha = 'a'.repeat(40), version = '0.1.0';
 function temporary(t) {
   const root = mkdtempSync(path.join(os.tmpdir(), 'copilot-byok-manager-release-test-'));
-  t.after(() => rmSync(root, { recursive: true, force: true }));
+  t.after(() => {
+    assert.ok(path.resolve(root).startsWith(path.join(path.resolve(os.tmpdir()), 'copilot-byok-manager-release-test-')));
+    rmSync(root, { recursive: true, force: true });
+  });
   return root;
 }
 function fixture(t, mode = 'draft', platform = 'all') {
@@ -42,6 +46,25 @@ test('all shipped version sources agree with the exact release tag', () => {
   for (const tag of [`v${other}`, shipped, 'v01.1.0', `v${shipped}-rc.1`, `v${shipped}\n`, 'main']) {
     assert.throws(() => checkReleaseVersion(ROOT, tag));
   }
+});
+
+test('fresh CRLF-configured checkouts keep the Tauri manifest LF and clean after its rewrite', t => {
+  const root = temporary(t), relative = 'apps/desktop/src-tauri/Cargo.toml';
+  const git = (...args) => execFileSync('git', ['-C', root, '-c', 'commit.gpgsign=false', '-c', `safe.directory=${root}`, '-c', `core.hooksPath=${path.join(root, 'no-hooks')}`, ...args], { encoding: 'utf8', windowsHide: true, stdio: 'pipe' }).trim();
+  git('init', '--quiet');
+  git('config', 'core.autocrlf', 'true');
+  git('config', 'user.name', 'Release fixture');
+  git('config', 'user.email', 'release-fixture@example.invalid');
+  copyFileSync(path.join(ROOT, '.gitattributes'), path.join(root, '.gitattributes'));
+  mkdirSync(path.dirname(path.join(root, relative)), { recursive: true });
+  const manifest = '[package]\nname = "fixture"\nversion = "0.1.0"\n';
+  writeFileSync(path.join(root, relative), manifest);
+  git('add', '.gitattributes', relative);
+  git('commit', '--quiet', '-m', 'Synthetic checkout');
+  git('checkout-index', '--force', '--all');
+  assert.equal(readFileSync(path.join(root, relative), 'utf8'), manifest);
+  writeFileSync(path.join(root, relative), manifest);
+  assert.equal(git('status', '--porcelain'), '');
 });
 
 test('file-version drift and missing locks are hard failures', t => {

@@ -1,0 +1,2 @@
+# Tauri rewrites this manifest with LF; keep clean Windows builds byte-stable.
+apps/desktop/src-tauri/Cargo.toml text eol=lf

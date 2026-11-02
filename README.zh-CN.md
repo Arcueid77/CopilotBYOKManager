@@ -23,7 +23,7 @@
   社区友链：<a href="https://linux.do">LINUX DO</a>
 </p>
 
-> **v0.2.0** — [下载 Windows 和 macOS 安装包](https://github.com/Arcueid77/CopilotBYOKManager/releases)。
+> **v0.2.1** — [下载 Windows 和 macOS 安装包](https://github.com/Arcueid77/CopilotBYOKManager/releases)。
 
 ![总览：四页界面示例，使用模拟数据](docs/images/overview-zh-CN.png)
 
