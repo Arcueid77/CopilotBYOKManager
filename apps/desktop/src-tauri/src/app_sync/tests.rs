@@ -18,7 +18,7 @@ fn input(connection: &Connection) -> ConnectionInput {
     }
 }
 fn fixture() -> (tempfile::TempDir, ManagedState, Target, Vec<Connection>) {
-    let root = tempfile::tempdir().unwrap();
+    let root = sqlite::tests::private_root();
     let target = sqlite::tests::database(&root.path().join("data.db"));
     let mut store = StateStore::open_at(root.path().join("state.json"));
     let mut template = input(&sqlite::tests::provider());

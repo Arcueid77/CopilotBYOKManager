@@ -5,6 +5,18 @@ use crate::{
 };
 use std::{collections::BTreeMap, path::Path};
 
+pub(crate) fn private_root() -> tempfile::TempDir {
+    #[cfg(windows)]
+    super::test_permissions::prepare_thread();
+    let root = tempfile::tempdir().unwrap();
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(root.path(), std::fs::Permissions::from_mode(0o700)).unwrap();
+    }
+    root
+}
+
 pub(crate) fn provider() -> Provider {
     Provider {
         id: "fixture-connection".into(),
@@ -115,7 +127,7 @@ fn app(write: &PreparedWrite) -> &AppResource {
 
 #[test]
 fn default_transaction_cannot_bypass_consent_and_checked_projection_is_atomic_and_idempotent() {
-    let root = tempfile::tempdir().unwrap();
+    let root = private_root();
     let target = database(&root.path().join("data.db"));
     let p = provider();
     let (write, _) = prepare(
@@ -173,7 +185,7 @@ fn default_transaction_cannot_bypass_consent_and_checked_projection_is_atomic_an
 
 #[test]
 fn durable_proof_required_and_external_edits_never_become_a_new_baseline() {
-    let root = tempfile::tempdir().unwrap();
+    let root = private_root();
     let target = database(&root.path().join("data.db"));
     let p = provider();
     let (write, _) = prepare(
@@ -220,7 +232,7 @@ fn durable_proof_required_and_external_edits_never_become_a_new_baseline() {
 
 #[test]
 fn foreign_key_actions_cannot_change_sessions_during_revocation_and_failed_rows_roll_back() {
-    let root = tempfile::tempdir().unwrap();
+    let root = private_root();
     let target = database(&root.path().join("data.db"));
     let p = provider();
     let (write, _) = prepare(
@@ -273,7 +285,7 @@ fn foreign_key_actions_cannot_change_sessions_during_revocation_and_failed_rows_
 #[test]
 fn consent_rechecked_inside_sqlite_transaction_and_model_removal_requires_review() {
     use std::cell::Cell;
-    let root = tempfile::tempdir().unwrap();
+    let root = private_root();
     let target = database(&root.path().join("data.db"));
     let p = provider();
     let (write, _) = prepare(
@@ -309,7 +321,7 @@ fn consent_rechecked_inside_sqlite_transaction_and_model_removal_requires_review
 
 #[test]
 fn unknown_schema_missing_database_and_app_triggers_are_rejected_without_initialization() {
-    let root = tempfile::tempdir().unwrap();
+    let root = private_root();
     let missing = root.path().join("missing/data.db");
     assert!(target::fixture(&missing).is_err());
     assert!(!missing.exists());
@@ -325,7 +337,7 @@ fn unknown_schema_missing_database_and_app_triggers_are_rejected_without_initial
 
 #[test]
 fn committed_but_unacknowledged_rows_recover_after_restart_and_external_edits_block_restore() {
-    let root = tempfile::tempdir().unwrap();
+    let root = private_root();
     let target = database(&root.path().join("data.db"));
     let p = provider();
     let (write, _) = prepare(
@@ -379,7 +391,7 @@ fn committed_but_unacknowledged_rows_recover_after_restart_and_external_edits_bl
 
 #[test]
 fn cross_target_failure_compensates_sqlite_without_overwriting_an_external_file() {
-    let root = tempfile::tempdir().unwrap();
+    let root = private_root();
     let target = database(&root.path().join("data.db"));
     let p = provider();
     let (write, _) = prepare(
@@ -422,7 +434,7 @@ fn cross_target_failure_compensates_sqlite_without_overwriting_an_external_file(
 
 #[test]
 fn busy_database_collision_missing_key_and_oversized_owned_metadata_preserve_existing_data() {
-    let root = tempfile::tempdir().unwrap();
+    let root = private_root();
     let target = database(&root.path().join("data.db"));
     let mut p = provider();
     p.has_secret = true;
@@ -489,7 +501,7 @@ fn busy_database_collision_missing_key_and_oversized_owned_metadata_preserve_exi
 
 #[test]
 fn unsafe_permissions_and_changed_database_identity_are_rejected() {
-    let root = tempfile::tempdir().unwrap();
+    let root = private_root();
     let target = database(&root.path().join("data.db"));
     #[cfg(windows)]
     {
@@ -515,7 +527,7 @@ fn unsafe_permissions_and_changed_database_identity_are_rejected() {
 
 #[test]
 fn recovery_cannot_adopt_a_schema_contract_replaced_in_the_private_journal() {
-    let root = tempfile::tempdir().unwrap();
+    let root = private_root();
     let target = database(&root.path().join("data.db"));
     let p = provider();
     let (write, _) = prepare(

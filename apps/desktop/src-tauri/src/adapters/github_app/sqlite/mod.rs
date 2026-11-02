@@ -3,6 +3,8 @@ mod rows;
 mod schema;
 mod security;
 pub(crate) mod target;
+#[cfg(all(test, windows))]
+mod test_permissions;
 
 use crate::{
     deployment::ownership::{self, TargetOwnership},
