@@ -1,4 +1,5 @@
 //! Default-off, destination-scoped synchronization of saved providers into App SQLite.
+mod command_error;
 pub mod commands;
 pub mod consent;
 #[cfg(test)]

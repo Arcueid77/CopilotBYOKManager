@@ -8,6 +8,7 @@
 - 安装结果增加“重新检测并重试”，重新核对组件并生成新的安装预览。
 - 安装器退出码改为标准十六进制；兼容已有安装记录，保留已完成组件。
 - 优化 Copilot App 供应商选择弹窗：紧凑列表、正常尺寸复选框、模型与端点摘要、选中计数和行内错误。
+- 修正 App 后台运行时误报“其他配置正在写入”的问题，分别提示退出客户端、检查目录权限或等待其他配置操作。
 
 ## 功能
 
@@ -38,6 +39,8 @@ checks the component again and creates a fresh installation preview. Exit codes
 use hexadecimal notation. Existing history and completed components are retained.
 Copilot App provider selection now uses a compact list with correctly sized
 checkboxes, model/endpoint summaries, a selection count and inline errors.
+App setup now distinguishes a client still running in the background, unsafe
+directory permissions and a competing configuration write, with specific next steps.
 
 Configure providers, API keys and models once, then publish to Copilot Chat in
 VS Code and supported JetBrains plugins. Copilot CLI now uses `providers.json`

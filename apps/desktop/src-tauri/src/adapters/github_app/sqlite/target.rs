@@ -226,13 +226,20 @@ pub fn ensure_closed(binary: &Path) -> AppResult<()> {
         };
         let snapshot = unsafe { CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0) };
         if snapshot == INVALID_HANDLE_VALUE {
-            return Err(running());
+            return Err(AppError::AppExitUnverified);
         }
         let mut entry: PROCESSENTRY32W = unsafe { mem::zeroed() };
         entry.dwSize = mem::size_of::<PROCESSENTRY32W>() as u32;
         let mut more = unsafe { Process32FirstW(snapshot, &mut entry) };
         let mut blocked = false;
+        let mut unverified = false;
+        let mut inspected = 0usize;
         while more != 0 {
+            inspected += 1;
+            if inspected > 65536 {
+                unverified = true;
+                break;
+            }
             let length = entry
                 .szExeFile
                 .iter()
@@ -251,7 +258,7 @@ pub fn ensure_closed(binary: &Path) -> AppResult<()> {
                     OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, entry.th32ProcessID)
                 };
                 if process.is_null() {
-                    blocked = true;
+                    unverified = true;
                 } else {
                     let mut path = vec![0u16; 32768];
                     let mut len = path.len() as u32;
@@ -259,7 +266,7 @@ pub fn ensure_closed(binary: &Path) -> AppResult<()> {
                         QueryFullProcessImageNameW(process, 0, path.as_mut_ptr(), &mut len)
                     } == 0
                     {
-                        blocked = true;
+                        unverified = true;
                     } else {
                         let path =
                             PathBuf::from(std::ffi::OsString::from_wide(&path[..len as usize]));
@@ -273,16 +280,19 @@ pub fn ensure_closed(binary: &Path) -> AppResult<()> {
                     }
                 }
             }
-            if blocked {
+            if blocked || unverified {
                 break;
             }
             more = unsafe { Process32NextW(snapshot, &mut entry) };
         }
         if more == 0 && unsafe { GetLastError() } != ERROR_NO_MORE_FILES {
-            blocked = true;
+            unverified = true;
         }
         unsafe {
             CloseHandle(snapshot);
+        }
+        if unverified {
+            return Err(AppError::AppExitUnverified);
         }
         if blocked {
             return Err(running());
@@ -299,7 +309,7 @@ pub fn ensure_closed(binary: &Path) -> AppResult<()> {
 }
 #[cfg(any(windows, test, feature = "local-e2e"))]
 fn running() -> AppError {
-    AppError::Busy
+    AppError::AppRunning
 }
 
 pub(super) fn no_pending_wal(path: &Path) -> AppResult<()> {

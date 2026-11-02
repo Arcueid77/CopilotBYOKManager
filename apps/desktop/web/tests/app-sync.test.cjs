@@ -87,6 +87,20 @@ test('scope controls are disabled while the native preview is preparing', async 
   assert.equal(h.calls.length,1);assert.equal(h.calls[0][0],'preview_app_sync_enable');
 });
 
+test('native failure codes distinguish running App, permissions and write contention in both languages',()=>{
+  for(const locale of ['zh-CN','en']) {
+    i18n.setLocale(locale,{persist:false});
+    const running=ui.preparationError({code:'appRunning',message:'ignored payload'});
+    const busy=ui.preparationError({code:'writeBusy',message:'ignored payload'});
+    const permissions=ui.preparationError({code:'unsafePermissions'});
+    assert.notEqual(running,busy);
+    assert.match(running,locale==='en'?/tray menu/:/托盘菜单/);
+    assert.match(permissions,locale==='en'?/permissions/:/权限/);
+    assert.notEqual(ui.preparationError({code:'appExitUnverified'}),running);
+    assert.notEqual(ui.preparationError({message:'Another managed write is in progress'}),busy);
+  }
+});
+
 test('App revocation requires reviewed model references and failed requests cannot replay the native plan', async () => {
   const plan={id:'native-revoke-id',appModelRemovals:['model <old>'],operations:[{description:'Owned rows only'}]};
   const h=harness(command => { if(command==='preview_app_sync_revoke') return plan; throw Error('synthetic failure'); });
@@ -99,6 +113,23 @@ test('App revocation requires reviewed model references and failed requests cann
   assert.deepEqual(h.calls[1],['apply_deployment_plan',{planId:'native-revoke-id',confirmed:true,appModelReferencesResolved:true}]);
   assert.equal(h.errors.length,1);
   assert.match(h.dialogs[0].config.body,/model &lt;old&gt;/);
+});
+
+test('confirmation failures use typed localized guidance and never replay a consumed plan', async () => {
+  for(const locale of ['zh-CN','en']) {
+    i18n.setLocale(locale,{persist:false});
+    const failure={code:'appRunning',message:'Native diagnostic'};
+    const h=harness(command=>{if(command==='preview_app_sync_enable')return preview;throw failure;});
+    h.controller.handle('app-sync-enable');
+    const choice=h.dialogs.at(-1).root;choice.inputs[0].checked=true;choice.inputs[0].handlers.change();
+    await choice.nodes['[data-sync-preview]'].click();
+    const confirm=h.dialogs.at(-1).root.nodes['[data-sync-confirm]'];
+    await confirm.click();await confirm.click();
+    assert.equal(h.calls.filter(([command])=>command==='enable_app_sync').length,1);
+    assert.equal(h.statuses.length,0);assert.equal(h.errors.length,1);
+    assert.equal(h.errors[0].message,ui.preparationError(failure));
+    assert.equal(h.errors[0].cause,failure);
+  }
 });
 
 test('database observations and manual confirmations remain separate and revoke has no model-selection instruction', () => {

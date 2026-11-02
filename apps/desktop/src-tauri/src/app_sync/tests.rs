@@ -336,3 +336,23 @@ fn app_running_waits_without_writes_and_conflicts_require_reconciliation_before_
         .is_err());
     });
 }
+
+#[test]
+fn managed_write_contention_is_not_reported_as_a_running_app() {
+    crate::secrets::with_fake_credentials(|| {
+        let (_root, state, target, connections) = fixture();
+        approve(&state, &target, vec![connections[0].id.clone()]);
+        let lease = crate::write_lock::WriteLock::acquire(state.store().unwrap().path()).unwrap();
+        super::worker::run_once(&state.app_sync, &state).unwrap();
+        assert_eq!(
+            state.app_sync.status(&state).unwrap().phase,
+            Phase::Conflict
+        );
+        assert!(state.app_sync.halted.load(Ordering::Acquire));
+        assert!(scoped(&state, &target, &connections[0].id)
+            .read()
+            .unwrap()
+            .is_none());
+        drop(lease);
+    });
+}

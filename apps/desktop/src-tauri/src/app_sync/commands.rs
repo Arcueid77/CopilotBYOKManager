@@ -1,3 +1,4 @@
+use super::command_error::CommandFailure;
 use super::*;
 use crate::{
     deployment::PlanContext,
@@ -8,16 +9,13 @@ use serde::Serialize;
 use std::{collections::BTreeSet, time::Duration};
 use tauri::State;
 
-fn error(error: AppError) -> String {
-    crate::redact::redact_text(&error.to_string())
-}
 async fn native<T: Send + 'static>(
     task: impl FnOnce() -> AppResult<T> + Send + 'static,
-) -> Result<T, String> {
+) -> Result<T, CommandFailure> {
     tauri::async_runtime::spawn_blocking(task)
         .await
-        .map_err(|_| "Copilot App synchronization worker failed".to_string())?
-        .map_err(error)
+        .map_err(|_| CommandFailure::worker_failure())?
+        .map_err(CommandFailure::from)
 }
 
 #[derive(Serialize)]
@@ -41,7 +39,7 @@ pub struct EnablePreview {
 }
 
 #[tauri::command]
-pub async fn get_app_sync_status(state: State<'_, ManagedState>) -> Result<Status, String> {
+pub async fn get_app_sync_status(state: State<'_, ManagedState>) -> Result<Status, CommandFailure> {
     let state = state.inner().clone();
     native(move || state.app_sync.status(&state)).await
 }
@@ -50,7 +48,7 @@ pub async fn get_app_sync_status(state: State<'_, ManagedState>) -> Result<Statu
 pub async fn preview_app_sync_enable(
     state: State<'_, ManagedState>,
     connection_ids: Vec<String>,
-) -> Result<EnablePreview, String> {
+) -> Result<EnablePreview, CommandFailure> {
     let state = state.inner().clone();
     native(move || preview_enable(&state, connection_ids, sqlite::target::review)).await
 }
@@ -156,7 +154,7 @@ pub async fn enable_app_sync(
     state: State<'_, ManagedState>,
     plan_id: String,
     confirmed: bool,
-) -> Result<Status, String> {
+) -> Result<Status, CommandFailure> {
     let state = state.inner().clone();
     native(move || enable(&state, plan_id, confirmed, sqlite::target::review)).await
 }
@@ -226,7 +224,7 @@ pub(super) fn enable(
 }
 
 #[tauri::command]
-pub async fn disable_app_sync(state: State<'_, ManagedState>) -> Result<Status, String> {
+pub async fn disable_app_sync(state: State<'_, ManagedState>) -> Result<Status, CommandFailure> {
     let state = state.inner().clone();
     state.app_sync.settings_epoch.fetch_add(1, Ordering::AcqRel);
     state.app_sync.cancelled.store(true, Ordering::Release);
@@ -245,7 +243,7 @@ pub async fn disable_app_sync(state: State<'_, ManagedState>) -> Result<Status, 
 }
 
 #[tauri::command]
-pub async fn retry_app_sync(state: State<'_, ManagedState>) -> Result<Status, String> {
+pub async fn retry_app_sync(state: State<'_, ManagedState>) -> Result<Status, CommandFailure> {
     let state = state.inner().clone();
     native(move || {
         let epoch = state.app_sync.settings_epoch.load(Ordering::Acquire);
@@ -295,7 +293,7 @@ pub async fn retry_app_sync(state: State<'_, ManagedState>) -> Result<Status, St
 pub async fn preview_app_sync_revoke(
     state: State<'_, ManagedState>,
     connection_id: String,
-) -> Result<DeploymentPlan, String> {
+) -> Result<DeploymentPlan, CommandFailure> {
     let state = state.inner().clone();
     native(move || {
         let store = state.store()?;

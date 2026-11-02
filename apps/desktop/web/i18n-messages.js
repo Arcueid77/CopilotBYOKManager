@@ -5,6 +5,10 @@
   if (typeof module === "object" && module.exports) module.exports = messages;
   else root.CopilotBYOKManagerMessages = messages;
 })(globalThis, () => ({
+  "Copilot App 仍在后台运行。请从它的托盘菜单退出后再试。": ["Copilot App 仍在后台运行。请从它的托盘菜单退出后再试。", "Copilot App is still running in the background. Quit it from its tray menu, then retry."],
+  "无法确认 Copilot App 已退出。请检查后台进程后重试。": ["无法确认 Copilot App 已退出。请检查后台进程后重试。", "Could not verify that Copilot App has exited. Check its background processes, then retry."],
+  "App 数据目录允许其他账号读取。请先收紧权限，再核对同步。": ["App 数据目录允许其他账号读取。请先收紧权限，再核对同步。", "Other accounts can read the App data directory. Restrict its permissions before reviewing sync."],
+  "有其他配置操作正在进行，请完成后重试。": ["有其他配置操作正在进行，请完成后重试。", "Another configuration operation is active. Let it finish, then retry."],
   "选择要同步到 Copilot App 的供应商。": ["选择要同步到 Copilot App 的供应商。", "Choose providers to sync with Copilot App."],
   "已选 {0} / 16": ["已选 {0} / 16", "{0} / 16 selected"],
   "{0} 个启用模型": ["{0} 个启用模型", "{0} enabled models"],

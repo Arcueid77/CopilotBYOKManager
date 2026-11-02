@@ -46,13 +46,23 @@
       return `<label class="app-sync-choice"><input type="checkbox" data-sync-provider value="${escape(c.id)}"><span class="app-sync-choice-content"><strong>${escape(c.name)}</strong><span class="app-sync-choice-meta">${tr("{0} 个启用模型", count)}${endpoint ? `<span aria-hidden="true"> · </span><span class="app-sync-choice-endpoint">${escape(endpoint)}</span>` : ""}</span></span></label>`;
     }).join("")}</div><p class="app-sync-close-hint">${tr("请先关闭 Copilot App，再继续。")}</p><div class="app-sync-error" data-sync-error role="alert" hidden></div>`;
   }
+  function failureMessage(error) {
+    if (error?.code === "appRunning") return tr("Copilot App 仍在后台运行。请从它的托盘菜单退出后再试。");
+    if (error?.code === "appExitUnverified") return tr("无法确认 Copilot App 已退出。请检查后台进程后重试。");
+    if (error?.code === "unsafePermissions") return tr("App 数据目录允许其他账号读取。请先收紧权限，再核对同步。");
+    if (error?.code === "writeBusy") return tr("有其他配置操作正在进行，请完成后重试。");
+    return null;
+  }
+  function preparationError(error) {
+    return failureMessage(error) || tr("无法生成同步预览，请稍后重试。");
+  }
   function create({ invoke, snapshot, setStatus, openModal, closeModal, setBusy, refresh, onError, openDeployment }) {
     let busy = false;
     async function perform(task) {
       if (busy) return;
       busy = true;
       try { await task(); }
-      catch (error) { onError(error); }
+      catch (error) { const message = failureMessage(error); onError(message ? new Error(message, { cause: error }) : error); }
       finally { busy = false; }
     }
     function risk(preview) {
@@ -87,7 +97,7 @@
           let preview;
           try { preview = await invoke("preview_app_sync_enable", { connectionIds: ids }); }
           catch (error) {
-            if (root.isConnected) { status.hidden = false; status.innerHTML = `<p>${tr("无法生成同步预览，请稍后重试。")}</p><details><summary>${tr("详细原因")}</summary><p>${escape(error?.message ?? String(error))}</p></details>`; }
+            if (root.isConnected) { status.hidden = false; status.innerHTML = `<p>${preparationError(error)}</p><details><summary>${tr("详细原因")}</summary><p>${escape(error?.message ?? String(error))}</p></details>`; }
             return;
           }
           finally { preparing = false; setBusy(false); inputs.forEach(input => { input.disabled = false; }); button.disabled = selected().length === 0 || selected().length > 16; button.textContent = tr("下一步：核对风险"); }
@@ -128,5 +138,5 @@
     }
     return { handle };
   }
-  return { label, panel, removalReview, riskBody, selectionBody, create };
+  return { label, panel, removalReview, riskBody, selectionBody, preparationError, create };
 });

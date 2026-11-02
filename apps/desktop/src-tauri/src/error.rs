@@ -16,6 +16,17 @@ pub enum AppError {
     #[error("Another managed write is in progress; wait for it to finish and preview again")]
     Busy,
 
+    #[error("Copilot App is still running. Use its Quit or Exit action, then preview again")]
+    AppRunning,
+
+    #[error("Cannot verify that Copilot App has exited; review its background processes before retrying")]
+    AppExitUnverified,
+
+    #[error(
+        "Copilot App database access is not restricted to its owner and system administrators"
+    )]
+    UnsafeAppPermissions,
+
     #[error("{0}")]
     InvalidInput(String),
 

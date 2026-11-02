@@ -8,10 +8,7 @@ use std::{
 };
 
 fn unsafe_access() -> AppError {
-    AppError::Unsupported(
-        "Copilot App database access is not restricted to its owner and system administrators"
-            .into(),
-    )
+    AppError::UnsafeAppPermissions
 }
 
 pub(super) fn open_guard(path: &Path) -> AppResult<File> {

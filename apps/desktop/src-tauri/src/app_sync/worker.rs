@@ -67,7 +67,7 @@ pub(super) fn run_once(jobs: &Jobs, state: &ManagedState) -> AppResult<()> {
     let target = mode.target.as_ref().ok_or(AppError::PlanChanged)?;
     if let Err(error) = sqlite::target::ensure_closed(&target.binary) {
         jobs.set_phase(
-            if matches!(error, AppError::Busy) {
+            if matches!(error, AppError::AppRunning | AppError::AppExitUnverified) {
                 Phase::PendingAppExit
             } else {
                 Phase::UnsupportedSchema
@@ -132,11 +132,11 @@ pub(super) fn run_once(jobs: &Jobs, state: &ManagedState) -> AppResult<()> {
                 if jobs.status.lock().map_err(|_| AppError::Lock)?.phase == Phase::ReviewRequired {
                     return Ok(());
                 }
-                if !matches!(error, AppError::Busy) {
+                if !matches!(error, AppError::AppRunning | AppError::AppExitUnverified) {
                     jobs.halted.store(true, Ordering::Release);
                 }
                 jobs.set_phase(
-                    if matches!(error, AppError::Busy) {
+                    if matches!(error, AppError::AppRunning | AppError::AppExitUnverified) {
                         Phase::PendingAppExit
                     } else if matches!(error, AppError::Unsupported(_)) {
                         Phase::UnsupportedSchema
