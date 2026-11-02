@@ -11,9 +11,9 @@
   const frozen = snapshot => Boolean(snapshot.stateRecovery || snapshot.deploymentRecovery);
   const date = value => Number.isNaN(Date.parse(value)) ? tr("时间未知") : new Date(value).toLocaleString(i18n.locale(), { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
 
-  function policy(kind) {
+  function policy(kind, automatic = false) {
     if (kind === "copilot-cli") return tr("确认后将此供应商及全部启用模型写入 providers.json，保留其他供应商。启动新的 CLI 会话后，用 /model 选择模型。");
-    if (kind === "github-copilot-app") return tr("请在 Copilot App 中手动添加供应商。");
+    if (kind === "github-copilot-app") return automatic ? tr("同步自有供应商和模型；完成后重新启动 App 并选择模型。") : tr("请在 Copilot App 中手动添加供应商。");
     if (kind === "jetbrains-copilot") return tr("仅更新本连接的供应商分组，保留其他来源；共享 BYOK 配置去重写入。重启相关 IDE 后，在模型选择器中选用。");
     return tr("仅更新本连接的供应商分组，保留其他来源；发布后在客户端的模型选择器中选用。");
   }
@@ -82,10 +82,12 @@
   }
 
   function publicationSteps(record, connection) {
+    if (["revokeApp", "revokeAndDelete"].includes(record.purpose)) return [];
     if (record.status !== "applied") return record.status === "skipped" && record.targetKind === "github-copilot-app" ? [tr("此客户端保持手动配置，请在 App 内添加本次连接。")] : [];
     if (!connection?.models.some(model => model.enabled)) return [];
     if (record.targetKind === "copilot-cli") return [tr("请启动新的 CLI 会话，用 /model 选择供应商与模型。")];
     if (record.targetKind === "jetbrains-copilot") return [tr("请先重启此 IDE，再到客户端的模型选择器中选用刚发布的模型。")];
+    if (record.targetKind === "github-copilot-app") return [tr("重新启动 App，在模型选择器中选择已同步的模型。")];
     if (["vs-code-copilot", "vscode-copilot"].includes(record.targetKind)) return [tr("请到客户端的模型选择器中选用刚发布的模型。")];
     return [];
   }

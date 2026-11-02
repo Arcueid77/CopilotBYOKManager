@@ -486,6 +486,7 @@ mod tests {
             target_id: "target".to_string(),
             target_kind: ClientKind::CopilotCli,
             status: DeploymentStatus::Applied,
+            purpose: None,
             detail: "done".to_string(),
             created_at: Utc::now(),
             target_fingerprint: None,

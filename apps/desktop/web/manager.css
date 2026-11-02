@@ -324,6 +324,16 @@ summary { cursor: pointer; }
   .nav-item, .more-nav > summary { padding: 9px 10px; }
   .brand strong { font-size: 12px; }
 }
+.app-sync-panel { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--border); min-width: 0; }
+.app-sync-panel .manager-section-head { flex-wrap: wrap; gap: 6px 12px; }
+.app-sync-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+.app-sync-results { list-style: none; padding: 0; font-size: 12px; }
+.app-sync-results li { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 12px; margin: 8px 0; }
+.app-sync-target { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 8px 14px; }
+.app-sync-target dd { margin: 0; overflow-wrap: anywhere; }
+.app-sync-risk, .app-sync-removal { padding: 12px; border: 1px solid var(--border); border-radius: 8px; }
+.app-sync-choices { display: grid; gap: 12px; }
+.app-sync-revoke { margin-top: 12px; }
 @media (max-width: 620px) {
   .sidebar { height: auto; min-height: 86px; grid-template-columns: 1fr; padding: 10px 14px 5px; }
   .brand { justify-content: center; }

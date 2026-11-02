@@ -155,6 +155,7 @@ async function nativeFixture() {
     if (cmd === "discover_connection_models") return { status: catalogStatus, detail: "Untrusted fixture catalog detail", models: [{ modelId: "gpt-5", name: "GPT-5" }, { modelId: "fixture-new", name: "New model" }, { modelId: "fixture-unselected", name: "Do not auto-add" }], parserVersion: 1 };
     if (cmd === "get_installation_status") return components;
     if (cmd === "get_setup_status") return structuredClone(setup);
+    if (cmd === "get_app_sync_status") return {enabled:false,phase:"disabled",selectedConnectionIds:[],ownedConnectionIds:[],results:[]};
     if (cmd === "get_manual_provider_status") return Promise.all(connections.map(async value => {
       const revision = await manualRevision(value), saved = manualConfirmations.get(value.id);
       return { connectionId: value.id, revision, providerUpdatedAt: value.updatedAt, confirmedAt: saved?.confirmedAt ?? null, state: !saved ? 'notConfirmed' : saved.revision === revision ? 'userConfirmed' : 'configurationChanged' };

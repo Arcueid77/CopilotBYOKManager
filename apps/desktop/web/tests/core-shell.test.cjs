@@ -28,6 +28,7 @@ function shell({ delayManual = false } = {}) {
     calls.push(command);
     if (command === 'get_dashboard') return structuredClone(snapshot);
     if (command === 'get_manual_provider_status') return delayManual ? new Promise(() => {}) : [];
+    if (command === 'get_app_sync_status') return { enabled:false, phase:'disabled', selectedConnectionIds:[], ownedConnectionIds:[], results:[] };
     if (command === 'get_window_behavior') return { trayAvailable: true, preferencesAvailable: true, closeAction: 'tray' };
     if (command === 'get_installation_status' || command === 'get_install_runs') return [];
     if (command === 'get_setup_status') return { preferences: {}, accounts: { surfaces: [] } };
@@ -39,6 +40,7 @@ function shell({ delayManual = false } = {}) {
     sessionStorage: { getItem() { return null; }, setItem() {} }, scrollTo() {}, __TAURI__: { core: { invoke } },
     CopilotBYOKManagerI18n: i18n, CopilotBYOKManagerCore: require('../core-ui.js'), CopilotBYOKManagerLoader: require('../core-loader.js'),
     CopilotBYOKManagerManager: require('../manager-ui.js'), CopilotBYOKManagerClients: require('../client-presentation.js'),
+    CopilotBYOKManagerAppSync: require('../app-sync-ui.js'),
     CopilotBYOKManagerSetup: require('../setup-ui.js'), CopilotBYOKManagerInstaller: installer,
     CopilotBYOKManagerAccount: { hydrate() {}, mount() {} }, CopilotBYOKManagerAppearance: { apply() {} },
     CopilotBYOKManagerUI: { capture() { return null; }, restore() {}, modal() { return { active: false, busy: false, close: () => true }; } } };

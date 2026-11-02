@@ -174,6 +174,10 @@ pub struct GithubAuthorizationStore {
 }
 
 impl GithubAuthorizationStore {
+    #[cfg(test)]
+    pub(crate) fn isolated(path: PathBuf) -> Self {
+        Self::open_at_with_backend(path, Box::new(NativeSecretBackend))
+    }
     pub fn open() -> Self {
         let Some(config_dir) = crate::platform::config_dir() else {
             return Self {

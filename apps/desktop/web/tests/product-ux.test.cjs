@@ -10,13 +10,14 @@ const clients = require('../client-presentation.js');
 const core = require('../core-ui.js');
 const loader = require('../core-loader.js');
 const progress = require('../installer-progress.js');
+const appSync = require('../app-sync-ui.js');
 const appSource = fs.readFileSync(path.join(__dirname, '../app.js'), 'utf8');
 const appFunctions = parse(appSource, { ecmaVersion: 'latest' }).body[0].expression.callee.body.body;
 const provider = id => ({ id, name: `Provider ${id}`, enabled: true, baseUrl: 'https://example.invalid/v1', protocol: 'chat-completions', models: [{ modelId: 'demo', name: 'Demo', enabled: true }], hasSecret: false });
 const client = { id: 'cli', name: 'Copilot CLI', kind: 'copilot-cli', detected: true, supportsWrite: true, status: 'available' };
 const fixture = () => ({ connections: [provider('A'), provider('B')], clients: [client], deployments: [], clientConfigurations: [{ targetId: 'cli', state: 'available', sources: [] }] });
 function cardRenderer(snapshot, data = {}) {
-  const context = vm.createContext({ tr: i18n.t, window: { CopilotBYOKManagerClients: clients, CopilotBYOKManagerManager: manager }, snapshot, data, appProviderChoices: new Map(), escapeHtml: manager.escape });
+  const context = vm.createContext({ tr: i18n.t, window: { CopilotBYOKManagerClients: clients, CopilotBYOKManagerManager: manager, CopilotBYOKManagerAppSync: appSync }, snapshot, data, isDesktop: true, appProviderChoices: new Map(), escapeHtml: manager.escape });
   for (const name of ['clientCard', 'clientIcon', 'statusLabel']) {
     const node = appFunctions.find(fn => fn.type === 'FunctionDeclaration' && fn.id.name === name);
     vm.runInContext(appSource.slice(node.start, node.end), context);

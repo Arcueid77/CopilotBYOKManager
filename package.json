@@ -1,7 +1,7 @@
 {
   "name": "copilot-byok-manager",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Local control plane for GitHub Copilot clients",
   "scripts": {
     "dev": "tauri dev --config apps/desktop/src-tauri/tauri.conf.json",

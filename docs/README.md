@@ -35,8 +35,9 @@ The first release is the four-page v0.1 core, not the complete extended MVP. The
 
 | Document | Purpose |
 | --- | --- |
-| [Copilot App SQLite sync](copilot-app-sqlite-sync.md) | Approved default-off provider/model synchronization plan, risk consent and acceptance; not implemented |
+| [Copilot App SQLite sync](copilot-app-sqlite-sync.md) | Default-off Windows x64 App 1.1.25 adapter, native consent, owned-row recovery and acceptance evidence |
 | [JetBrains support](jetbrains-support.md) | Reviewed plugin versions, automatic shared BYOK writes and per-IDE acceptance |
+| [Copilot App operation flow](copilot-app-support.md) | App entry points, manual setup, mixed publication, per-provider confirmations, updates and removal |
 | [VS Code detection](vscode-detection.md) | Versioned launcher/capability detection and no-surprise-window behavior |
 | [Provider model discovery](provider-model-discovery.md) | Connection form, read-only catalog queries and saved-key binding |
 | [Usage sources](usage-sources.md) | Runtime quota, personal Billing, local import, prices and coverage limits |

@@ -18,6 +18,7 @@ pub struct PlanContext {
     state_revision: String,
     credential_revision: String,
     pub(crate) ownership: Vec<super::ownership::TargetOwnership>,
+    pub(crate) app: Option<crate::app_sync::Approval>,
 }
 
 impl PlanContext {
@@ -30,10 +31,15 @@ impl PlanContext {
                 secret.map(str::as_bytes),
             ),
             ownership: Vec::new(),
+            app: None,
         }
     }
     pub fn with_ownership(mut self, ownership: &[super::ownership::TargetOwnership]) -> Self {
         self.ownership = ownership.to_vec();
+        self
+    }
+    pub fn with_app(mut self, approval: Option<crate::app_sync::Approval>) -> Self {
+        self.app = approval;
         self
     }
 }
@@ -90,6 +96,14 @@ impl PlanStore {
         }
         let (writes, ownership_after) =
             prepare_writes(connection, secret, &mut plan, targets, &context)?;
+        plan.app_model_removals.clear();
+        for write in &writes {
+            if let crate::transaction::Resource::AppSqlite(resource) = &write.resource {
+                plan.app_model_removals.extend(
+                    resource.removed_models(write.before.as_deref(), write.after.as_deref())?,
+                );
+            }
+        }
         let mut after_fingerprints = BTreeMap::new();
         for target in targets
             .iter()

@@ -107,6 +107,9 @@ fn preview_for_purpose(
         let operation = match target.kind {
             ClientKind::VsCodeCopilot => vscode::preview(connection, target),
             ClientKind::CopilotCli => copilot_cli::preview(connection, target),
+            ClientKind::GithubCopilotApp if purpose.is_revocation() => {
+                github_app::preview_revocation(connection, target)
+            }
             ClientKind::GithubCopilotApp => github_app::preview(connection, target),
             ClientKind::JetBrainsCopilot
                 if purpose == crate::domain::DeploymentPurpose::RevokeAndDelete =>
@@ -126,6 +129,7 @@ fn preview_for_purpose(
         connection_name: connection.name.clone(),
         target_ids: canonical_ids,
         operations,
+        app_model_removals: Vec::new(),
         created_at: Utc::now(),
     })
 }

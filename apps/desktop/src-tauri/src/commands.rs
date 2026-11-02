@@ -44,6 +44,8 @@ pub enum RecoveryAction {
 
 #[derive(Clone)]
 pub struct ManagedState {
+    #[cfg(test)]
+    pub(crate) test_targets: Option<Vec<crate::domain::ClientTarget>>,
     pub(crate) writes: Arc<Mutex<()>>,
     pub(crate) resource_plans: Arc<Mutex<crate::resources::ResourcePlans>>,
     recovery_plan: Arc<Mutex<Option<RecoveryPlan>>>,
@@ -58,6 +60,7 @@ pub struct ManagedState {
     github_authorization: Arc<Mutex<GithubAuthorizationStore>>,
     pub(crate) usage_db: Arc<Mutex<Option<UsageDb>>>,
     pub(crate) usage_jobs: Arc<crate::usage::commands::UsageJobs>,
+    pub(crate) app_sync: Arc<crate::app_sync::Jobs>,
     usage_db_error: Option<String>,
 }
 
@@ -72,12 +75,19 @@ impl ManagedState {
         let install_jobs = Arc::new(installer::history::InstallJobs::open(
             store.path().with_file_name("install-history.json"),
         ));
+        let app_sync = Arc::new(crate::app_sync::Jobs::new(
+            store.path(),
+            store.installation_owner_id(),
+        ));
         Self {
+            #[cfg(test)]
+            test_targets: None,
             writes: Arc::new(Mutex::new(())),
             resource_plans: Arc::new(Mutex::new(crate::resources::ResourcePlans::default())),
             recovery_plan: Arc::new(Mutex::new(None)),
             installs: Arc::new(Mutex::new(())),
             install_jobs,
+            app_sync,
             logins: Arc::new(Mutex::new(())),
             store: Arc::new(Mutex::new(store)),
             plans: Arc::new(Mutex::new(PlanStore::default())),
@@ -95,7 +105,7 @@ impl ManagedState {
         self.store.lock().map_err(|_| AppError::Lock)
     }
 
-    fn plans(&self) -> AppResult<MutexGuard<'_, PlanStore>> {
+    pub(crate) fn plans(&self) -> AppResult<MutexGuard<'_, PlanStore>> {
         self.plans.lock().map_err(|_| AppError::Lock)
     }
 
@@ -175,9 +185,10 @@ pub async fn get_dashboard(state: State<'_, ManagedState>) -> Result<DashboardSn
                 "An interrupted deployment requires recovery review; managed writes are disabled"
                     .to_string()
             });
-        let clients = adapters::discover_all();
-        let client_configurations =
+        let clients = crate::app_sync::targets(&state);
+        let mut client_configurations =
             deployment::publication::observe(&clients, &connections, &owner_id);
+        state.app_sync.observe(&state, &mut client_configurations);
         Ok(DashboardSnapshot {
             client_configurations,
             credential_statuses,
@@ -504,7 +515,10 @@ pub async fn upsert_connection(
         let mut store = state.store().map_err(command_error)?;
         let _lease = crate::write_lock::WriteLock::acquire(store.path()).map_err(command_error)?;
         deployment::ensure_no_pending_journal(store.path()).map_err(command_error)?;
-        store.upsert_connection(input).map_err(command_error)
+        let result = store.upsert_connection(input).map_err(command_error)?;
+        drop(store);
+        state.app_sync.schedule();
+        Ok(result)
     })
     .await
 }
@@ -524,9 +538,12 @@ pub async fn set_connection_enabled(
         let mut store = state.store().map_err(command_error)?;
         let _lease = crate::write_lock::WriteLock::acquire(store.path()).map_err(command_error)?;
         deployment::ensure_no_pending_journal(store.path()).map_err(command_error)?;
-        store
+        let result = store
             .set_connection_enabled(&connection_id, enabled)
-            .map_err(command_error)
+            .map_err(command_error)?;
+        drop(store);
+        state.app_sync.schedule();
+        Ok(result)
     })
     .await
 }
@@ -545,9 +562,12 @@ pub async fn delete_connection(
         let mut store = state.store().map_err(command_error)?;
         let _lease = crate::write_lock::WriteLock::acquire(store.path()).map_err(command_error)?;
         deployment::ensure_no_pending_journal(store.path()).map_err(command_error)?;
-        store
+        let result = store
             .delete_connection(&connection_id)
-            .map_err(command_error)
+            .map_err(command_error)?;
+        drop(store);
+        state.app_sync.schedule();
+        Ok(result)
     })
     .await
 }
@@ -579,9 +599,13 @@ pub async fn preview_deployment(
             .with_ownership(store.ownership());
             (connection, secret, context)
         };
-        let targets = adapters::discover_all();
+        let targets = crate::app_sync::targets_for_connection(&state, &connection);
         let plan = adapters::preview_resolved(&connection, &target_ids, &targets)
             .map_err(command_error)?;
+        let context = context.with_app(
+            crate::app_sync::commands::approval_for_plan(&state, &connection, &plan)
+                .map_err(command_error)?,
+        );
         state
             .plans()
             .and_then(|mut plans| {
@@ -597,6 +621,7 @@ pub async fn apply_deployment_plan(
     state: State<'_, ManagedState>,
     plan_id: String,
     confirmed: bool,
+    app_model_references_resolved: Option<bool>,
 ) -> Result<ApplyResult, String> {
     let state = state.inner().clone();
     native_job(move || {
@@ -607,7 +632,12 @@ pub async fn apply_deployment_plan(
         if !confirmed {
             return Err("Explicit deployment confirmation is required".into());
         }
-        execute_stored_plan(&state, stored).map_err(command_error)
+        execute_stored_plan(
+            &state,
+            stored,
+            app_model_references_resolved.unwrap_or(false),
+        )
+        .map_err(command_error)
     })
     .await
 }
@@ -628,14 +658,14 @@ pub async fn preview_revoke_and_delete(
             && record.status == DeploymentStatus::Applied && !record.ownership_tracked) {
             return Err("Legacy deployments have no durable ownership proof. Review their configuration manually, or choose Detach only; no client data was changed".into());
         }
-        let targets = adapters::discover_all();
+        let targets = crate::app_sync::targets(&state);
         let owned_ids = store.ownership().iter().filter(|proof| proof.connection_id == connection_id)
             .map(|proof| proof.target_id.clone()).collect::<Vec<_>>();
         let mut plan = if owned_ids.is_empty() {
             DeploymentPlan {
                 id: Uuid::new_v4().to_string(), purpose: DeploymentPurpose::RevokeAndDelete,
                 connection_id: connection.id.clone(), connection_name: connection.name.clone(),
-                target_ids: Vec::new(), operations: Vec::new(), created_at: Utc::now(),
+                target_ids: Vec::new(), operations: Vec::new(), app_model_removals:Vec::new(),created_at: Utc::now(),
             }
         } else {
             adapters::preview_revoke_resolved(&connection, &owned_ids, &targets).map_err(command_error)?
@@ -651,16 +681,29 @@ pub async fn preview_revoke_and_delete(
         }
         let context = PlanContext::new(store.installation_owner_id(), store.revision().map_err(command_error)?, None)
             .with_ownership(store.ownership());
+        drop(store);
+        let context=context.with_app(crate::app_sync::commands::approval_for_plan(&state,&connection,&plan).map_err(command_error)?);
         state.plans().and_then(|mut plans| plans.insert(&connection, None, plan, &targets, context)).map_err(command_error)
     }).await
 }
 
-fn execute_stored_plan(state: &ManagedState, stored: StoredPlan) -> AppResult<ApplyResult> {
-    let revoke = stored.plan.purpose == DeploymentPurpose::RevokeAndDelete;
-    let _write = state
+pub(crate) fn execute_stored_plan(
+    state: &ManagedState,
+    stored: StoredPlan,
+    allow_app_model_removal: bool,
+) -> AppResult<ApplyResult> {
+    let revoke = stored.plan.purpose.is_revocation();
+    let delete_connection = stored.plan.purpose == DeploymentPurpose::RevokeAndDelete;
+    let app_resources = stored
         .writes
-        .try_lock()
-        .map_err(|_| AppError::Config("Another managed write is active".into()))?;
+        .iter()
+        .filter_map(|w| match &w.resource {
+            crate::transaction::Resource::AppSqlite(r) => Some(r.clone()),
+            _ => None,
+        })
+        .collect::<Vec<_>>();
+    let _app_activity = (!app_resources.is_empty()).then(|| state.app_sync.activity());
+    let _write = state.writes.lock().map_err(|_| AppError::Lock)?;
     let state_path = state.store()?.path().to_path_buf();
     let _lease = crate::write_lock::WriteLock::acquire(&state_path)?;
     let (connection, secret, context) = {
@@ -681,14 +724,38 @@ fn execute_stored_plan(state: &ManagedState, stored: StoredPlan) -> AppResult<Ap
         .with_ownership(store.ownership());
         (connection, secret, context)
     };
-    let targets = adapters::discover_all();
+    let context = context.with_app(crate::app_sync::commands::approval_for_plan(
+        state,
+        &connection,
+        &stored.plan,
+    )?);
+    let targets = if revoke {
+        crate::app_sync::targets(state)
+    } else {
+        crate::app_sync::targets_for_connection(state, &connection)
+    };
     deployment::validate_plan(&stored, &connection, &targets, &context)?;
+    crate::app_sync::commands::authorize_plan(
+        state,
+        &connection,
+        &stored.writes,
+        allow_app_model_removal,
+    )?;
+    if revoke {
+        for resource in &app_resources {
+            state
+                .app_sync
+                .stop_scope_for_revoke(&connection.id, &resource.target)?;
+        }
+    }
     let mut tx = crate::transaction::Transaction::begin(
         deployment::journal_path(&state_path),
         &stored.plan.id,
         stored.writes,
     )?;
-    let applied = tx.apply();
+    let applied = tx.apply_checked(allow_app_model_removal, &|resource| {
+        state.app_sync.authorize(&connection, resource)
+    });
     let failed = applied.is_err();
     let mut detail = "Prepared changes were applied and verified".to_string();
     let mut recovery_failed = false;
@@ -768,7 +835,7 @@ fn execute_stored_plan(state: &ManagedState, stored: StoredPlan) -> AppResult<Ap
             } else {
                 stored.ownership_after.clone()
             },
-            if revoke && !failed {
+            if delete_connection && !failed {
                 Some(connection.id.as_str())
             } else {
                 None
@@ -805,11 +872,38 @@ fn execute_stored_plan(state: &ManagedState, stored: StoredPlan) -> AppResult<Ap
             log::warn!("{warning}");
         }
     }
+    if !app_resources.is_empty() {
+        if failed {
+            state
+                .app_sync
+                .halt(crate::app_sync::Phase::Failed, Some(detail));
+        }
+        let count = if failed {
+            None
+        } else if revoke {
+            Some(0)
+        } else {
+            adapters::github_app::sqlite::observed_source(&app_resources[0])
+                .ok()
+                .flatten()
+                .map(|(_, count)| count)
+        };
+        state.app_sync.notify_result(
+            &connection,
+            stored.plan.purpose,
+            if failed {
+                crate::app_sync::Phase::Failed
+            } else {
+                crate::app_sync::Phase::SyncedConfiguration
+            },
+            count,
+        );
+    }
     Ok(ApplyResult {
         plan_id: stored.plan.id,
         records,
-        connection_deleted: revoke && !failed,
-        credential_cleanup_warning: if revoke && !failed {
+        connection_deleted: delete_connection && !failed,
+        credential_cleanup_warning: if delete_connection && !failed {
             crate::secrets::delete(&connection.secret_ref).err().map(|_|
                 "Configuration was revoked and the connection deleted, but its OS credential could not be removed".into())
         } else {
@@ -831,6 +925,7 @@ fn record(
         target_id: operation.target_id.clone(),
         target_kind: operation.target_kind,
         status,
+        purpose: Some(plan.purpose),
         detail: redact::redact_text(&detail),
         created_at: Utc::now(),
         target_fingerprint: None,
@@ -851,6 +946,7 @@ pub async fn preview_deployment_recovery(
         let allowed = match action {
             RecoveryAction::Restore => {
                 let mut allowed = deployment::recovery_resources().unwrap_or_default();
+                allowed.extend(state.app_sync.recovery_resources().unwrap_or_default());
                 if let Ok(resources) = crate::resources::recovery_resources(
                     state.store().map_err(command_error)?.resources(),
                 ) {
@@ -907,6 +1003,7 @@ pub async fn apply_deployment_recovery(
         match plan.action {
             RecoveryAction::Restore => {
                 let mut allowed = deployment::recovery_resources().unwrap_or_default();
+                allowed.extend(state.app_sync.recovery_resources().unwrap_or_default());
                 if let Ok(resources) = crate::resources::recovery_resources(store.resources()) {
                     allowed.extend(resources);
                 }

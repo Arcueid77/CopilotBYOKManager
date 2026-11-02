@@ -33,7 +33,7 @@
       if (disposed) return;
       preview.disabled = review.busy || applying;
       apply.disabled = review.busy || applying || (review.plan
-        ? !review.plan.operations.some(operation => operation.supported)
+        ? !review.plan.operations.some(operation => operation.supported) || (review.plan.appModelRemovals?.length > 0 && !root.querySelector("[data-app-models-resolved]")?.checked)
         : !inputs.some(input => input.checked && targets[Number(input.dataset.targetIndex)].supportsWrite));
       apply.textContent = review.plan ? tr("确认发布") : tr("发布配置");
       close.disabled = review.busy || applying;
@@ -65,8 +65,9 @@
       body.innerHTML = `<div class="manager-operations">${plan.operations.map(operation => {
         const target = targets.find(target => target.id === operation.targetId);
         const count = connection.models.filter(model => model.enabled).length;
-        return `<article class="manager-operation"><h3>${escape(target ? globalThis.CopilotBYOKManagerClients.name(target) : operation.title)} <span class="manager-meta">${operation.supported ? tr("自动写入") : tr("需手动处理")}</span></h3><p>${escape(manager.policy(target?.kind ?? operation.targetKind))}</p>${operation.supported && !count ? `<p class="inline-error">${tr("空模型目录：将移除本连接的供应商分组。")}</p>` : ""}<details><summary>${tr("写入明细")}</summary><p>${escape(operation.description)}</p><ul>${operation.changes.map(change => `<li>${escape(change)}</li>`).join("")}</ul></details></article>`;
-      }).join("")}</div>`;
+        return `<article class="manager-operation"><h3>${escape(target ? globalThis.CopilotBYOKManagerClients.name(target) : operation.title)} <span class="manager-meta">${operation.supported ? tr("自动写入") : tr("需手动处理")}</span></h3><p>${escape(manager.policy(target?.kind ?? operation.targetKind, operation.supported))}</p>${operation.supported && !count && operation.targetKind !== "github-copilot-app" ? `<p class="inline-error">${tr("空模型目录：将移除本连接的供应商分组。")}</p>` : ""}<details><summary>${tr("写入明细")}</summary><p>${escape(operation.description)}</p><ul>${operation.changes.map(change => `<li>${escape(change)}</li>`).join("")}</ul></details></article>`;
+      }).join("")}</div>${globalThis.CopilotBYOKManagerAppSync.removalReview(plan)}`;
+      root.querySelector("[data-app-models-resolved]")?.addEventListener("change", buttons);
       return plan;
     }
     function showFailure(message, error) {
@@ -94,8 +95,11 @@
         // Normal publication is one click. Keep a reviewed confirmation for
         // CLI credential-file publication or removing a provider group.
         if (!alreadyReviewed && (!connection.models.some(model => model.enabled)
+          || plan.appModelRemovals?.length
           || plan.operations.some(operation => operation.supported && operation.targetKind === "copilot-cli"))) return;
-        const request = review.apply();
+        const resolved = root.querySelector("[data-app-models-resolved]")?.checked === true;
+        if (plan.appModelRemovals?.length && !resolved) return;
+        const request = review.apply({ appModelReferencesResolved: resolved });
         body.textContent = tr("正在发布配置…");
         buttons();
         const result = await request;

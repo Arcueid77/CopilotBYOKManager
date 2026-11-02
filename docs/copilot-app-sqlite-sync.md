@@ -1,10 +1,20 @@
 # Copilot App experimental SQLite synchronization
 
-Decision: 2026-10-31. **Approved implementation plan, not implemented or released.**
+Decision: 2026-10-31. Implementation: 2026-11-01. **Experimental, default-off; real-client request acceptance remains open.**
 
 The maintainer approved direct SQLite provider/model synchronization instead of waiting indefinitely for a documented App write interface. The integration must be **off by default**, require manual enablement and a concrete risk-confirmation dialog, and then automatically synchronize the explicitly selected Connections into the selected Copilot App installation.
 
-Current `adapters/github_app.rs` still reports no write support. Current packages use manual App setup. This decision changes the permitted implementation scope, not the adapter's runtime capability, current release claims, or any user's consent.
+The native adapter and Apps panel now implement this contract for the pinned Windows x64 App 1.1.25 build. Discovery alone remains manual. Only a confirmed, destination-scoped consent record enables writes for its saved Connections. Earlier published packages remain manual; this source change does not update those packages or grant consent.
+
+## Reviewed implementation and storage
+
+- Official [App 1.1.25 Windows release](https://github.com/github/app/releases/tag/v1.1.25): setup SHA-256 `6ca31b9003dceefd434a62d5b58b59e44a07b6083d1628ef5a137039e64b130e`; extracted `github.exe` is 405,381,920 bytes, SHA-256 `1c741981f9b450a17401ab4a8f44bcc556d42bb6a43561c4c9305c39a997e97f`. Its Windows signature was valid. The executable was extracted for schema review, without installing or launching the App.
+- Configuration DDL extracted independently from that binary matches the sanitized [v1 fixture](../apps/desktop/src-tauri/tests/fixtures/copilot-app/schema-v1.sql). The adapter pins both provider/model tables, columns, defaults, unique keys and foreign keys, rejects unknown triggers and binds the external reference graph. `sessions.provider_id` can cascade to SET NULL, so temporary connection-local guards abort any cascade into unrelated tables. Session values are never selected.
+- Only OpenAI-compatible Chat Completions and Responses are mapped. Other protocols, Windows ARM64, macOS/Linux, unknown executable hashes/schema and custom `COPILOT_HOME` are unsupported. The App must have created its own database at `~/.copilot/data.db`; it must be closed, with no pending WAL, for review. The adapter never initializes App tables.
+- `app-sync.json` beside the manager's `state.json` stores private versioned consent, target file/owner identity, selected Connection destination hashes and recovery IDs. It contains no keys. Missing files on fresh installs/upgrades mean off; invalid or externally changed consent stops writes and preserves the original file. State remains v2 and the manager's Usage DB remains v3.
+- Native workers coalesce saves, serialize through the existing managed-write lock and make fresh one-shot deployment plans. Endpoint/protocol/headers/credential-mode changes require renewed consent. Model removals pause for explicit review and active/default-model confirmation. Database errors/conflicts pause automatic retries; **Check and retry** first checks current owned fingerprints. No background model request is sent.
+- Recovery uses `deployment-journal.json`, containing only necessary owned-row preimages/postimages plus other explicitly planned resources. It is written privately before mutation and removed after durable success or completed compensation. Interrupted or conflicting recovery retains it until reviewed Restore or Keep current. No whole-database backup is made. Restores remain conditional on the exact owned postimage, current file identity/schema and a closed App, including when sync is disabled.
+- [App synchronization service](../apps/desktop/src-tauri/src/app_sync/mod.rs), [SQLite adapter](../apps/desktop/src-tauri/src/adapters/github_app/sqlite/mod.rs) and [bilingual UI](../apps/desktop/web/app-sync-ui.js) implement the vertical slice. [Implementation status](implementation-status.md) separates source/fixture checks from pending real App visibility, selection and request acceptance.
 
 ## Evidence and interface boundary
 
@@ -75,7 +85,7 @@ The approved compatibility route permits materializing **only the selected Conne
 
 ## State and UX semantics
 
-Use distinct Disabled, ConsentRequired, UnsupportedSchema, PendingAppExit, PendingSync, Synchronizing, SyncedConfiguration, Conflict, Failed and RecoveryRequired states (or equivalent typed existing states).
+Use distinct Disabled, ConsentRequired, UnsupportedSchema, ReviewRequired, PendingAppExit, PendingSync, Paused, Synchronizing, SyncedConfiguration, Conflict, Failed and RecoveryRequired states.
 
 “Synced” means the owned configuration was committed and read back. It does **not** mean the App selected the model, authenticated successfully, refreshed its picker, or completed a model request. Show the App restart/model-selection next step and separate request verification. A manual confirmation is not database observation. Unknown cannot become configured or verified.
 
@@ -91,4 +101,4 @@ Keep the switch and results within the existing four-page UI. Do not reopen Usag
 
 ## 中文决策摘要
 
-采用 SQLite 直接同步方案，不再无限等待官方公开写接口。功能默认不开启，用户手动打开并在风险弹窗明确确认后，才把所选连接的供应商和模型自动同步到 Copilot App。允许上述受限、已告知风险的明文 Authorization header 兼容路径；不允许导入客户端凭据或扩大到认证、对话、用量私有表。未知版本拒绝写入、关闭 App 后事务更新、仅管理自有条目、保留其他配置、可核查恢复与单独撤销。此文仅批准实现方向；当前代码和 v0.1.0 仍是手动指引。
+已实现默认关闭的 SQLite 同步：用户选择供应商并确认风险后，保存变更会自动同步到已审核的 Windows x64 App 1.1.25。模型移除需额外核对，冲突会暂停，关闭同步保留现有配置，单独撤销保留管理器中的供应商。仅允许上述明文 Authorization header 兼容路径，不导入客户端凭据、会话或用量。精确版本/schema、私有权限、所有权、事务及条件恢复均受原生检查；实际 App 模型可见性、选择和真实请求仍待隔离验收。此前已发布的包没有因这次源码修改而更新。

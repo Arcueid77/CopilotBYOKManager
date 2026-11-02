@@ -1,5 +1,6 @@
 mod account;
 pub mod adapters;
+mod app_sync;
 mod commands;
 pub mod decimal;
 pub mod deployment;
@@ -87,13 +88,14 @@ pub fn run() {
                 Ok(db) => (Some(db), None),
                 Err(error) => (None, Some(redact_text(&error.to_string()))),
             };
-            app.manage(ManagedState::new(
+            let managed = ManagedState::new(
                 store,
                 login_store,
                 github_authorization,
                 usage_db,
                 usage_db_error,
-            ));
+            );
+            app.manage(managed.clone());
             app.manage(window_shell::WindowShellState::open());
             #[cfg(feature = "local-e2e")]
             tauri::WebviewWindowBuilder::new(
@@ -115,15 +117,25 @@ pub fn run() {
             if window_shell::initialize(app.handle()).is_err() {
                 log::warn!("System tray unavailable; closing the window will exit normally");
             }
+            managed
+                .app_sync
+                .start(managed.clone(), app.handle().clone());
             Ok(())
         })
         .on_window_event(window_shell::on_window_event)
         .plugin(tauri_plugin_opener::init())
+        .plugin(app_sync::lifecycle())
         .invoke_handler(tauri::generate_handler![
             window_shell::get_window_behavior,
             window_shell::set_close_action,
             window_shell::set_tray_locale,
             commands::get_dashboard,
+            app_sync::commands::get_app_sync_status,
+            app_sync::commands::preview_app_sync_enable,
+            app_sync::commands::enable_app_sync,
+            app_sync::commands::disable_app_sync,
+            app_sync::commands::retry_app_sync,
+            app_sync::commands::preview_app_sync_revoke,
             resources::commands::get_resources,
             resources::commands::upsert_resource,
             resources::commands::preview_resource_sync,

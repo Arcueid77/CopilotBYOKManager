@@ -46,7 +46,7 @@ pub(super) fn prepare_writes(
 )> {
     let mut writes = Vec::new();
     let mut ownership_after = context.ownership.clone();
-    let revoke = plan.purpose == crate::domain::DeploymentPurpose::RevokeAndDelete;
+    let revoke = plan.purpose.is_revocation();
     for operation in &mut plan.operations {
         let target = targets
             .iter()
@@ -55,7 +55,9 @@ pub(super) fn prepare_writes(
         if !operation.supported {
             continue;
         }
-        if !target.detected || !target.supports_write {
+        let writable =
+            target.supports_write || (revoke && target.kind == ClientKind::GithubCopilotApp);
+        if !target.detected || !writable {
             return Err(AppError::Unsupported("Target is not writable".into()));
         }
         let (prepared, resource_id, projection) = match target.kind {
@@ -104,9 +106,21 @@ pub(super) fn prepare_writes(
                 (vec![write], resource_id, projection)
             }
             ClientKind::GithubCopilotApp => {
-                return Err(AppError::Unsupported(
-                    "This client remains manual/read-only".into(),
-                ))
+                let approval = context.app.as_ref().ok_or(AppError::PlanChanged)?;
+                if approval.revoke != revoke {
+                    return Err(AppError::PlanChanged);
+                }
+                let (write, projection) = adapters::github_app::sqlite::prepare(
+                    connection,
+                    secret,
+                    &context.owner_id,
+                    &context.ownership,
+                    &approval.target,
+                    approval.consent_revision.clone(),
+                    revoke,
+                )?;
+                let resource_id = ownership::resource_id(&write.resource);
+                (vec![write], resource_id, projection)
             }
         };
         ownership_after.retain(|proof| {
@@ -292,6 +306,7 @@ mod tests {
                 requires_restart: false,
             }],
             created_at: Utc::now(),
+            app_model_removals: Vec::new(),
         }
     }
 

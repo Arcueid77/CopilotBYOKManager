@@ -6,7 +6,7 @@
 
 **Configure one provider. Publish it safely across your Copilot clients.**
 
-Save your AI provider's endpoint, API key, and models in one place, then review publication to **VS Code, Copilot CLI, and reviewed JetBrains plugin versions**. Copilot App is covered through guided manual setup.
+Save your AI provider's endpoint, API key, and models in one place, then review publication to **VS Code, Copilot CLI, and reviewed JetBrains plugin versions**. Copilot App offers guided manual setup and default-off experimental synchronization.
 
 You do not need to maintain a separate provider configuration for every client. When you change an endpoint or key, or add or remove models, edit the connection, preview the changes, and publish them to the clients you want to update.
 
@@ -49,7 +49,7 @@ A **provider entry** is a reusable endpoint/key/model configuration. **Publishin
 | VS Code Stable / Insiders and detected profiles | Automatically adds or updates this connection's provider group while preserving other providers | After publishing, select the model in Copilot's model picker in the corresponding profile |
 | GitHub Copilot CLI | Publishes multiple providers and models to `providers.json` | Unchecked by default; confirm publication, start a new session and choose with `/model` |
 | GitHub Copilot plugin in JetBrains IDEs | Automatically writes shared BYOK configuration for reviewed plugin versions | Close the relevant IDEs first; reopen them after publishing, sign in, and select a model |
-| GitHub Copilot App | Provides setup instructions; does not automatically write provider configuration | Add the provider and verify it manually in the app |
+| GitHub Copilot App | Manual setup guide with separate confirmation records for each provider | [Configure, select and confirm inside the App](#copilot-app) |
 
 The JetBrains adapter is limited to the [1.19 plugin distributions in the version table](jetbrains-support.md#version-and-compatibility-boundary). IDEs using the same runtime directory share the configuration, including IDEs you did not select.
 
@@ -159,7 +159,7 @@ Apps shows the current provider names and model counts separately from **Provide
 
 Every publication uses a native plan valid for 15 minutes and usable once. Changed or expired plans are refused. Check any error and retry to obtain a fresh plan; CLI publication and group removal require confirmation again.
 
-Afterward, check each target's result under **Overview (总览) → Latest publication (最近一次发布)** or **Providers (供应商) → Recent configuration operations (最近配置操作)**. Restart instructions, manual steps, and model-selection guidance remain visible after the notification disappears.
+Afterward, check each target's result under **Overview (总览) → Latest deployment (最近一次发布)** or **Providers (供应商) → Recent configuration actions (最近配置操作)**. Restart instructions, manual steps, and model-selection guidance remain visible after the notification disappears.
 
 Overview offers **Add your first provider** for an empty catalog and **Publish to apps** in the header once a provider is available. **View app** focuses the selected app card. Supported configured apps sort first, followed by supported unconfigured apps. JetBrains cards show plugin support individually. Copilot Chat is the VS Code default profile; a built-in Agents profile sharing its catalog uses the same card. Changing the publication selection invalidates an idle preview; language changes preserve the selection. During publication, navigation, refresh and dismissal are blocked. On failure, check publication/recovery and generate a fresh preview.
 
@@ -179,15 +179,47 @@ Custom `COPILOT_HOME` or `COPILOT_PROVIDERS_CONFIG` paths are not automatically 
 
 Reopen the relevant IDE, complete official GitHub Copilot sign-in, and select the published model in Copilot Chat's model picker. Sign in and select a model in each IDE. Unknown plugin versions are not written automatically. See [JetBrains usage and compatibility](jetbrains-support.md) for further limits.
 
-**Copilot App**
+<a id="copilot-app"></a>
 
-The steps below describe the current release. [Experimental SQLite sync](copilot-app-sqlite-sync.md) is approved but not implemented: it will be off by default and require manual enablement plus a risk confirmation before automatic synchronization. Do not look for an enable switch in v0.1.0.
+**Copilot App: experimental automatic sync**
 
-On its Apps card, choose **Provider to configure manually (本次手动配置)**, then **Manual setup (手动配置)**. Confirmations are saved separately for each provider and displayed as **Confirmed by you (你已确认)**. Editing a provider changes its record to **Confirm updated configuration (修改后待确认)**. Reopen the guide after updating the App and confirm again.
+This source includes opt-in synchronization for **Windows x64 App 1.1.25**. Earlier published packages still use the manual flow below. Other versions/platforms keep manual setup.
 
-In the App's **Model providers**, add the provider using the displayed endpoint and model, and enter its key inside the App. Then click **I have completed manual setup (我已完成手动配置)** in the manager's guide.
+1. Save providers and models on **Providers** and allow publishing. Close Copilot App. The App must already have created its database at `~/.copilot/data.db`.
+2. On **Apps → GitHub Copilot app → Experimental auto-sync**, select **Enable experimental sync**, choose up to 16 saved providers, then **Review scope and risks**.
+3. Check the App version, database location and selected endpoints. Selected API keys will be stored as **plaintext Authorization headers** in the App database and may remain in WAL files, journals and backups. The dialog explains this storage route and database-format compatibility. Confirm **I understand — enable sync** to authorize that scope.
+4. Initial configuration and later saved changes synchronize automatically while App is closed. Unsaved edits stay in the editor. Endpoint/protocol/headers/credential-mode changes require turning sync off and reviewing enablement again. Add other providers by reviewing a new scope.
+5. **Configuration synchronized** confirms the managed entries were written. Restart App, select a model in its picker and initiate your own request when ready. **Waiting for Copilot App to close** resumes after closure. Conflicts/errors pause; use **Check and retry** after resolving them.
+6. Removing models pauses automatic sync. Use **Review changes for [provider]**, switch affected active/default models inside App, close App and confirm the reviewed removal. Then **Check and retry** to resume automatic updates. Actual foreign-key references still block removal.
+7. **Turn auto-sync off** cancels queued updates and keeps existing App configuration. **Remove managed App configuration** separately previews and revokes owned entries while keeping the provider and key in the manager. Removal is not secure erasure from database pages or backups; rotate a key if exposure is suspected.
 
-If App was included in a publication, use its result's **Manual setup for [connection]** button to open instructions for that specific connection, even when another connection is selected elsewhere.
+Unknown schemas, unsafe file permissions and custom `COPILOT_HOME` stop writes. No App database is initialized or migrated. See the [adapter contract and version evidence](copilot-app-sqlite-sync.md).
+
+**Copilot App: manual setup, confirmation and updates**
+
+Use this path with experimental sync off, or for a provider outside its selected scope.
+
+1. Find **GitHub Copilot app** on **Apps**. If it is missing, expand **Installation and updates** to review the supported Windows installation plan, then **Detect again** after installation. Follow the App's sign-in prompts; **Sign-in and account checks (optional)** provides the corresponding account steps.
+2. Save the endpoint, key and models on **Providers**, and enable **Allow publishing**. Those providers appear in the App card's **Provider to configure manually** selector.
+3. Select the provider and click **Manual setup**. The guide shows its name, endpoint and recommended upstream model ID. The confirmation button stays disabled while its local record is being read.
+4. In the App's **Model providers**, add or update that provider with the displayed endpoint and model, and enter its key in the App if required. Look up additional upstream model IDs in the manager's provider editor and add them using the App's available model controls.
+5. Choose the provider/model in the App and check a short request. Return to the guide and click **I completed manual setup**.
+6. On success the guide closes, a notification names the provider, and **Apps** and **Overview** show its **Confirmed by you** record. Repeat for other providers; each record is retained separately.
+
+**Provider to configure manually** chooses the guide to open. Select the active provider and model inside the App. Enter the key there if required; the manager's guide does not display the saved key.
+
+| Display | Meaning | Next action |
+| --- | --- | --- |
+| Add the provider manually in Copilot App | No provider confirmation record is currently shown | Open a guide, configure the provider and confirm |
+| Provider name · **Confirmed by you** | Your confirmation for that provider configuration was saved | Use the corresponding model in the App |
+| Provider name · **Confirm updated configuration** | The manager's provider record changed | Check or update the App entry, then reopen the guide and confirm |
+| **Manual setup records could not be read**, or a read/save error in the guide | The confirmation record could not be read or saved | Close the guide, refresh and retry; handle any displayed storage recovery issue first |
+
+Saving edits or toggling **Allow publishing** changes the provider revision and makes an existing confirmation require another review. If the App entry already matches, check it and confirm again. Check direct edits/deletions made inside the App yourself; the manager displays its local confirmation records.
+
+The App is unchecked by default in a provider's publication targets. Explicitly include it alongside an automatic target to retain a **Not processed automatically** result and a **Manual setup for [provider name]** link. That link opens the guide for the provider in that publication. A later manual confirmation is saved separately; the original publication result remains unchanged. For App-only setup, use the App card's **Manual setup** action.
+
+Closing the guide retains anything already saved in the App. Remove the corresponding provider and key inside the App when needed; the manager's **Stop managing only** and **Revoke and delete** actions leave manually entered App configuration intact. See the [Copilot App operation flow](copilot-app-support.md) for the record contract.
 
 Finally, send a short request containing no sensitive project content from the client you intend to use, and confirm that the model responds. Real requests may incur provider charges.
 
@@ -204,6 +236,8 @@ Find the provider under **Providers (供应商)** and click **Edit (编辑)**:
 3. Use **Publish to apps → Publish configuration** again to update the intended targets; confirm CLI publication or group removal when prompted.
 4. Reopen clients or create new sessions as instructed by the publication results.
 
+For Copilot App, enabled experimental sync updates selected providers after saving; otherwise follow the [manual setup flow](#copilot-app). Manual confirmations remain independent per provider.
+
 Editing a connection does not automatically synchronize it to all clients in the background. If fetching models asks for credentials after you change the endpoint, protocol, or headers, enter the key for the current endpoint again. Catalog discovery will not silently send the stored key to a changed destination.
 
 ### Add or switch providers
@@ -212,7 +246,7 @@ Add another connection under **Providers (供应商)**, then publish it to the c
 
 - **VS Code / JetBrains:** multiple provider groups can coexist. Switch using the client's model picker.
 - **Copilot CLI:** multiple providers and models coexist in `providers.json`. Select a provider, review and confirm to update only its group; manual configuration and other providers are preserved. Start a new CLI session and choose a model afterward. If configuration changes after preview, generate a fresh preview and confirm again.
-- **Copilot App:** add or switch providers manually inside the app.
+- **Copilot App:** synchronized providers can be selected inside App; use manual setup for other providers.
 
 Select the active model in each client's model picker.
 
@@ -224,9 +258,9 @@ Select the active model in each client's model picker.
 | **Remove (移除) → Stop managing only (仅停止管理…) → Confirm (确认停止管理)** | Removes the connection, publication records, ownership proofs, and its dedicated credential | Configuration and any materialized keys remain; you are responsible for managing them afterward |
 | **Remove (移除) → Preview revocation and deletion (预览撤销并删除) → Confirm (确认撤销并删除)** | Removes the connection after successful revocation | Removes only configuration verified as managed by this app, not other providers |
 
-**To remove this configuration from clients, choose revocation and deletion rather than simply disabling the connection.** Review every target in the preview: revocation covers this connection's published managed configuration, not just one client.
+For automatic targets, use **Revoke and delete** to remove the provider's managed configuration and review all targets in its preview. Delete manually entered Copilot App providers and keys inside the App.
 
-Overview and Apps read the current configuration on refresh: manual edits appear immediately, deleted providers disappear, and read errors remain distinct from an empty catalog. Publishing or revoking an owned provider uses its current content. Changes after the plan is created stop the write; changes after a write stop rollback. Ownership conflicts still require review. Check **Apps (应用) → Publication and revocation history (发布与撤销记录)** and the recovery status under **About → Local storage and security (本地存储与安全)** first. Do not delete configuration files or backups directly.
+For apps with supported configuration reads, Overview and Apps show the current catalog on refresh; read errors stay distinct from an empty catalog. Copilot App reads safely observable owned-provider metadata while experimental sync is enabled, and otherwise shows manual confirmations. Changes after preview stop publication; external edits after writing stop rollback. Changed App ownership fingerprints require conflict review. Check **Apps → Publication and revocation history** and **About → Local storage and security** first. Do not delete configuration files or backups directly.
 
 <a id="usage"></a>
 
@@ -242,7 +276,7 @@ See the [feature availability record](feature-availability.md) for implemented-b
 
 ### I saved a connection. Why has nothing changed in my client?
 
-Saving only updates the manager. You must also click **Publish to apps**, generate a preview, and confirm it. Then select the model, restart the IDE, or open a new terminal as required by that client. The same process applies when updating an existing connection.
+Saving updates the manager and schedules selected Copilot App providers when experimental sync is enabled. For other automatic targets, use **Publish to apps → Publish configuration**, then select the model, restart the IDE or open a new terminal as required. Manual App providers follow the [manual setup guide](#copilot-app).
 
 ### Test connection succeeded. Why does chat still fail?
 
@@ -254,7 +288,7 @@ Yes. If the provider does not expose a compatible catalog endpoint, enter model 
 
 ### I published the configuration but still cannot see the model. What should I check?
 
-Start with the per-target results under **Overview → Latest publication**, then check:
+Start with the per-target results under **Overview → Latest deployment**, then check:
 
 1. Whether you published to the VS Code profile or JetBrains runtime directory you are actually using.
 2. Whether the target was written successfully or still requires manual setup.
@@ -262,7 +296,7 @@ Start with the per-target results under **Overview → Latest publication**, the
 4. Whether the client and plugin version are supported; JetBrains requires the exact reviewed versions.
 5. Whether you completed official sign-in and explicitly selected the model in the client.
 
-**App configuration status (应用配置状态)** only checks configuration published by this manager.
+**App configuration status (应用配置状态)** shows the current catalog for apps with supported reads. Copilot App shows owned-provider metadata while experimental sync is enabled, and separate per-provider manual confirmations when it is off.
 
 ### What if the CLI reports a configuration conflict, or I want to return to the official route?
 

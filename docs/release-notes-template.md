@@ -5,7 +5,10 @@
 ## 本版功能
 
 - 集中管理供应商地址、API Key 和模型，支持获取模型列表或手动添加。
-- 一键发布到 Copilot Chat（VS Code）、Copilot CLI 和支持的 JetBrains 插件；Copilot App 提供手动配置指引。
+- 发布到 Copilot Chat（VS Code）和支持的 JetBrains 插件；Copilot CLI 使用 `providers.json` 保存多个供应商及其全部启用模型。
+- 新增 Copilot App 实验性自动同步：选择供应商并确认后，保存变更即更新自有供应商和模型。默认关闭，目前支持 Windows x64 App 1.1.25，保留手动配置。
+- App 同步支持等待关闭客户端、模型移除复核、冲突重试和单独撤销；关闭同步保留现有配置。
+- 改进安装进度和取消结果，保留已完成组件；更新供应商编辑与模型选择流程。
 - 刷新后直接显示客户端当前配置；应用按支持情况和配置状态排序。
 - 总览、供应商、应用、关于四个页面，支持简体中文、英文和明暗主题。
 - 保留发布记录、撤销和恢复功能；发布时保留其他供应商的配置。
@@ -23,10 +26,15 @@
 ## English
 
 Configure providers, API keys and models once, then publish to Copilot Chat in
-VS Code, Copilot CLI and supported JetBrains plugins. Copilot App includes manual
-setup guidance. Refresh reads the current client configuration, with supported
-and configured apps listed first. Includes English / 简体中文, themes, publication
-history, revocation and recovery.
+VS Code and supported JetBrains plugins. Copilot CLI now uses `providers.json`
+for multiple providers and all enabled models.
+
+Experimental Copilot App auto-sync is off by default. Select providers and confirm
+the setup to synchronize saved changes. Supports the reviewed Windows x64 App
+1.1.25 build, with manual setup retained. Includes App-exit waiting, model-removal
+review, conflict retry and separate revocation. Turning sync off keeps existing
+configuration. Installation progress/cancellation and provider model selection
+are improved. English / 简体中文, themes, history and recovery remain available.
 
 Windows: run Setup or extract the standalone ZIP. macOS 15+: open the Universal
 DMG and drag the app to Applications. After publishing, select a model in the

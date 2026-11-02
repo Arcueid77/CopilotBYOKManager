@@ -62,9 +62,7 @@ pub fn selection_notice(kind: ClientKind) -> &'static str {
         ClientKind::CopilotCli => {
             "供应商与模型已写入 providers.json；请启动新的 CLI 会话，在 /model 中选择模型。"
         }
-        ClientKind::GithubCopilotApp => {
-            "没有已审核的自动写入接口，请在 App 内手动添加供应商并选择模型。"
-        }
+        ClientKind::GithubCopilotApp => "重新启动 App，在模型选择器中选择刚同步的模型。",
     }
 }
 

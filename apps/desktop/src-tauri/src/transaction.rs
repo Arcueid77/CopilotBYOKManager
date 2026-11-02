@@ -15,6 +15,7 @@ const MAX_WRITES: usize = 160;
 #[serde(tag = "kind", content = "location", rename_all = "camelCase")]
 pub enum Resource {
     File(PathBuf),
+    AppSqlite(Box<crate::adapters::github_app::sqlite::AppResource>),
     #[cfg(windows)]
     UserEnvironment(String),
 }
@@ -22,6 +23,7 @@ pub enum Resource {
 impl Resource {
     pub fn key(&self) -> String {
         match self {
+            Self::AppSqlite(resource) => resource.key(),
             Self::File(path) => {
                 let key = format!("file:{}", path.display());
                 #[cfg(windows)]
@@ -40,6 +42,7 @@ impl Resource {
 
     pub fn read(&self) -> AppResult<Option<Vec<u8>>> {
         match self {
+            Self::AppSqlite(resource) => resource.read(),
             Self::File(path) => safe_io::read_optional(path, MAX_RESOURCE_BYTES),
             #[cfg(windows)]
             Self::UserEnvironment(name) => {
@@ -76,8 +79,18 @@ impl Resource {
         }
     }
 
-    fn write(&self, bytes: Option<&[u8]>, mode: Option<u32>) -> AppResult<()> {
+    fn write(
+        &self,
+        bytes: Option<&[u8]>,
+        mode: Option<u32>,
+        expected: Option<&[u8]>,
+        allow_model_removal: bool,
+        authorize: &dyn Fn(&Resource) -> AppResult<()>,
+    ) -> AppResult<()> {
         match self {
+            Self::AppSqlite(resource) => {
+                resource.write(expected, bytes, allow_model_removal, || authorize(self))
+            }
             Self::File(path) => match bytes {
                 Some(bytes) => {
                     #[cfg(unix)]
@@ -308,10 +321,30 @@ impl Transaction {
     }
 
     pub fn apply(&mut self) -> AppResult<()> {
+        self.apply_checked(false, &|resource| {
+            if matches!(resource, Resource::AppSqlite(_)) {
+                return Err(AppError::Unsupported(
+                    "App SQLite synchronization requires native consent authorization".into(),
+                ));
+            }
+            Ok(())
+        })
+    }
+
+    pub(crate) fn apply_checked(
+        &mut self,
+        allow_model_removal: bool,
+        authorize: &dyn Fn(&Resource) -> AppResult<()>,
+    ) -> AppResult<()> {
+        // Check every target's authorization before the first cross-target mutation.
+        for write in &self.journal.writes {
+            authorize(&write.resource)?;
+        }
         #[cfg(feature = "local-e2e")]
         let mut written = 0;
         for index in 0..self.journal.writes.len() {
             let write = &self.journal.writes[index];
+            authorize(&write.resource)?;
             if write.resource.read()? != write.before {
                 return Err(AppError::Config(
                     "Target changed immediately before its write".into(),
@@ -328,9 +361,13 @@ impl Transaction {
                 if written == 1 {
                     crate::test_support::fault("second-write")?;
                 }
-                write
-                    .resource
-                    .write(write.after.as_deref(), write.write_mode)?;
+                write.resource.write(
+                    write.after.as_deref(),
+                    write.write_mode,
+                    write.before.as_deref(),
+                    allow_model_removal,
+                    authorize,
+                )?;
                 #[cfg(feature = "local-e2e")]
                 {
                     // Faults target actual mutations, independent of the
@@ -366,9 +403,13 @@ impl Transaction {
                         "External edit prevents safe rollback".into(),
                     ));
                 }
-                write
-                    .resource
-                    .write(write.before.as_deref(), write.restore_mode)?;
+                write.resource.write(
+                    write.before.as_deref(),
+                    write.restore_mode,
+                    write.after.as_deref(),
+                    true,
+                    &|_| Ok(()),
+                )?;
                 if write.resource.read()? != write.before {
                     return Err(AppError::Config("Rollback verification failed".into()));
                 }

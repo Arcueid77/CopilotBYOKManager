@@ -297,6 +297,8 @@ pub struct DeploymentPlan {
     pub connection_name: String,
     pub target_ids: Vec<String>,
     pub operations: Vec<DeploymentOperation>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub app_model_removals: Vec<String>,
     pub created_at: DateTime<Utc>,
 }
 
@@ -317,6 +319,8 @@ pub struct DeploymentRecord {
     pub target_id: String,
     pub target_kind: ClientKind,
     pub status: DeploymentStatus,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub purpose: Option<DeploymentPurpose>,
     pub detail: String,
     pub created_at: DateTime<Utc>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -344,6 +348,13 @@ pub enum DeploymentPurpose {
     #[default]
     Deploy,
     RevokeAndDelete,
+    RevokeApp,
+}
+
+impl DeploymentPurpose {
+    pub fn is_revocation(self) -> bool {
+        self != Self::Deploy
+    }
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]

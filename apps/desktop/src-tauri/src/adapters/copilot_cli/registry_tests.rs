@@ -280,6 +280,7 @@ fn projected_fingerprint_uses_registry_after_bytes_and_external_edits_invalidate
             target_ids: vec![target.id.clone()],
             operations: vec![super::super::preview(&c, &target)],
             purpose: crate::domain::DeploymentPurpose::Deploy,
+            app_model_removals: Vec::new(),
             created_at: chrono::Utc::now(),
         };
         let mut plans = PlanStore::default();

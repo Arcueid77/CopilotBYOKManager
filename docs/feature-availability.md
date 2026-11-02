@@ -1,20 +1,21 @@
 # CopilotBYOKManager feature availability
 
-Updated 2026-10-31. The **v0.1 release-candidate scope** is the core configuration edition with four pages: **Overview, Providers, Apps and About**. Configure providers, publish to selected targets, inspect results and revoke owned configuration. Packages and versions are listed on [Releases](https://github.com/Arcueid77/CopilotBYOKManager/releases).
+Updated 2026-11-02. The **v0.2 release-candidate scope** retains the approved core configuration edition with four pages: **Overview, Providers, Apps and About**. Configure providers, publish to selected targets, inspect results and revoke owned configuration. Packages and versions are listed on [Releases](https://github.com/Arcueid77/CopilotBYOKManager/releases).
 
 ## Available in the current interface
 
 - Provider endpoint, OS-held key and model management; catalog discovery, preferred model, enablement and explicit deletion choices.
 - App detection, reviewed installation and official account steps; supported provider preview/publication and manual App guidance.
+- Copilot App provider-specific manual guides and independently saved confirmation records, including changed-configuration follow-up. See [the operation flow](copilot-app-support.md).
 - Persistent per-target publication results, publication/revocation history and safe recovery, within the four pages.
 - English and Simplified Chinese; Light, Dark and System appearance, with a bounded saved preference.
 - Windows close-to-tray by default, saved Tray/Exit choice on About, left-click restore, localized right-click Open main window / Exit menu and repeated-launch wakeup. Ordinary minimize stays on the taskbar. Unavailable tray, hide failure or unreadable preferences keep normal close. Browser preview and other platforms do not claim Windows tray behavior.
 
 See [implementation status](implementation-status.md) for the evidence attached to this source.
 
-## Approved next App integration (not implemented)
+## Experimental App integration
 
-[Copilot App SQLite synchronization](copilot-app-sqlite-sync.md) is approved as a default-off experimental integration. The user must enable it manually and confirm the plaintext-key/database risks before selected Connections synchronize automatically. Current code and v0.1.0 still use manual App setup; no automatic App support is advertised until implementation and version/platform acceptance. This is separate from the hidden extended services below.
+[Copilot App SQLite synchronization](copilot-app-sqlite-sync.md) is implemented as a default-off experimental integration for the exact Windows x64 App 1.1.25 build. Enable it in Apps, choose providers and confirm the plaintext-key/database risks. Native plans, owned rows, scoped recovery, save coalescing and separate revocation are connected. Real App picker/request acceptance remains open; previously published packages still use manual setup. This is separate from the hidden extended services below.
 
 ## Planned capabilities not offered in this edition
 
@@ -46,7 +47,7 @@ Organization/enterprise Billing, provider invoices, cloud usage synchronization,
 
 ## 中文功能记录
 
-2026-10-31 已批准 Copilot App 的[实验性 SQLite 同步方案](copilot-app-sqlite-sync.md)：默认关闭，用户手动开启并确认明文密钥、数据库兼容与恢复风险后，自动同步所选连接的供应商与模型。当前代码和 v0.1.0 仍为手动指引；方案尚未实现或实机验收，不得宣传为已支持。仅解除此受限方案的禁止写入约束，不开放认证、会话或用量私有表。
+2026-11-01 已实现 Copilot App 的[实验性 SQLite 同步](copilot-app-sqlite-sync.md)，仅限精确审核的 Windows x64 App 1.1.25。默认关闭，选择供应商并确认风险后自动同步，支持暂停、模型移除复核、单独撤销和条件恢复。实际模型选择器与真实请求仍待验收；此前发布包继续使用手动流程。认证、会话和用量私有表不开放。
 
 当前为四页核心配置版：**总览、供应商、应用、关于**。先做好供应商配置、选择应用、直接发布或查看变更、结果核对和安全撤销。中英文、浅色/深色/跟随系统，以及 Windows 关闭到托盘属于本版界面能力。托盘采用 CC Switch 式规则：默认关闭至托盘，可在关于页改为直接退出；左键打开主窗口，右键显示本语言菜单，再次启动唤回已有实例。托盘和真实应用是否通过验收，以[实现状态](implementation-status.md)为准。
 

@@ -49,6 +49,7 @@
   }
 
   function description(client) {
+    if (client.kind === "github-copilot-app" && client.detected) return client.supportsWrite ? tr("同步自有供应商和模型；完成后重新启动 App 并选择模型。") : tr("手动配置，或开启实验性自动同步。");
     if (client.kind === "copilot-cli" && client.detected && client.supportsWrite) return tr("发布后，在新的 CLI 会话中用 /model 选择模型。");
     if (vscode(client) && client.detected && client.supportsWrite && /^vscode:(stable|insiders):default$/.test(client.id)) return tr("使用 VS Code 默认配置档案的模型目录。");
     return client.detail;
@@ -58,7 +59,7 @@
     if (["error", "unknown"].includes(client.status)) return { state: "unavailable", label: tr("检测不可用"), sources: [] };
     if (!client.detected && client.status === "read-only") return { state: "unsupported", label: tr("应用或插件已停用"), sources: [] };
     if (!client.detected) return { state: "missing", label: tr("未安装"), sources: [] };
-    if (client.kind === "github-copilot-app") {
+    if (client.kind === "github-copilot-app" && !client.supportsWrite) {
       if (data.errors?.manualProviders) return { state: "unavailable", label: tr("手动配置记录读取失败"), sources: [] };
       const records = (data.manualProviders ?? []).filter(record => record.state !== "notConfirmed");
       const sources = records.flatMap(record => {

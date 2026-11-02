@@ -38,7 +38,7 @@ The checked-in implementation is a pre-release desktop application with connecte
 - native-held, expiring, one-shot deployment plans, live fingerprints, durable ownership, prepare-all transactions, private journals, conditional rollback and reviewed revocation;
 - VS Code Custom Endpoint projection that preserves non-CopilotBYOKManager groups and creates an original backup;
 - Copilot CLI multi-provider/model publication through its public `providers.json` registry, with retained legacy-route revocation and same-Connection upgrade;
-- current read-only/manual GitHub Copilot app provider configuration; default-off experimental SQLite synchronization is approved for implementation, not yet shipped (see `docs/copilot-app-sqlite-sync.md`);
+- GitHub Copilot App manual guidance plus default-off, risk-confirmed SQLite synchronization for pinned Windows x64 App 1.1.25, with selected saved Connections, owned rows, save coalescing, reviewed model removal, separate revocation and conditional recovery (see `docs/copilot-app-sqlite-sync.md`); real-client acceptance remains open;
 - pinned Windows installation plans, fresh PATH/WinGet portable discovery, typed hidden-terminal download progress, scoped cancellation, preserved partial outcomes and post-install rediscovery (see `docs/installer-support.md`);
 - official client account flows, safe CLI identity follow-up and separate GitHub personal-usage authorization;
 - `state.json` schema v2 and migration-safe `usage.sqlite3` schema v3, explicit recovery, exact monetary arithmetic and metadata-only local usage;
@@ -57,7 +57,7 @@ The 2026-10-24 core UX update loads dashboard/manual-confirmation/window metadat
 
 ## Copilot App SQLite synchronization decision (2026-10-31)
 
-The maintainer permits an experimental App provider/model SQLite adapter under `docs/copilot-app-sqlite-sync.md`; a documented public write API is no longer a prerequisite for this narrowly scoped integration. It is default-off and requires a user-enabled switch plus an explicit risk confirmation before automatic synchronization of selected Connections. The confirmation must disclose plaintext provider-key storage in the App database, WAL/journal and backups when using the Authorization-header route. Preserve version/schema gates, owned-row-only writes, safe transactions and conditional recovery. This does not authorize reading/copying client login credentials, sessions or usage from private tables. Current `github_app.rs` remains read-only until implementation and acceptance; runtime support still requires implementation and acceptance.
+The maintainer permits the experimental App provider/model SQLite adapter in `docs/copilot-app-sqlite-sync.md`. The 2026-11-01 source connects its native consent, worker, transaction resource and bilingual Apps panel. It stays default-off and requires explicit destination-scoped risk confirmation, including plaintext keys in SQLite/WAL/journals/backups. Preserve the exact reviewed executable/schema/Windows x64 gate, ACL checks, owned rows and conditional recovery. Unknown versions remain manual. The new fixture/source evidence does not establish real App picker/request acceptance. No client login credentials, session content or private usage may be read/copied.
 
 ## Required scope boundary
 

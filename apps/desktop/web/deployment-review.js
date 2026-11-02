@@ -28,7 +28,7 @@
           busy = false;
         }
       },
-      async apply() {
+      async apply(options = {}) {
         if (busy) throw new Error(tr("A deployment request is already in progress"));
         if (!plan) throw new Error(tr("Preview the current selection before applying it"));
         const planId = plan.id;
@@ -37,7 +37,7 @@
         generation += 1;
         busy = true;
         try {
-          return await invoke("apply_deployment_plan", { planId, confirmed: true });
+          return await invoke("apply_deployment_plan", { planId, confirmed: true, ...(options.appModelReferencesResolved === true ? { appModelReferencesResolved: true } : {}) });
         } finally {
           busy = false;
         }

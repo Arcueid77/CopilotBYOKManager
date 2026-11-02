@@ -1,10 +1,20 @@
 # CopilotBYOKManager implementation status
 
-Updated 2026-10-24 for consistent multi-provider presentation, per-provider manual confirmations, independent core loading and concise installation results. Initial release engineering started at `83a82db3555eb0defa278bd6e042b7c55a76088f`; source and evidence are recorded below. The [specification §21](mvp-implementation-spec.md#21-final-acceptance) and [feature availability](feature-availability.md) separate the core release from the retained extended milestone. Public versions and their exact build metadata are on [Releases](https://github.com/Arcueid77/CopilotBYOKManager/releases).
+Updated 2026-11-01 for default-off Copilot App SQLite synchronization. Initial release engineering started at `83a82db3555eb0defa278bd6e042b7c55a76088f`; source and evidence are recorded below. The [specification §21](mvp-implementation-spec.md#21-final-acceptance) and [feature availability](feature-availability.md) separate the core release from the retained extended milestone. Public versions and their exact build metadata are on [Releases](https://github.com/Arcueid77/CopilotBYOKManager/releases).
 
-## 2026-10-31 documentation decision: experimental App sync
+## 2026-11-02 v0.2.0 release preparation
 
-Approved the [Copilot App SQLite synchronization plan](copilot-app-sqlite-sync.md): disabled by default, manually enabled after a concrete risk confirmation, then automatic synchronization of selected Connections. This removes the categorical requirement to wait for a public App provider-write interface. It does not change `github_app.rs`, `supports_write`, manual confirmation behavior, any database or credential, or the v0.1.0 package. Implementation, schema/platform fixtures and real-client acceptance remain outstanding; no runtime PASS is claimed by this documentation change.
+The maintainer authorized submission and publication as `v0.2.0` Pre-release. Application manifests, lock metadata, About labels, README and bilingual release notes are aligned to 0.2.0. The four-page scope and state v2 / Usage DB v3 stay unchanged. The release workflow must check the exact committed source using Node 22 / Rust 1.88.0, build Windows x64 and macOS Universal, and verify the Draft's original bytes before promotion. The Release's metadata, SHA256SUMS and Actions provide final package evidence; the previous dirty-tree 0.1.0 local preview is not a release artifact. Browser/native UI automation, clean-system installation and real-client requests remain separately tracked quality work.
+
+## 2026-11-01 experimental App synchronization
+
+Implemented the [approved SQLite contract](copilot-app-sqlite-sync.md) in the working tree based on `3de949f`. Missing consent on new installs/upgrades leaves the feature off. Native-held one-shot scope previews and the bilingual risk dialog authorize only selected saved providers, the pinned Windows x64 App 1.1.25 executable, default database identity/owner/schema and reviewed destinations. Saved changes coalesce through the existing managed-write lock, deployment plans, scoped row journals, exact readback and conditional compensation. Running App waits; changed destinations require renewed consent; model removals require review. Other errors/conflicts halt automatic retries pending reconciliation. Disable preserves committed rows; separate App revocation retains the manager provider/key. The four core pages and manual fallback remain.
+
+Schema review used the signed official App binary without installing/running it. The exact hashes, mapping and sanitized schema fixture are in the adapter contract. Session-reference tests prove cascading deletion is blocked; production SQL never selects account/session content. Consent/state and frontend results contain no provider keys. Only owned row preimages/postimages can enter the private recovery journal, retained on interrupted/conflicting recovery and cleared after durable completion. Existing state v2 and Usage DB v3 need no migration; only features on existing SQLite/Windows dependencies were enabled.
+
+Checks: 318 Rust unit tests + 6 integration tests, 91 web tests, 24 release tests, version consistency, bilingual catalog, formatting and strict Clippy passed on this source. New fixtures cover cancel/expiry/replay/stale consent, saved-only selected scope, coalescing/no-op, model review, destination changes, App-running state, restart/revocation, unknown schema/triggers, unsafe ACL/file identity, lock contention/collisions/bounds, external edits, precommit cancellation, commit acknowledgement interruption, native schema binding during restart recovery and cross-target compensation. Web tests exercise the real dialog controllers through synthetic DOM/API boundaries in both languages.
+
+These are source/fixture tests. Browser/native UI automation, clean Windows/macOS installation, actual App model visibility/selection and a provider request have not been rerun for this change. No new real-client or request PASS is claimed. Earlier Release bytes remain unchanged; local package provenance is kept with the ignored build artifacts.
 
 ## Current implementation
 
@@ -15,7 +25,7 @@ Approved the [Copilot App SQLite synchronization plan](copilot-app-sqlite-sync.m
 | VS Code | Stable/Insiders/profile discovery; owned `chatLanguageModels.json` groups coexist with other suppliers | Select the model in the client; sign-in only focuses an existing Windows editor or gives manual instructions |
 | Copilot CLI | Confirmed merge of each provider and all enabled models into `providers.json`; independent durable claims, current multi-provider observations and scoped revoke; same-Connection owned legacy-route upgrade | Default path only; start a new session and select with `/model`; custom-root overrides unsupported; saved default unchanged |
 | JetBrains | Automatic dedicated shared BYOK projection for reviewed 1.19 distributions, with per-profile proofs and deduplicated writes | Unknown versions unsupported; per-IDE login, picker visibility and actual requests are separate acceptance steps |
-| Copilot app | Component discovery, official-flow/manual account steps and provider runbook | Provider writes remain unimplemented; [default-off SQLite sync](copilot-app-sqlite-sync.md) is approved next work. Private usage/authentication extraction remains excluded |
+| Copilot app | Discovery/manual flow plus risk-confirmed, selected-provider SQLite auto-sync, model removal review, status/retry, separate revoke and recovery | Exact Windows x64 App 1.1.25/default-root/OpenAI-compatible contract; real picker/request acceptance open. Private usage/authentication extraction excluded |
 | Installation | Pinned WinGet plans and identity checks; fresh PATH/portable CLI discovery, hidden-terminal phase/download progress, scoped cancellation, preserved partial results and rediscovery | Unknown progress is indeterminate; direct app asset-download fallback and clean-machine package acceptance are not complete |
 | Accounts and GitHub authorization | Official client workflows, protocol-3 CLI identity follow-up, manual/verified distinction, separate OS-held GitHub authorization | No copying client credentials; actual runtime/Billing capability depends on the installed client and account |
 | Resources | Native MCP, Markdown-only Skills and Instructions authoring/publication/revoke on reviewed public paths | Named profiles, custom roots, local-command/secret-bearing MCP, app and JetBrains resource gaps remain manual |
@@ -42,6 +52,12 @@ Technical detail: [architecture](architecture.md), [hardening](hardening-handoff
 ## Validation evidence
 
 Evidence must stay attached to the source and validation layer that produced it. Tests use temporary data and fake external services. Private runtime reports remain outside Git; the reviewed, synthetic README screenshots are checked in with [provenance](images/README.md).
+
+### Copilot App workflow documentation — 2026-10-31
+
+Documented the existing `dcc5a8f` App workflow in both user guides, the READMEs, documentation index and a dedicated [App contract](copilot-app-support.md). Coverage includes installation/account entry points, the selected-provider guide, confirmation read/save and retry states, independent records, revision invalidation, mixed publication versus App-only setup, guide cancellation, and removal of manual App entries. The architecture now distinguishes local confirmation records from public catalogs and automatic publication history. No application code, persistence schema or client configuration changed. Real App sign-in/model/request acceptance remains the open quality work recorded below.
+
+Documentation-only validation passed: `npm run check` (24 release tests, 87 Web tests, 302 Rust library + 6 integration tests, version checks, formatting and strict Clippy), 31 Markdown files / 309 local links and anchors, and `git diff --check`. App button/status wording was compared with the bilingual message catalog. No App installation, sign-in or request was performed for this documentation update.
 
 ### Four-page product consistency — 2026-10-24
 

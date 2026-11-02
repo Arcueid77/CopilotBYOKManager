@@ -94,7 +94,8 @@ pub fn validate(
             .iter()
             .any(|value| value.len() != 64 || !value.bytes().all(|b| b.is_ascii_hexdigit()))
             || !identities.insert((&record.target_id, &record.connection_id))
-            || record.target_kind == ClientKind::GithubCopilotApp
+            || (record.target_kind == ClientKind::GithubCopilotApp
+                && record.target_id != crate::app_sync::TARGET_ID)
         {
             return Err(AppError::InvalidInput(
                 "Invalid configuration ownership proof; read-only recovery is required".into(),

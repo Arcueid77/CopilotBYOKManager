@@ -10,7 +10,7 @@
 
 <p align="center">
   <a href="https://github.com/Arcueid77/CopilotBYOKManager/actions/workflows/ci.yml"><img src="https://github.com/Arcueid77/CopilotBYOKManager/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <img src="https://img.shields.io/badge/status-v0.1%20candidate-purple" alt="v0.1 候选版">
+  <img src="https://img.shields.io/badge/status-v0.2%20candidate-purple" alt="v0.2 候选版">
   <img src="https://img.shields.io/badge/interface-English%20%7C%20简体中文-blue" alt="中英文界面">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="MIT 许可证"></a>
 </p>
@@ -23,7 +23,7 @@
   社区友链：<a href="https://linux.do">LINUX DO</a>
 </p>
 
-> **v0.1** — [下载 Windows 和 macOS 安装包](https://github.com/Arcueid77/CopilotBYOKManager/releases)。
+> **v0.2.0** — [下载 Windows 和 macOS 安装包](https://github.com/Arcueid77/CopilotBYOKManager/releases)。
 
 ![总览：四页界面示例，使用模拟数据](docs/images/overview-zh-CN.png)
 
@@ -52,7 +52,7 @@
 | VS Code Stable / Insiders / 配置档案 | 自动 | 受管供应商分组。在对应档案选用模型并测试。[检测细节](docs/vscode-detection.md) |
 | GitHub Copilot CLI | 自动 | 通过 `providers.json` 同时配置多个供应商和模型。重启 CLI 会话后用 `/model` 选择。[客户端手册](docs/user-guide.zh-CN.md#5-到客户端里选用并验证) |
 | 已审核的 JetBrains GitHub Copilot 插件发行版 | 自动，固定版本 | 关闭后重开 IDE，分别登录、选用和测试。[确切版本表](docs/jetbrains-support.md#version-and-compatibility-boundary) |
-| GitHub Copilot App | 当前版本手动 | 在 App 内配置并核对；默认关闭的[实验性 SQLite 同步](docs/copilot-app-sqlite-sync.md)已列入方案，尚未实现。[指引](docs/user-guide.zh-CN.md#5-到客户端里选用并验证) |
+| GitHub Copilot App | 手动 + 可选实验性同步 | 明确启用后自动同步所选供应商与模型；仅限已审核的 Windows x64 App 1.1.25。[操作步骤与密钥存储风险](docs/user-guide.zh-CN.md#copilot-app)。保留手动配置。 |
 
 JetBrains 支持上方版本表中列出的插件发行版；共用运行时目录的 IDE 可能看到同一份配置。客户端政策、订阅和供应商权限要求仍然适用。
 
@@ -120,7 +120,7 @@ Windows 安装器会在需要时下载 WebView2。
 ## 已知限制
 
 - CLI 使用默认的 `~/.copilot/providers.json`，暂不支持自定义配置根目录。[注册表说明](docs/copilot-cli-support.md)
-- Copilot App 需要手动配置；JetBrains 仅限确切审核过的插件发行版。
+- Copilot App SQLite 同步默认关闭并限制版本；JetBrains 仅限确切审核过的插件发行版。
 - Usage、Billing、Resources/MCP/Skills/Instructions 不属于本核心版。已有数据保留。[功能记录](docs/feature-availability.md)。
 
 ## 界面截图

@@ -57,7 +57,7 @@ On each Mac architecture:
 - From a **Finder launch**, detect the installed Copilot CLI; terminal PATH is not assumed. Publish a dedicated test route, open a new terminal/session and independently verify its model/request. CLI currently has one managed route.
 - Use dedicated VS Code profiles: preview, publish, select a model, make an explicitly authorized minimal request, revoke and verify unrelated configuration remains.
 - When authorized, use precisely reviewed JetBrains plugin distributions, record per-IDE login and model visibility, test the request and shared-file behavior; no universal/latest-version claim. Deferred Rider work stays deferred until resumed.
-- Verify App manual guidance separately; no automatic App write or authentication claim.
+- Verify App manual guidance on macOS. Experimental SQLite writes are limited to the exact reviewed Windows build and separate opt-in; record actual model/request acceptance independently.
 - Exercise closing the last window, Cmd+Q, process termination, Dock/Finder reopen and another launch. Report actual macOS behavior; do not assume Windows close-to-tray semantics.
 - Interrupt an isolated publication, review safe recovery and test an external target edit refusing overwrite. Keep private journal/rollback data out of the report.
 - Remove the manager app and verify it has not deleted VS Code/CLI/JetBrains or unrelated provider configuration. Document manager-owned state/credential retention; do not call standalone builds fully portable.

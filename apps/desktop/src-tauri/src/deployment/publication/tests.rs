@@ -139,7 +139,7 @@ fn successful_publication_notices_do_not_claim_client_selection_or_account_verif
     assert!(selection_notice(ClientKind::VsCodeCopilot).contains("请到客户端的模型选择器"));
     assert!(selection_notice(ClientKind::JetBrainsCopilot).contains("重启相关 IDE"));
     assert!(selection_notice(ClientKind::CopilotCli).contains("/model"));
-    assert!(selection_notice(ClientKind::GithubCopilotApp).contains("手动添加"));
+    assert!(selection_notice(ClientKind::GithubCopilotApp).contains("重新启动 App"));
     for kind in [
         ClientKind::VsCodeCopilot,
         ClientKind::JetBrainsCopilot,

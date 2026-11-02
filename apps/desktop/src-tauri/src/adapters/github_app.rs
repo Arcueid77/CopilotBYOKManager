@@ -5,6 +5,8 @@ use std::env;
 use std::path::PathBuf;
 use uuid::Uuid;
 
+pub(crate) mod sqlite;
+
 pub fn discover_target() -> ClientTarget {
     let path = installation_path();
     let detected = path.is_some();
@@ -13,7 +15,7 @@ pub fn discover_target() -> ClientTarget {
         kind: ClientKind::GithubCopilotApp,
         name: "GitHub Copilot app".to_string(),
         detail: if detected {
-            "Installation detected; provider management is manual in this MVP".to_string()
+            "Manual setup; experimental synchronization requires explicit enablement".to_string()
         } else {
             "No supported installation path was detected".to_string()
         },
@@ -25,10 +27,7 @@ pub fn discover_target() -> ClientTarget {
         } else {
             ClientStatus::NotInstalled
         },
-        diagnostic: detected.then(|| {
-            "CopilotBYOKManager will not write private app state or credential storage without a stable external interface"
-                .to_string()
-        }),
+        diagnostic: None,
     }
 }
 
@@ -46,12 +45,21 @@ fn find_installed_candidate(candidates: impl IntoIterator<Item = PathBuf>) -> Op
 }
 
 pub fn preview(connection: &Connection, target: &ClientTarget) -> DeploymentOperation {
+    if target.supports_write {
+        return DeploymentOperation {
+            id: Uuid::new_v4().to_string(),target_id:target.id.clone(),target_kind:ClientKind::GithubCopilotApp,
+            title:format!("Synchronize {} to GitHub Copilot App",connection.name),
+            description:"Update this installation's provider and enabled models in the reviewed App database".into(),
+            changes:vec![format!("Provider: {}",connection.name),format!("Endpoint: {}",connection.base_url),format!("{} enabled model(s)",connection.models.iter().filter(|m|m.enabled).count()),"Restart App and choose a published model".into()],
+            supported:target.detected,requires_restart:true,
+        };
+    }
     DeploymentOperation {
         id: Uuid::new_v4().to_string(),
         target_id: target.id.clone(),
         target_kind: ClientKind::GithubCopilotApp,
         title: format!("Configure {} in GitHub Copilot app", connection.name),
-        description: "No reviewed documented provider-write interface is available for this app. Add the supplier manually in Model providers; private databases and credential stores are not read or written".to_string(),
+        description: "Add this provider in the App's Model providers settings, or review experimental synchronization for a supported App version".to_string(),
         changes: vec![
             format!("Provider name: {}", connection.name),
             format!("Endpoint: {}", connection.base_url),
@@ -62,12 +70,20 @@ pub fn preview(connection: &Connection, target: &ClientTarget) -> DeploymentOper
                     .map(|model| model.model_id.as_str())
                     .unwrap_or("<none>")
             ),
-            "Credential remains in the OS credential store until a supported deployment path exists"
+            "Enter the provider key in App when using manual setup"
                 .to_string(),
         ],
         supported: false,
         requires_restart: false,
     }
+}
+
+pub fn preview_revocation(connection: &Connection, target: &ClientTarget) -> DeploymentOperation {
+    DeploymentOperation {id:Uuid::new_v4().to_string(),target_id:target.id.clone(),target_kind:ClientKind::GithubCopilotApp,
+        title:format!("Remove {} from GitHub Copilot App",connection.name),
+        description:"Remove only durably owned provider/model rows after checking their current fingerprints".into(),
+        changes:vec!["Stop automatic synchronization for this provider".into(),"Keep other providers, defaults, accounts and sessions unchanged".into()],
+        supported:target.detected,requires_restart:true}
 }
 
 pub fn apply(
@@ -76,7 +92,7 @@ pub fn apply(
     _target: &ClientTarget,
 ) -> AppResult<String> {
     Err(AppError::Unsupported(
-        "GitHub Copilot app provider deployment is intentionally read-only in this MVP; use the app's Model providers settings"
+        "Manual mode is read-only; use Model providers or review experimental synchronization"
             .to_string(),
     ))
 }

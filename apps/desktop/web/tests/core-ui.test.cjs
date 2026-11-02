@@ -9,7 +9,7 @@ const snapshot = { connections: [], clients: [], deployments: [], version: 2, st
 test('only the four core routes are available, and refresh never requests hidden features', () => {
   assert.deepEqual(core.routeIds, ['overview', 'connections', 'clients', 'about']);
   assert.equal(Object.isFrozen(core.routeIds), true);
-  assert.deepEqual(core.sections.map(s => s[1]), ['get_dashboard', 'get_manual_provider_status', 'get_window_behavior']);
+  assert.deepEqual(core.sections.map(s => s[1]), ['get_dashboard', 'get_manual_provider_status', 'get_window_behavior', 'get_app_sync_status']);
   assert.deepEqual(core.environmentSections.map(s => s[1]), ['get_installation_status', 'get_install_runs']);
   assert.deepEqual(core.accountSections.map(s => s[1]), ['get_setup_status']);
   assert.doesNotMatch(JSON.stringify(core.sections), /usage|billing|quota|price|resources|authorization/);
