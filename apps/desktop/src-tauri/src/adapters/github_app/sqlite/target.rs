@@ -297,6 +297,7 @@ pub fn ensure_closed(binary: &Path) -> AppResult<()> {
         ))
     }
 }
+#[cfg(any(windows, test, feature = "local-e2e"))]
 fn running() -> AppError {
     AppError::Busy
 }
