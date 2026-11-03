@@ -41,6 +41,7 @@ function shell({ delayManual = false } = {}) {
     CopilotBYOKManagerI18n: i18n, CopilotBYOKManagerCore: require('../core-ui.js'), CopilotBYOKManagerLoader: require('../core-loader.js'),
     CopilotBYOKManagerManager: require('../manager-ui.js'), CopilotBYOKManagerClients: require('../client-presentation.js'),
     CopilotBYOKManagerAppSync: require('../app-sync-ui.js'),
+    CopilotBYOKManagerWorkspace: require('../workspace-ui.js'),
     CopilotBYOKManagerSetup: require('../setup-ui.js'), CopilotBYOKManagerInstaller: installer,
     CopilotBYOKManagerAccount: { hydrate() {}, mount() {} }, CopilotBYOKManagerAppearance: { apply() {} },
     CopilotBYOKManagerUI: { capture() { return null; }, restore() {}, modal() { return { active: false, busy: false, close: () => true }; } } };

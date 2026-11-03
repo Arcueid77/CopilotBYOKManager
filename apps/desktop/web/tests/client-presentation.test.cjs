@@ -24,12 +24,12 @@ test("Agents is hidden only when the same edition's Chat actually shares its wri
   const chat = target("vscode:stable:default", { kind: "vs-code-copilot", name: "Visual Studio Code · Default", path: "same.json" });
   const agents = { ...chat, id: "vscode:stable:profile:builtin/agents", name: "Visual Studio Code · Agents" };
   assert.deepEqual(clients.visible([agents, chat]), [chat]);
-  assert.equal(clients.name(chat), "Copilot Chat · VS Code");
-  assert.equal(clients.name({ ...chat, id: "vscode:insiders:default" }), "Copilot Chat · VS Code Insiders");
+  assert.equal(clients.name(chat), "GitHub Copilot · VS Code");
+  assert.equal(clients.name({ ...chat, id: "vscode:insiders:default" }), "GitHub Copilot · VS Code Insiders");
   for (const separate of [{ ...agents, path: "independent.json" }, { ...agents, supportsWrite: false }, { ...agents, detected: false }, { ...agents, id: "vscode:insiders:profile:builtin/agents" }]) assert.equal(clients.visible([chat, separate]).length, 2);
   assert.deepEqual(clients.visible([agents]), [agents]);
   const named = { ...chat, id: "vscode:stable:profile:work", name: "Visual Studio Code · Work <team>" };
-  assert.equal(clients.name(named), "Copilot Chat · VS Code · Work <team>");
+  assert.equal(clients.name(named), "GitHub Copilot · VS Code · Work <team>");
 });
 
 test("JetBrains plugin availability and version support keep unknown states distinct", () => {
@@ -38,4 +38,18 @@ test("JetBrains plugin availability and version support keep unknown states dist
   assert.match(clients.capability(target("disabled", { detected: false, status: "read-only" })), /已停用/);
   assert.match(clients.capability(target("missing", { detected: false, status: "not-installed" })), /未检测到/);
   assert.match(clients.capability(target("unknown", { detected: false, status: "error" })), /未知/);
+});
+
+test("all application names share one surface naming policy and preserve instance data", () => {
+  for (const locale of ["zh-CN", "en"]) {
+    i18n.setLocale(locale, { persist: false });
+    for (const [kind, platform] of [["vs-code-copilot", "VS Code"], ["copilot-cli", "CLI"], ["github-copilot-app", "App"], ["jetbrains-copilot", "JetBrains"]]) {
+      assert.equal(clients.surfaceName(kind), `GitHub Copilot · ${platform}`);
+    }
+    assert.equal(clients.name(target("app", { kind: "github-copilot-app", name: "GitHub Copilot app" })), "GitHub Copilot · App");
+    assert.equal(clients.name(target("ide", { name: "PyCharm 2026.2 · Copilot" })), "GitHub Copilot · JetBrains · PyCharm 2026.2");
+    const named = target("vscode:stable:profile:work", { kind: "vs-code-copilot", name: "Visual Studio Code · My <team>" });
+    assert.equal(clients.name(named), "GitHub Copilot · VS Code · My <team>");
+    assert.equal(named.name, "Visual Studio Code · My <team>");
+  }
 });

@@ -239,7 +239,11 @@ fn namespace_paths_follow_the_reviewed_runtime_not_ide_options_or_password_safe(
     assert!(supported_version("1.19.0-261-windows-x64"));
     assert!(supported_version("1.19.0-252"));
     assert!(!supported_version("1.18.0-252"));
-    assert!(!supported_version("1.20.0-261-windows-x64"));
+    assert!(supported_version("1.20.0-261-windows-x64"));
+    assert!(!supported_version("1.20.0-261-windows-arm64"));
+    assert!(!supported_version("1.20.0-261-macos-arm64"));
+    assert!(!supported_version("1.20.0-252"));
+    assert!(!supported_version("1.21.0-261-windows-x64"));
     assert!(!supported_version("1.19.0-261-win-x64"));
     let mut c = connection();
     c.base_url = "https://example.invalid/v1?api-version=future".into();

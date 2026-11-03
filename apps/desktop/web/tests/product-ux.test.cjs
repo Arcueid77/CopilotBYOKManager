@@ -79,11 +79,11 @@ test('publication results and history identify the exact provider and app and es
   const record = { planId: 'plan', connectionId: 'A', targetId: 'cli', status: 'applied', createdAt: '2026-10-24T00:00:00Z', targetKind: 'copilot-cli' };
   snapshot.deployments = [record];
   const first = manager.lastResult(snapshot, true);
-  assert.match(first, /&lt;Provider A&gt; → Copilot CLI/);
-  assert.match(core.history(snapshot), /&lt;Provider A&gt; → Copilot CLI/);
+  assert.match(first, /&lt;Provider A&gt; → GitHub Copilot · CLI/);
+  assert.match(core.history(snapshot), /&lt;Provider A&gt; → GitHub Copilot · CLI/);
   record.connectionId = 'B';
   assert.notEqual(first, manager.lastResult(snapshot, true));
-  assert.match(manager.lastResult(snapshot, true), /Provider B → Copilot CLI/);
+  assert.match(manager.lastResult(snapshot, true), /Provider B → GitHub Copilot · CLI/);
 });
 
 test('publishing pause keeps the observed catalog and labels the switch by its actual effect', () => {

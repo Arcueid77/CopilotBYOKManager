@@ -64,6 +64,7 @@ pub struct ProviderResult {
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Status {
+    pub review_supported: bool,
     pub enabled: bool,
     pub phase: Phase,
     pub database_path: Option<String>,
@@ -77,6 +78,7 @@ pub struct Status {
 impl Default for Status {
     fn default() -> Self {
         Self {
+            review_supported: cfg!(all(windows, target_arch = "x86_64")),
             enabled: false,
             phase: Phase::Disabled,
             database_path: None,

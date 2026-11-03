@@ -44,7 +44,7 @@
         const text = Number.isInteger(source.modelCount) && source.modelCount >= 0 ? tr("{0} 个模型", source.modelCount) : tr("模型数量未知");
         return `<span class="manager-source" data-source-state="configured">${escape(source.name || connection?.name || tr("供应商"))} · ${text}${connection?.enabled === false ? tr(" · 已停用，配置保留") : ""}</span>`;
       });
-      const visible = chips.slice(0, 3).join("") + (chips.length > 3 ? `<details class="manager-extra-sources"><summary>${tr("另有 {0} 个来源", chips.length - 3)}</summary><div class="manager-sources">${chips.slice(3).join("")}</div></details>` : "");
+      const visible = chips.slice(0, 3).join("") + (chips.length > 3 ? compact ? `<span class="manager-extra-summary">${tr("另有 {0} 个来源", chips.length - 3)}</span>` : `<details class="manager-extra-sources"><summary>${tr("另有 {0} 个来源", chips.length - 3)}</summary><div class="manager-sources">${chips.slice(3).join("")}</div></details>` : "");
       return `<div class="app-current-state" data-configuration-state="${escape(current.state)}">${!compact || !visible ? `<p class="manager-meta">${escape(current.label)}</p>` : ""}${visible ? `<div class="manager-sources">${visible}</div>` : ""}</div>`;
   }
 

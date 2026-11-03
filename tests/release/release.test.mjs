@@ -7,7 +7,7 @@ import { execFileSync } from 'node:child_process';
 import { checkReleaseVersion, ROOT } from '../../scripts/check-release-version.mjs';
 import { APPLE_SECRET_NAMES, assetNames, releaseRequest, requireAppleCredentials } from '../../scripts/release-policy.mjs';
 import { assembleRelease, assertWindowsGuiApplication, fileDigest, peArchitecture, verifyReleaseDirectory } from '../../scripts/release-artifacts.mjs';
-import { findRelease, publishRelease } from '../../scripts/publish-release.mjs';
+import { findRelease, findCreatedRelease, publishRelease } from '../../scripts/publish-release.mjs';
 import Ajv from 'ajv';
 
 const sha = 'a'.repeat(40), version = '0.1.0';
@@ -288,7 +288,7 @@ test('formal assembly produces complete checksums and bound source metadata', t 
   assert.equal(verifyReleaseDirectory(config.output, config).length, 5);
   const notes = readFileSync(path.join(config.output, 'RELEASE-NOTES.md'), 'utf8');
   assert.match(notes, /Copilot Chat/);
-  assert.doesNotMatch(notes, /signed|notarized|acceptance|签名|验收/i);
+  assert.doesNotMatch(notes, /\b(?:un)?signed\b|\bnotarized\b|\bacceptance\b|签名|验收/i);
 });
 
 test('a release can contain an ad-hoc Mac package without promoting dry-run bytes', t => {
@@ -358,6 +358,40 @@ test('Draft lookup uses the authenticated release list and follows bounded pages
   assert.throws(() => findRelease('v0.1.0', () => JSON.stringify([draft, draft])), /Ambiguous/);
   assert.throws(() => findRelease('v0.1.0', () => JSON.stringify([{ ...draft, id: '../other' }])), /identity/);
   assert.throws(() => findRelease('v0.1.0', () => JSON.stringify(Array.from({ length: 100 }, () => ({ tag_name: 'v9.0.0' })))), /limit/);
+});
+
+test('new Draft visibility retries only bounded reads and never swallows API errors', () => {
+  let reads = 0; const pauses = [];
+  const draft = { id: 42, tag_name: 'v0.1.0', draft: true };
+  assert.equal(findCreatedRelease('v0.1.0', () => JSON.stringify(++reads < 3 ? [] : [draft]), ms => pauses.push(ms)).id, 42);
+  assert.equal(reads, 3); assert.deepEqual(pauses, [2000, 2000]);
+  reads = 0;
+  assert.throws(() => findCreatedRelease('v0.1.0', () => { reads++; return '[]'; }, () => {}), /bounded visibility/);
+  assert.equal(reads, 5);
+  assert.throws(() => findCreatedRelease('v0.1.0', () => { throw Error('API authorization failed'); }, () => { throw Error('must not wait'); }), /API authorization/);
+});
+
+test('delayed Draft visibility creates and uploads once and refuses a newly public release', t => {
+  for (const becomesPublic of [false, true]) {
+    const config = fixture(t, 'draft'); assembleRelease(config);
+    const downloads = path.join(config.root, 'downloads'); mkdirSync(downloads);
+    const filenames = readdirSync(config.output).sort(); let created = 0, reads = 0, uploads = 0;
+    const cli = args => {
+      if (args[0] === 'api') {
+        if (args[1].includes('/git/')) return JSON.stringify({ object: { type: 'commit', sha } });
+        const release = { id: 42, tag_name: 'v0.1.0', draft: !becomesPublic, body: readFileSync(path.join(config.output, 'RELEASE-NOTES.md'), 'utf8'), assets: uploads ? filenames.map((name, id) => ({ id, name, size: fileDigest(path.join(config.output, name)).size })) : [] };
+        if (args[1].includes('releases?')) return JSON.stringify(!created || ++reads < 3 ? [] : [release]);
+        return JSON.stringify(release);
+      }
+      if (args[1] === 'create') created++;
+      if (args[1] === 'upload') uploads++;
+      if (args[1] === 'download') for (const name of filenames) copyFileSync(path.join(config.output, name), path.join(downloads, name));
+      return '';
+    };
+    const options = { directory: config.output, version, sha, tag: 'v0.1.0', mode: 'draft', cli, downloadDirectory: downloads, pause: () => {} };
+    if (becomesPublic) assert.throws(() => publishRelease(options), /became public/); else publishRelease(options);
+    assert.equal(created, 1); assert.equal(uploads, becomesPublic ? 0 : 1);
+  }
 });
 
 test('publishing waits for downloaded asset verification before making a Draft public', t => {

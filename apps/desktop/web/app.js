@@ -2,6 +2,7 @@
   "use strict";
   const i18n = typeof module === "object" && module.exports ? require("./i18n.js") : globalThis.CopilotBYOKManagerI18n;
   const tr = i18n.t;
+  const workspace = window.CopilotBYOKManagerWorkspace;
   i18n.localizeStatic();
 
   const invokeNative = window.__TAURI__?.core?.invoke ?? null;
@@ -51,11 +52,19 @@
   let deploymentCleanup = null;
   // Presentation-only selections, keyed by native IDs; never keys or form data.
   const appProviderChoices = new Map();
+  const providerView = { selectedId: null, query: "" };
+  const expandedAppGroups = new Set();
+  let publicationDialog = false;
   function closeDeployment() {
     if (deploymentCleanup?.busy || deploymentCleanup?.() === false) return false;
     deploymentCleanup = null; return true;
   }
   function setDeploymentBusy(value) {
+    if (publicationDialog) {
+      dialogs.setBusy(value);
+      const picker = modalRoot.querySelector("[data-publication-provider]");
+      if (picker) picker.disabled = value;
+    }
     document.querySelector("#primary-nav").inert = value;
     document.querySelectorAll("#primary-nav .nav-item").forEach(button => { button.disabled = value; });
     refreshButton.disabled = value || loading;
@@ -110,15 +119,20 @@
   }
   function updateCurrentSources() {
     const home = content.querySelector("[data-home-sources]");
-    if (home) home.innerHTML = window.CopilotBYOKManagerManager.sourceRows(snapshot, data);
+    if (home) home.innerHTML = workspace.overviewRows(snapshot, data);
     for (const element of content.querySelectorAll("[data-app-sources]")) {
       const client = snapshot.clients.find(value => value.id === element.dataset.appSources);
       if (client) element.innerHTML = window.CopilotBYOKManagerManager.currentSources(client, snapshot, data);
     }
+    for (const group of workspace.groups(snapshot)) {
+      const element = [...content.querySelectorAll("[data-app-group]")].find(node => node.dataset.appGroup === group.id);
+      if (element) element.querySelector(".app-config-main").innerHTML = workspace.groupHeader(group, snapshot, data, isDesktop, expandedAppGroups.has(group.id));
+    }
   }
   function updateAppSyncPanel() {
-    const panel = content.querySelector("[data-app-sync-panel]");
-    if (panel && snapshot && !deploymentCleanup?.busy) panel.outerHTML = window.CopilotBYOKManagerAppSync.panel(data.appSync,data.errors.appSync,snapshot,isDesktop);
+    for (const container of [content, modalRoot]) for (const panel of container.querySelectorAll("[data-app-sync-panel]")) {
+      if (snapshot && !deploymentCleanup?.busy) panel.outerHTML = window.CopilotBYOKManagerAppSync.panel(data.appSync,data.errors.appSync,snapshot,isDesktop);
+    }
     if (snapshot) updateCurrentSources();
   }
   function updateAccountSummary() {
@@ -485,16 +499,16 @@
   function showToast(message, type = "success") {
     const toast = document.createElement("div");
     toast.className = `toast ${type}`;
-    toast.textContent = message;
+    toast.innerHTML = workspace.icon(type === "error" ? "about" : "check") + `<span>${escapeHtml(message)}</span>`;
     toastRoot.append(toast);
     setTimeout(() => toast.remove(), 4200);
   }
 
   function setRuntimeState() {
     runtimeDot.classList.toggle("online", true);
-    runtimeLabel.textContent = isDesktop ? tr("本地模式") : tr("浏览器试用");
+    runtimeLabel.textContent = isDesktop ? tr("本地运行") : tr("浏览器试用");
     runtimeDetail.textContent = isDesktop
-      ? tr("写入前须预览确认")
+      ? tr("配置保存在此电脑")
       : tr("不修改电脑");
   }
 
@@ -564,7 +578,7 @@
       overview: renderOverview,
       connections: renderConnections,
       clients: renderClients,
-      about: () => window.CopilotBYOKManagerCore.about(snapshot, data, isDesktop, helpUrls),
+      about: () => window.CopilotBYOKManagerCore.about(snapshot, data, isDesktop, helpUrls, window.CopilotBYOKManagerAppearance.preference?.() ?? "system"),
     };
     content.innerHTML = (!isDesktop && route !== "overview" ? `<div class="preview-banner">${tr("浏览器试用 · 示例数据 · 不修改电脑")}</div>` : "") + window.CopilotBYOKManagerCore.recovery(snapshot, isDesktop) + renderers[route]();
     content.dataset.route = route;
@@ -577,19 +591,19 @@
   }
 
   function renderOverview() {
-    return window.CopilotBYOKManagerManager.renderHome(snapshot, data, isDesktop);
+    return workspace.overview(snapshot, data, isDesktop);
   }
 
   function renderConnections() {
     return `
-      ${snapshot.connections.length ? `<div class="card-grid">${snapshot.connections.map(connectionCard).join("")}</div>` : emptyConnections()}
+      ${snapshot.connections.length ? workspace.providers(snapshot, data, isDesktop, providerView) : emptyConnections()}
       <section class="manager-section manager-publication"><h2 id="publication-result-title">${tr("最近配置操作")}</h2>${window.CopilotBYOKManagerManager.lastResult(snapshot, isDesktop)}</section>
       ${window.CopilotBYOKManagerCore.history(snapshot)}
     `;
   }
 
   function renderClients() {
-    return `<div class="client-grid">${window.CopilotBYOKManagerClients.ordered(snapshot).map(clientCard).join("")}</div>
+    return `${workspace.appRows(snapshot, data, isDesktop, expandedAppGroups, clientCard)}
       <details class="manager-section" id="installation-details" ${installationExpanded ? "open" : ""}><summary>${tr("安装与更新")}</summary><section id="installation-panel" class="install-panel"></section></details>
       <details class="manager-section" id="account-details" ${accountsExpanded ? "open" : ""}><summary>${tr("登录与账号检查（可选）")}</summary><p class="manager-meta" data-account-load-status></p><section id="account-panel" class="account-panel"></section><button class="button ghost small" data-action="setup-accounts" ${!isDesktop || !data.setup || accountsLoading ? "disabled" : ""}>${tr("记录已核对的账号")}</button><button class="button ghost small" data-action="reload-accounts">${tr("重新检测")}</button></details>
       <section class="manager-section"><h2 id="publication-result-title">${tr("最近一次发布")}</h2>${window.CopilotBYOKManagerManager.lastResult(snapshot, isDesktop)}</section>
@@ -707,15 +721,15 @@
     setStatus(status) { sectionLoader.invalidate("appSync"); data.appSync = status; delete data.errors.appSync; updateAppSyncPanel(); },
     openModal, closeModal, setBusy: value => dialogs.setBusy(value), refresh,
     onError: error => showToast(error?.message ?? String(error), "error"), openDeployment });
-  function openModal({ title, body, footer = "", wide = false, compact = false, onOpen }) {
+  function openModal({ title, body, footer = "", wide = false, compact = false, drawer = false, onOpen }) {
     if (deploymentCleanup?.busy) return;
     if (!dialogs.prepare()) return;
     closeDeployment();
     modalCleanup?.();
     modalCleanup = null;
     modalRoot.innerHTML = `
-      <div class="modal-backdrop" role="presentation">
-        <section class="modal ${wide ? "wide" : ""} ${compact ? "compact" : ""}" role="dialog" aria-modal="true" aria-label="${escapeHtml(title)}">
+      <div class="modal-backdrop ${drawer ? "drawer-backdrop" : ""}" role="presentation">
+        <section class="modal ${wide ? "wide" : ""} ${compact ? "compact" : ""} ${drawer ? "drawer" : ""}" role="dialog" aria-modal="true" aria-label="${escapeHtml(title)}">
           <header class="modal-header"><h2>${escapeHtml(title)}</h2><button class="icon-button" data-modal-close aria-label="${tr("关闭")}">×</button></header>
           <div class="modal-body">${body}</div>
           ${footer ? `<footer class="modal-footer">${footer}</footer>` : ""}
@@ -746,7 +760,7 @@
     const advanced = connection && (connection.providerKind !== "openai" || connection.protocol !== "chat-completions" || headersText);
     openModal({
       title: connection ? tr("编辑 {0}", connection.name) : tr("添加连接"),
-      wide: true,
+      drawer: true,
       body: `
         <form id="connection-form" class="form-grid" novalidate>
           <input type="hidden" name="id" value="${escapeHtml(connection?.id ?? "")}" />
@@ -777,11 +791,8 @@
               <small data-model-selection role="status" aria-live="polite"></small>
             </div>
           </div>
-          <div class="form-field full">
-            <label for="models">${tr("模型")}</label>
-            <textarea id="models" name="models" required placeholder="model-id | Display Name">${escapeHtml(modelsText)}</textarea>
-            <small>${tr("每行一个模型：")}<code>${tr("上游模型 ID | 显示名称")}</code>${tr("，名称可省略。")}</small>
-          </div>
+          <div class="form-field full"><span class="field-label">${tr("模型")}</span><div class="editor-models" data-draft-model-list></div><div class="manual-model"><input name="manualModelId" data-manual-model-id aria-label="${tr("模型 ID")}" placeholder="${tr("模型 ID")}"><input name="manualModelName" data-manual-model-name aria-label="${tr("显示名称（可选）")}" placeholder="${tr("显示名称（可选）")}"><button class="icon-button bordered" type="button" data-add-manual-model aria-label="${tr("手动添加模型")}">${workspace.icon("plus")}</button></div><p class="inline-error" data-manual-model-error role="alert"></p></div>
+          <details class="full model-lines-editor"><summary>${tr("批量编辑模型")}</summary><div class="form-field"><label for="models">${tr("模型")}</label><textarea id="models" name="models" required placeholder="model-id | Display Name">${escapeHtml(modelsText)}</textarea><small>${tr("每行一个模型：")}<code>${tr("上游模型 ID | 显示名称")}</code>${tr("，名称可省略。")}</small></div></details>
           <div class="form-field full"><label for="preferred-model">${tr("首选模型")}</label><select id="preferred-model" name="preferredModel"></select><small>${tr("首选模型仅作推荐，发布后请在客户端选择。")}</small></div>
           <details class="connection-advanced full" ${advanced ? "open" : ""}><summary>${tr("高级选项：供应商类型、接口协议与请求头")}</summary><div class="form-grid">
             <div class="form-field"><label for="provider-kind">${tr("供应商类型")}</label><select id="provider-kind" name="providerKind">${selectOptions(["openai", "azure", "anthropic", "local", "custom"], connection?.providerKind ?? "openai", { openai: tr("OpenAI 兼容"), azure: "Azure OpenAI", anthropic: "Anthropic", local: tr("本地端点"), custom: tr("自定义") })}</select></div>
@@ -797,17 +808,20 @@
         root.querySelector("[data-edit-protocol]").addEventListener("click", () => { protocol.closest("details").open = true; protocol.focus(); });
         const preferred = root.querySelector("#preferred-model");
         const modelsField = root.querySelector("#models");
+        let modelDraft = null;
         function syncPreferred() {
           const chosen = preferred.value || connection?.models.find(model => model.enabled)?.modelId;
           const lines = modelsField.value.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
-          const options = lines.map(line => line.split("|")[0].trim()).filter(id => id && connection?.models.find(model => model.modelId === id)?.enabled !== false);
+          const options = lines.map(line => line.split("|")[0].trim()).filter(id => id && (modelDraft ? modelDraft.isEnabled(id) : connection?.models.find(model => model.modelId === id)?.enabled !== false));
           preferred.replaceChildren();
           for (const id of options) { const option = document.createElement("option"); option.value = id; option.textContent = id; preferred.append(option); }
           if (options.includes(chosen)) preferred.value = chosen;
         }
         modelsField.addEventListener("input", syncPreferred); syncPreferred();
+        modelDraft = window.CopilotBYOKManagerProviderEditor.mount(root.querySelector("#connection-form"), connection, syncPreferred);
+        modelDraft.render();
         const discovery = window.ModelDiscovery.mount(root.querySelector("#connection-form"), { invoke, native: Boolean(window.__TAURI__?.core?.invoke), connection });
-        modalCleanup = () => discovery.dispose();
+        modalCleanup = () => { discovery.dispose(); modelDraft.dispose(); };
         const form = root.querySelector("#connection-form"), errorPanel = root.querySelector("#connection-error");
         for (const field of form.querySelectorAll("input, select, textarea")) {
           const hint = field.parentElement.querySelector(":scope > small");
@@ -828,6 +842,7 @@
         form.addEventListener("submit", async (event) => {
           event.preventDefault();
           if (saving) return;
+          try { modelDraft.commitManual(); } catch (error) { formError(error.message, form.querySelector("[data-manual-model-id]")); return; }
           if (!form.checkValidity()) { formError(tr("请填写必填项，并检查端点地址格式。"), form.querySelector(":invalid")); return; }
           const data = new FormData(form);
           saving = true;
@@ -836,8 +851,11 @@
           dialogs.setBusy(true);
           errorPanel.hidden = true;
           try {
+            const recommended = String(data.get("preferredModel") ?? ""); data.set("preferredModel", "");
             const input = parseConnectionForm(data, connection, discovery.discoveredIds);
-            await invoke("upsert_connection", { input });
+            input.models = window.ModelDiscovery.preferModels(modelDraft.apply(input.models), recommended);
+            const saved = await invoke("upsert_connection", { input });
+            providerView.selectedId = saved.id; providerView.query = "";
             if (form.isConnected) closeModal();
             showToast(tr("连接已保存，尚未发布到客户端。"));
             await refresh();
@@ -989,21 +1007,37 @@
       showToast(tr("只读恢复期间不能发布。"), "error");
       return;
     }
-    if (connection.enabled === false) { showToast(tr("请先启用连接再发布。"), "error"); return; }
-    closeModal(); closeDeployment();
-    deploymentCleanup = window.CopilotBYOKManagerInlineDeployment.mount({
-      container: content, connection, targets: window.CopilotBYOKManagerClients.ordered(snapshot).map(target => target.kind === "github-copilot-app" && !data.appSync?.selectedConnectionIds.includes(connection.id) ? { ...target, supportsWrite: false } : target), selectedIds, invoke, native: isDesktop, autoPublish,
-      onError: () => showToast(tr("发布未完成，请查看下方说明。"), "error"),
-      onBusyChange: setDeploymentBusy,
-      async onApplied(result) {
-        const applied = result.records.filter(item => item.status === "applied");
-        const skipped = result.records.filter(item => item.status === "skipped").length;
-        const failed = result.records.filter(item => item.status === "failed").length;
-        showToast(tr("{0}{1} 个目标配置已写入{2}{3}。请核对下方结果与下一步。", isDesktop ? "" : tr("模拟 · "), applied.length, skipped ? tr("，{0} 个未自动处理", skipped) : "", failed ? tr("，{0} 个失败", failed) : ""), failed ? "error" : "success");
-        await refresh();
-        const heading = content.querySelector("#publication-result-title");
-        if (heading) { heading.tabIndex = -1; heading.focus({ preventScroll: true }); heading.scrollIntoView({ block: "nearest" }); }
-      },
+    if (connection?.enabled === false) { showToast(tr("请先启用连接再发布。"), "error"); return; }
+    const providers = snapshot.connections.filter(c => c.enabled !== false);
+    connection ??= providers.find(c => c.id === providerView.selectedId) ?? providers[0];
+    if (!connection) { openConnectionForm(); return; }
+    const initialId = connection.id;
+    openModal({ title: tr("发布配置"), body: `<div class="form-field publication-provider"><label for="publication-provider">${tr("供应商")}</label><select id="publication-provider" data-publication-provider>${providers.map(c => `<option value="${escapeHtml(c.id)}" ${c.id === initialId ? "selected" : ""}>${escapeHtml(c.name)} · ${tr("{0} 个模型", c.models.filter(m => m.enabled).length)}</option>`).join("")}</select></div><div data-deployment-host></div>`, onOpen(root) {
+      publicationDialog = true;
+      const picker = root.querySelector("[data-publication-provider]"), host = root.querySelector("[data-deployment-host]");
+      function mountProvider(provider) {
+        closeDeployment();
+        deploymentCleanup = window.CopilotBYOKManagerInlineDeployment.mount({
+          container: host, connection: provider,
+          targets: workspace.groups(snapshot).flatMap(group => group.members).map(target => target.kind === "github-copilot-app" && !data.appSync?.selectedConnectionIds.includes(provider.id) ? { ...target, supportsWrite: false } : target),
+          selectedIds, invoke, native: isDesktop, autoPublish,
+          onClose: () => closeModal(), onError: () => {}, onBusyChange: setDeploymentBusy,
+          async onApplied(result) {
+            const applied = result.records.filter(item => item.status === "applied");
+            const skipped = result.records.filter(item => item.status === "skipped").length;
+            const failed = result.records.filter(item => item.status === "failed").length;
+            closeModal();
+            showToast(tr("{0}{1} 个目标配置已写入{2}{3}。请核对下方结果与下一步。", isDesktop ? "" : tr("模拟 · "), applied.length, skipped ? tr("，{0} 个未自动处理", skipped) : "", failed ? tr("，{0} 个失败", failed) : ""), failed ? "error" : "success");
+            await refresh();
+            const heading = content.querySelector("#publication-result-title");
+            if (heading) { heading.tabIndex = -1; heading.focus({ preventScroll: true }); heading.scrollIntoView({ block: "nearest" }); }
+          },
+        });
+      }
+      modalCleanup = () => { closeDeployment(); publicationDialog = false; };
+      picker.addEventListener("change", () => { const selected = providers.find(c => c.id === picker.value); if (selected && !deploymentCleanup?.busy) mountProvider(selected); });
+      mountProvider(connection);
+    },
     });
   }
 
@@ -1078,7 +1112,7 @@
         if (guide.targetId === target.id) operation = guide;
       } catch (error) { showToast(error?.message ?? String(error), "error"); }
     }
-    openModal({ title: `JetBrains BYOK · ${target.name}`, wide: true,
+    openModal({ title: tr("{0} · 配置指引", window.CopilotBYOKManagerClients.name(target)), wide: true,
       body: window.CopilotBYOKManagerJetBrains.guide(connection, target, operation),
       footer: `<button class="button ghost" data-modal-close>${tr("关闭")}</button>${operation?.supported ? `<button class="button primary" id="jetbrains-preview-deployment">${tr("预览自动 BYOK")}</button>` : ""}`,
       onOpen(root) { root.querySelector("#jetbrains-preview-deployment")?.addEventListener("click", () => openDeployment(connection, [target.id])); }
@@ -1169,6 +1203,36 @@
     if (appSync.handle(action.dataset.action, action.dataset.id)) return;
     const connection = snapshot?.connections.find((item) => item.id === action.dataset.id);
     switch (action.dataset.action) {
+      case "publish-config": openDeployment(); break;
+      case "publish-family": {
+        const group = workspace.groups(snapshot).find(group => group.id === action.dataset.id);
+        if (group) openDeployment(null, group.members.filter(client => client.kind !== "copilot-cli").map(client => client.id));
+        break;
+      }
+      case "toggle-app-group": {
+        const id = action.dataset.id, element = action.closest("[data-app-group]");
+        const open = !expandedAppGroups.has(id);
+        if (open) expandedAppGroups.add(id); else expandedAppGroups.delete(id);
+        element.classList.toggle("expanded", open); element.querySelector(".app-group-instances").hidden = !open;
+        action.setAttribute("aria-expanded", String(open));
+        break;
+      }
+      case "open-app-group": {
+        expandedAppGroups.add(action.dataset.id);
+        if (setRoute("clients")) [...content.querySelectorAll("[data-app-group]")].find(element => element.dataset.appGroup === action.dataset.id)?.scrollIntoView({ block: "nearest" });
+        break;
+      }
+      case "open-provider": providerView.query = ""; providerView.selectedId = action.dataset.id; setRoute("connections"); break;
+      case "select-provider": providerView.selectedId = action.dataset.id; updateProviderView(); break;
+      case "manage-app-sync":
+        openModal({ title: tr("管理同步"), body: window.CopilotBYOKManagerAppSync.panel(data.appSync, data.errors.appSync, snapshot, isDesktop), footer: `<button class="button ghost" data-modal-close>${tr("关闭")}</button>` });
+        break;
+      case "set-theme": {
+        const result = window.CopilotBYOKManagerAppearance.set(action.dataset.value);
+        content.querySelectorAll("[data-theme-value]").forEach(button => { const active = button.dataset.value === action.dataset.value; button.classList.toggle("active", active); button.setAttribute("aria-pressed", String(active)); });
+        if (!result.persisted) showToast(tr("外观偏好无法保存，本次选择仍然有效。"), "warning");
+        break;
+      }
       case "show-installation": {
         const details = content.querySelector("#installation-details");
         installationExpanded = true; details.open = true;
@@ -1208,7 +1272,7 @@
         if (!selected || !client) break;
         appProviderChoices.set(client.id, selected.id);
         if (client.kind === "github-copilot-app" && (!client.supportsWrite || !data.appSync?.selectedConnectionIds.includes(selected.id))) openManualSetup(selected.id);
-        else openDeployment(selected, [client.id], true);
+        else openDeployment(selected, [client.id]);
         break;
       }
       case "jetbrains-guide": openJetBrainsGuide(action.dataset.id).catch(error => showToast(error?.message ?? String(error), "error")); break;
@@ -1232,6 +1296,10 @@
         if (connection) openDeleteConfirmation(connection);
         break;
       case "route":
+        if (action.dataset.clientId) {
+          const client = snapshot.clients.find(client => client.id === action.dataset.clientId);
+          if (client) expandedAppGroups.add(workspace.family(client));
+        }
         if (setRoute(action.dataset.route) && action.dataset.clientId) {
           const target = [...content.querySelectorAll(".client-card[data-client-id]")].find(card => card.dataset.clientId === action.dataset.clientId);
           if (target) { target.focus({ preventScroll: true }); target.scrollIntoView({ block: "start" }); }
@@ -1245,9 +1313,22 @@
 
   addConnectionButton.addEventListener("click", () => openConnectionForm());
   overviewPublishButton.addEventListener("click", () => {
-    if (!setRoute("connections")) return;
-    const target = content.querySelector('[data-action="deploy-connection"]') ?? addConnectionButton;
-    target?.focus({ preventScroll: true });
+    openDeployment();
+  });
+  function updateProviderView() {
+    const focus = window.CopilotBYOKManagerUI.capture(content);
+    const matches = workspace.filtered(snapshot, providerView.query);
+    if (!matches.some(c => c.id === providerView.selectedId)) providerView.selectedId = matches[0]?.id ?? null;
+    content.querySelector("[data-provider-list]").innerHTML = workspace.providerList(snapshot, providerView.query, providerView.selectedId);
+    content.querySelector("[data-provider-detail]").innerHTML = workspace.providerDetail(matches.find(c => c.id === providerView.selectedId), snapshot, data, isDesktop);
+    window.CopilotBYOKManagerUI.restore(content, focus);
+  }
+  content.addEventListener("input", event => {
+    if (event.target.id === "provider-search") { providerView.query = event.target.value; updateProviderView(); }
+  });
+  modalRoot.addEventListener("click", event => {
+    const action = event.target.closest("[data-action]");
+    if (action && !action.disabled && !dialogs.busy) appSync.handle(action.dataset.action, action.dataset.id);
   });
   refreshButton.addEventListener("click", refresh);
   content.addEventListener("toggle", event => {
@@ -1282,6 +1363,9 @@
   });
 
   content.addEventListener("change", async (event) => {
+    if (event.target.matches("[data-interface-language]")) {
+      languageSelect.value = event.target.value; languageSelect.dispatchEvent(new Event("change")); return;
+    }
     if (event.target.matches("[data-close-action]")) {
       if (!isDesktop || windowSettingsBusy || !["tray", "exit"].includes(event.target.value) || data.windowBehavior?.preferencesAvailable !== true || data.windowBehavior?.trayAvailable !== true) {
         updateWindowSettingsUI(); return;

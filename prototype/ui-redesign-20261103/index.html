@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
+    <title>CopilotBYOKManager · 界面视觉方案</title>
+    <link rel="icon" type="image/png" href="../../apps/desktop/web/assets/app-icon.png" />
+    <link rel="stylesheet" href="styles.css" />
+    <script src="app.js" defer></script>
+  </head>
+  <body>
+    <svg class="svg-defs" aria-hidden="true">
+      <symbol id="i-overview" viewBox="0 0 24 24"><path d="M4 13h6V4H4v9Zm0 7h6v-4H4v4Zm10 0h6v-9h-6v9Zm0-16v4h6V4h-6Z"/></symbol>
+      <symbol id="i-provider" viewBox="0 0 24 24"><path d="M8 7a4 4 0 1 1 8 0M5 11h14v10H5zM9 11V9m6 2V9M9 16h6"/></symbol>
+      <symbol id="i-apps" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></symbol>
+      <symbol id="i-about" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6m0-10v.2"/></symbol>
+      <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+      <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 7v5h-5M4 17v-5h5M6.1 8a7 7 0 0 1 11.5-1L20 12M4 12l2.4 5a7 7 0 0 0 11.5-1"/></symbol>
+      <symbol id="i-arrow" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></symbol>
+      <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+      <symbol id="i-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></symbol>
+      <symbol id="i-edit" viewBox="0 0 24 24"><path d="m4 16-.7 4.7L8 20 19 9l-4-4L4 16Zm9-9 4 4"/></symbol>
+      <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V4H4v12h4"/></symbol>
+      <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m16 16 4 4"/></symbol>
+      <symbol id="i-code" viewBox="0 0 24 24"><path d="m8 7-5 5 5 5m8-10 5 5-5 5m-3-13-2 16"/></symbol>
+      <symbol id="i-terminal" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="m7 9 3 3-3 3m6 0h4"/></symbol>
+      <symbol id="i-desktop" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="14" rx="3"/><path d="M8 21h8m-4-4v4"/></symbol>
+      <symbol id="i-copilot" viewBox="0 0 24 24"><path d="M5 9a7 7 0 0 1 14 0v7a4 4 0 0 1-4 4H9a4 4 0 0 1-4-4V9Z"/><path d="M8 11h3m2 0h3m-7 5h6"/></symbol>
+      <symbol id="i-jetbrains" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M7 7v10m4-10v6a4 4 0 0 0 8 0V7"/></symbol>
+      <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+      <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M6 18 18 6"/></symbol>
+      <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="2.5"/></symbol>
+      <symbol id="i-star" viewBox="0 0 24 24"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-2.9-5.6 2.9 1.1-6.2L3 9.6l6.2-.9L12 3Z"/></symbol>
+      <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16V3m-5 5 5-5 5 5M4 14v6h16v-6"/></symbol>
+      <symbol id="i-book" viewBox="0 0 24 24"><path d="M4 4h6a3 3 0 0 1 3 3v13a3 3 0 0 0-3-3H4V4Zm16 0h-4a3 3 0 0 0-3 3v13a3 3 0 0 1 3-3h4V4Z"/></symbol>
+      <symbol id="i-external" viewBox="0 0 24 24"><path d="M14 4h6v6m0-6-9 9M11 5H5v14h14v-6"/></symbol>
+      <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/></symbol>
+      <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 15.5A8.5 8.5 0 0 1 8.5 4 8.5 8.5 0 1 0 20 15.5Z"/></symbol>
+      <symbol id="i-monitor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8m-4-4v4"/></symbol>
+      <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3m3 0-1 14H7L6 7m4 4v6m4-6v6"/></symbol>
+      <symbol id="i-key" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="m11 12 9-9m-4 4 3 3m-6 0 3 3"/></symbol>
+    </svg>
+
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <img src="../../apps/desktop/web/assets/app-icon.png" alt="" width="36" height="36" />
+          <div><strong>CopilotBYOKManager</strong><span>本地配置工作台</span></div>
+        </div>
+        <div class="nav-label">工作区</div>
+        <nav class="primary-nav" aria-label="主导航">
+          <button class="nav-item active" data-route="overview" aria-current="page"><svg><use href="#i-overview"/></svg><span>总览</span></button>
+          <button class="nav-item" data-route="providers"><svg><use href="#i-provider"/></svg><span>供应商</span></button>
+          <button class="nav-item" data-route="apps"><svg><use href="#i-apps"/></svg><span>应用</span></button>
+          <button class="nav-item" data-route="about"><svg><use href="#i-about"/></svg><span>关于</span></button>
+        </nav>
+        <div class="sidebar-bottom">
+          <div class="runtime-status"><span class="status-dot"></span><div><strong>本地运行</strong><span>配置保存在此电脑</span></div></div>
+          <div class="prototype-label">交互原型 · 示例数据</div>
+        </div>
+      </aside>
+
+      <div class="main-shell">
+        <header class="page-header">
+          <div class="page-heading"><h1 id="page-title">总览</h1><p id="page-subtitle">掌握配置状态，继续下一步。</p></div>
+          <div class="page-actions" id="page-actions"></div>
+        </header>
+        <main id="content" class="content" aria-live="polite"></main>
+      </div>
+    </div>
+
+    <div id="modal-root"></div>
+    <div id="toast-root" class="toast-root" aria-live="polite"></div>
+  </body>
+</html>

@@ -23,7 +23,7 @@
   Community: <a href="https://linux.do">LINUX DO</a>
 </p>
 
-> **v0.2.2** — [Download Windows and macOS packages](https://github.com/Arcueid77/CopilotBYOKManager/releases).
+> **v0.2.3** — [Download Windows and macOS packages](https://github.com/Arcueid77/CopilotBYOKManager/releases).
 
 ![Overview — interface example with simulated data](docs/images/overview-en.png)
 

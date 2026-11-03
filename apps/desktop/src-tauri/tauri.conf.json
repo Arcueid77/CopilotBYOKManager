@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "CopilotBYOKManager",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "identifier": "io.github.avalonero.copilotbyokmanager",
   "build": {
     "frontendDist": "../web"
@@ -26,19 +26,31 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["nsis"],
+    "targets": [
+      "nsis"
+    ],
     "createUpdaterArtifacts": false,
     "publisher": "AvaloNero",
     "homepage": "https://github.com/Arcueid77/CopilotBYOKManager",
     "category": "DeveloperTool",
     "shortDescription": "Configure one provider. Publish it safely across your Copilot clients.",
-    "icon": ["icons/icon.ico", "icons/icon.png", "icons/icon.icns"],
+    "icon": [
+      "icons/icon.ico",
+      "icons/icon.png",
+      "icons/icon.icns"
+    ],
     "windows": {
       "allowDowngrades": false,
-      "webviewInstallMode": { "type": "downloadBootstrapper", "silent": true },
+      "webviewInstallMode": {
+        "type": "downloadBootstrapper",
+        "silent": true
+      },
       "nsis": {
         "installMode": "currentUser",
-        "languages": ["English", "SimpChinese"],
+        "languages": [
+          "English",
+          "SimpChinese"
+        ],
         "displayLanguageSelector": true,
         "startMenuFolder": "CopilotBYOKManager"
       }

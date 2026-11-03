@@ -9,14 +9,28 @@
   const vscode = client => ["vs-code-copilot", "vscode-copilot"].includes(client.kind);
   const agents = client => vscode(client) && /^vscode:(stable|insiders):profile:builtin\/agents$/.test(client.id);
 
+  function surfaceName(kind) {
+    const platform = ({ "vs-code-copilot": "VS Code", "vscode-copilot": "VS Code", "copilot-cli": "CLI", "github-copilot-app": "App", "jetbrains-copilot": "JetBrains" })[kind];
+    return platform ? tr("GitHub Copilot · {0}", platform) : kind;
+  }
+
   function name(client) {
     if (!client) return "";
+    if (["copilot-cli", "github-copilot-app"].includes(client.kind)) return surfaceName(client.kind);
+    if (client.kind === "jetbrains-copilot") {
+      const base = surfaceName(client.kind);
+      if (client.id === "jetbrains:local") return base;
+      const suffix = " · Copilot";
+      const instance = client.name.endsWith(suffix) ? client.name.slice(0, -suffix.length) : client.name;
+      return tr("{0} · {1}", base, instance);
+    }
     if (!vscode(client) || !/^vscode:(stable|insiders):/.test(client.id)) return client.name;
     const edition = client.id.startsWith("vscode:insiders:") ? "VS Code Insiders" : "VS Code";
-    if (client.id.endsWith(":default")) return tr("Copilot Chat · {0}", edition);
-    if (agents(client)) return tr("{0} Agents", edition);
+    const base = tr("GitHub Copilot · {0}", edition);
+    if (client.id.endsWith(":default")) return base;
+    if (agents(client)) return tr("{0} · {1}", base, "Agents");
     const prefix = edition === "VS Code" ? "Visual Studio Code · " : "Visual Studio Code Insiders · ";
-    return client.name.startsWith(prefix) ? tr("Copilot Chat · {0} · {1}", edition, client.name.slice(prefix.length)) : client.name;
+    return tr("{0} · {1}", base, client.name.startsWith(prefix) ? client.name.slice(prefix.length) : client.name);
   }
 
   function visible(clients) {
@@ -83,5 +97,5 @@
     return client.supportsWrite ? tr("Copilot 已安装 · 支持自动配置") : tr("Copilot 已安装 · 当前版本不支持自动配置");
   }
 
-  return { name, visible, ordered, configuration, sources, description, capability, configurationState };
+  return { name, surfaceName, visible, ordered, configuration, sources, description, capability, configurationState };
 });

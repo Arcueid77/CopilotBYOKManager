@@ -47,7 +47,8 @@ Upstream review dates and fixed versions in these documents are provenance, not 
 
 ## Design and historical records
 
-- [Approved interactive prototype](../prototype/copilot-byok-manager.html) and [implementation handoff](../prototype/handoff-prompt.md): approved product semantics and layout. The implemented web frontend is authoritative for current interaction behavior.
+- [Approved 2026-11-03 workspace design](../prototype/ui-redesign-20261103/index.html): sidebar navigation, provider master/detail and editing drawer, grouped app instances and a shared publication dialog. The approved implementation additionally promotes supported App synchronization into the primary row action. The implemented frontend is authoritative for live behavior.
+- [Earlier prototype](../prototype/copilot-byok-manager.html) and [implementation handoff](../prototype/handoff-prompt.md): historical design references.
 - [September hardening record](hardening-2026-09.md): historical slice; its remaining-work list is not the current backlog.
 - [P0/P1 handoff](p0-p1-handoff.md): historical 2026-09-10 evidence; earlier navigation, default target selection, and Resources status have been superseded.
 

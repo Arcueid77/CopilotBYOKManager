@@ -12,7 +12,7 @@ Navigation, buttons, form help, statuses, dialogs, recovery warnings, Usage, Res
 
 The core edition exposes Overview / Providers / Apps / About (总览 / 供应商 / 应用 / 关于). Extended Usage/Resources translations remain but their pages are not mounted. Connection/client domain IDs and native command names are unchanged by user-facing labels.
 
-Core user-facing terms are Provider / 供应商, App / 应用, Provider to publish / 本次发布, Allow publishing / 允许发布 and Recommended model / 推荐模型. Keep internal Connection IDs unchanged. Existing model/provider names are data, not translation keys. Language redraws preserve expanded sections without starting their optional probes.
+Core user-facing terms are Provider / 供应商, App / 应用, Provider to publish / 本次发布, Allow publishing / 允许发布 and Recommended model / 推荐模型. Keep internal Connection IDs unchanged. Existing model/provider names are data, not translation keys. Language redraws preserve expanded sections without starting their optional probes. App display names use the central client-presentation helper: GitHub Copilot · VS Code / CLI / App / JetBrains, with preserved instance suffixes. Row badges describe current configuration (Configured / Empty / Partial / Unavailable); App synchronization progress is separate and cannot override unavailable configuration.
 
 Appearance offers System / Light / Dark (跟随系统 / 浅色 / 深色), saved separately under `copilot-byok-manager.appearance`. Only these values are accepted. Denied storage keeps the choice for this session. System changes apply only in System mode. Theme changes are CSS-only, including during a draft/reviewed preview: no field values are stored, no redraw occurs and no native command is called.
 

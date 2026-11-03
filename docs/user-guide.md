@@ -14,18 +14,18 @@ You do not need to maintain a separate provider configuration for every client. 
 
 Download desktop packages from [Releases](https://github.com/Arcueid77/CopilotBYOKManager/releases). See the selected version's installation instructions and checksums.
 
-The interface supports **English and Simplified Chinese**. It follows your system language on first launch; choose **Interface language** at the top to switch and save your preference. Other system languages fall back to English. Finish or close an open form or deployment preview before switching. Connection names, model IDs, endpoints and original diagnostic messages are not translated.
+The interface supports **English and Simplified Chinese**. It follows your system language on first launch; choose **About → Interface language** to switch and save your preference. Other system languages fall back to English. Finish or close an open form or deployment preview before switching. Connection names, model IDs, endpoints and original diagnostic messages are not translated.
 
 ## Current pages
 
 | Page | What to do here |
 | --- | --- |
 | Overview | Check configuration status, next actions and the latest publication result |
-| Providers | Manage endpoint, key and models; preview publication or revoke owned configuration |
-| Apps | Choose a provider per app; review detection, installation, official sign-in and publication history |
+| Providers | Search the provider list, inspect details, edit in a drawer and publish through a shared dialog |
+| Apps | Expand an app family to see concrete installations/profiles and their providers; review installation, sign-in and publication history |
 | About | Window behavior, help, offline planned-feature record and local storage/recovery information |
 
-Use **Appearance** at the top to choose **System, Light or Dark**. The preference is saved independently of language. Switching appearance keeps open drafts and reviewed previews intact.
+Use **About → Appearance** to choose **System, Light or Dark**. The preference is saved independently of language. Switching appearance keeps open drafts and reviewed previews intact.
 
 On Windows, closing the window hides it to the tray by default. In **About → When closing the window**, choose **Hide to system tray** or **Exit the app**; the choice is saved. Left-click the tray icon or choose **Open main window** to restore it; right-click **Exit CopilotBYOKManager** to quit. Ordinary minimize stays on the taskbar. Opening the app again restores the existing window instead of starting another instance. The tray menu follows the interface language.
 
@@ -51,7 +51,7 @@ A **provider entry** is a reusable endpoint/key/model configuration. **Publishin
 | GitHub Copilot plugin in JetBrains IDEs | Automatically writes shared BYOK configuration for reviewed plugin versions | Close the relevant IDEs first; reopen them after publishing, sign in, and select a model |
 | GitHub Copilot App | Manual setup guide with separate confirmation records for each provider | [Configure, select and confirm inside the App](#copilot-app) |
 
-The JetBrains adapter is limited to the [1.19 plugin distributions in the version table](jetbrains-support.md#version-and-compatibility-boundary). IDEs using the same runtime directory share the configuration, including IDEs you did not select.
+The JetBrains adapter supports the [reviewed distributions in the version table](jetbrains-support.md#version-and-compatibility-boundary), including the exact Windows x64 1.20.0 distribution. IDEs using the same runtime directory share the configuration, including IDEs you did not select.
 
 Accepted protocols, endpoints, and model capabilities can differ between clients; review the publication preview. This app manages configuration. It does not provide model hosting, subscriptions, or free credits, and it does not replace a client's own access requirements.
 
@@ -71,7 +71,7 @@ Choose your version on [Releases](https://github.com/Arcueid77/CopilotBYOKManage
 
 The page displays **Browser preview (浏览器试用)**. This mode uses simulated data: it does not write to real clients, run installers, sign you in, or send requests to providers. Use sample data, not real API keys. Usage, Billing and resource management are not offered in this core edition.
 
-The [interactive design prototype](../prototype/copilot-byok-manager.html) is retained separately as a design reference. Use the frontend entry point above to try the current interface.
+The [interactive design prototype](../prototype/ui-redesign-20261103/index.html) is retained separately as a design reference. Use the frontend entry point above to try the current interface.
 
 ### Run the desktop app to configure real clients
 

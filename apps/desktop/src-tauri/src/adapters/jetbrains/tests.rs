@@ -57,6 +57,45 @@ fn standard_profiles_are_separate_stable_writable_targets_for_reviewed_version()
 }
 
 #[test]
+fn reviewed_modular_120_windows_distribution_is_writable_without_loading_modules() {
+    let root = tempfile::tempdir().unwrap();
+    let descriptor = install(root.path(), "PyCharm2026.2");
+    let lib = descriptor.parent().unwrap();
+    fs::remove_file(&descriptor).unwrap();
+    let path = lib.join("github-copilot-intellij-1.20.0-261-windows-x64.jar");
+    fs::write(
+        &path,
+        jar(
+            include_bytes!("fixtures/plugin-120-windows-v1.xml"),
+            "META-INF/plugin.xml",
+        ),
+    )
+    .unwrap();
+    fs::create_dir_all(lib.join("modules")).unwrap();
+    fs::write(
+        lib.join("modules/github-copilot-intellij.core.jar"),
+        b"not a descriptor; never execute",
+    )
+    .unwrap();
+    let before = fs::read(&path).unwrap();
+    let found = discover_at(root.path(), root.path()).unwrap();
+    assert_eq!(found.len(), 1);
+    assert!(found[0].target.detected);
+    assert!(found[0].target.supports_write);
+    assert_eq!(found[0].target.status, ClientStatus::Available);
+    assert!(found[0].target.detail.contains("1.20.0-261-windows-x64"));
+    assert_eq!(fs::read(&path).unwrap(), before);
+    fs::write(
+        root.path().join("PyCharm2026.2/disabled_plugins.txt"),
+        "com.github.copilot\n",
+    )
+    .unwrap();
+    let disabled = discover_at(root.path(), root.path()).unwrap();
+    assert!(!disabled[0].target.detected);
+    assert!(!disabled[0].target.supports_write);
+}
+
+#[test]
 fn official_distribution_with_many_dependencies_reads_only_the_descriptor_jar() {
     let root = tempfile::tempdir().unwrap();
     let path = install(root.path(), "IntelliJIdea2026.2");
@@ -357,7 +396,7 @@ fn forged_writable_flag_cannot_bypass_an_unreviewed_plugin_version() {
     let jar = install(root.path(), "IntelliJIdea2026.2");
     let xml = String::from_utf8(XML.to_vec())
         .unwrap()
-        .replace("1.19.0", "1.20.0");
+        .replace("1.19.0", "1.21.0");
     fs::write(
         &jar,
         super::tests::jar(xml.as_bytes(), "META-INF/plugin.xml"),
@@ -482,9 +521,9 @@ fn shared_byok_is_written_once_with_native_plan_stale_checks_and_private_recover
 #[test]
 fn external_namespace_or_plugin_changes_reject_a_reviewed_plan_before_any_write() {
     use crate::deployment;
-    for change_namespace in [true, false] {
+    for change in ["namespace", "disabled", "reviewed-upgrade"] {
         let root = tempfile::tempdir().unwrap();
-        install(root.path(), "IntelliJIdea2026.2");
+        let descriptor = install(root.path(), "IntelliJIdea2026.2");
         let path = root.path().join("byok.json");
         with_test_roots(root.path(), || {
             byok::with_test_path(&path, || {
@@ -510,12 +549,21 @@ fn external_namespace_or_plugin_changes_reject_a_reviewed_plan_before_any_write(
                     )
                     .unwrap();
                 let stored = plans.consume(&plan.id).unwrap();
-                if change_namespace {
+                if change == "namespace" {
                     fs::write(&path, include_bytes!("fixtures/byok-v1.json")).unwrap();
-                } else {
+                } else if change == "disabled" {
                     fs::write(
                         root.path().join("IntelliJIdea2026.2/disabled_plugins.txt"),
                         PLUGIN_ID,
+                    )
+                    .unwrap();
+                } else {
+                    fs::write(
+                        &descriptor,
+                        jar(
+                            include_bytes!("fixtures/plugin-120-windows-v1.xml"),
+                            "META-INF/plugin.xml",
+                        ),
                     )
                     .unwrap();
                 }
@@ -668,11 +716,11 @@ fn owned_revocation_does_not_require_a_cleared_key_or_changed_endpoint_to_be_dep
 }
 
 #[test]
-fn byok_ownership_reopens_with_state_and_allows_idempotent_redeployment() {
+fn byok_ownership_reopens_and_survives_a_reviewed_120_plugin_upgrade() {
     use crate::{deployment, domain::PersistentState, state::StateStore, transaction};
     let root = tempfile::tempdir().unwrap();
     install(root.path(), "IntelliJIdea2026.2");
-    install(root.path(), "PyCharm2026.2");
+    let upgraded_descriptor = install(root.path(), "PyCharm2026.2");
     let path = root.path().join("runtime/byok.json");
     let state_path = root.path().join("state.json");
     let mut connection = connection();
@@ -722,6 +770,29 @@ fn byok_ownership_reopens_with_state_and_allows_idempotent_redeployment() {
                 .unwrap();
             tx.complete().unwrap();
             drop(state);
+            fs::write(
+                &upgraded_descriptor,
+                jar(
+                    include_bytes!("fixtures/plugin-120-windows-v1.xml"),
+                    "META-INF/plugin.xml",
+                ),
+            )
+            .unwrap();
+            let refreshed = discover_at(root.path(), root.path()).unwrap();
+            assert!(refreshed
+                .iter()
+                .all(|observation| observation.target.supports_write));
+            let targets = refreshed
+                .into_iter()
+                .map(|observation| observation.target)
+                .collect::<Vec<_>>();
+            assert_eq!(
+                targets
+                    .iter()
+                    .map(|target| target.id.clone())
+                    .collect::<Vec<_>>(),
+                ids
+            );
             let state = StateStore::open_at(state_path.clone());
             assert!(state.recovery().is_none());
             assert_eq!(state.ownership().len(), 2);

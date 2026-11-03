@@ -33,7 +33,19 @@ export function findRelease(tag, cli = githubCli) {
   throw new Error('Release lookup limit reached; no mutation performed');
 }
 
-export function publishRelease({ directory, version, sha, tag, mode, cli = githubCli, downloadDirectory }) {
+const visibilityPause = milliseconds => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, milliseconds);
+export function findCreatedRelease(tag, cli = githubCli, pause = visibilityPause) {
+  // Creation can precede visibility in GitHub's list. Retry reads only: never
+  // create a second Draft, repeat an upload or hide an authorization/API error.
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const release = findRelease(tag, cli);
+    if (release) return release;
+    if (attempt < 4) pause(2000);
+  }
+  throw new Error('Created Draft is unavailable after bounded visibility checks; rerun the upload job');
+}
+
+export function publishRelease({ directory, version, sha, tag, mode, cli = githubCli, downloadDirectory, pause = visibilityPause }) {
   assert.ok(['draft', 'publish'].includes(mode), 'dry-run cannot create a Release');
   assert.match(tag, TAG_PATTERN); assert.equal(tag, `v${version}`);
   assert.match(sha, /^[a-f0-9]{40}$/);
@@ -57,9 +69,8 @@ export function publishRelease({ directory, version, sha, tag, mode, cli = githu
   } else if (mode === 'draft') {
     const existingNames = existing.assets.map(asset => asset.name);
     assert.ok(existingNames.every(name => files.includes(name)), 'Draft contains unexpected attachments; reconcile manually before retrying');
-    cli(['release', 'edit', tag, '--repo', REPOSITORY, '--target', sha, '--prerelease', '--latest=false', '--notes-file', path.join(directory, 'RELEASE-NOTES.md')]);
   }
-  const releaseId = (existing || findRelease(tag, cli))?.id;
+  const releaseId = (existing || findCreatedRelease(tag, cli, pause))?.id;
   assert.ok(Number.isSafeInteger(releaseId) && releaseId > 0, 'Created Draft is unavailable');
   const readRelease = () => {
     const release = api(`releases/${releaseId}`);
@@ -67,6 +78,8 @@ export function publishRelease({ directory, version, sha, tag, mode, cli = githu
     assert.equal(release.tag_name, tag, 'Release tag changed');
     return release;
   };
+  assert.equal(readRelease().draft, true, 'Never edit or upload to a Release that became public');
+  if (existing && mode === 'draft') cli(['release', 'edit', tag, '--repo', REPOSITORY, '--target', sha, '--prerelease', '--latest=false', '--notes-file', path.join(directory, 'RELEASE-NOTES.md')]);
   if (mode === 'draft') cli(['release', 'upload', tag, ...files.map(name => path.join(directory, name)), '--repo', REPOSITORY, '--clobber']);
   const uploaded = readRelease();
   assert.equal(uploaded.draft, true, 'Release became public during attachment upload');

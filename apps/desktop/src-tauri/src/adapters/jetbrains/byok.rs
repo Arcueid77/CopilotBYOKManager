@@ -17,6 +17,8 @@ const OWNER: &str = "copilotByokManagerInstallationOwnerId";
 const CONNECTION: &str = "copilotByokManagerConnectionId";
 const MANAGED: &str = "copilotByokManagerManaged";
 const SCHEMA: &str = "copilotByokManagerSchemaVersion";
+// The reviewed 1.20 Windows x64 runtime retains this store contract. Keep its
+// identity stable so an approved plugin upgrade preserves durable ownership.
 pub const SCHEMA_VERSION: &str = "jetbrains-byok-1.19-v1";
 
 /// Exact reviewed distribution versions, not a semver guess about future schemas.
@@ -30,6 +32,7 @@ pub fn supported_version(version: &str) -> bool {
             | "1.19.0-261-macos-arm64"
             | "1.19.0-261-linux-x64"
             | "1.19.0-261-linux-arm64"
+            | "1.20.0-261-windows-x64"
     )
 }
 
@@ -123,7 +126,7 @@ pub fn effective_endpoint(connection: &Connection) -> AppResult<String> {
             .is_some_and(|(_, last)| connection.protocol != ApiProtocol::Messages || last == "v1")
     };
     if !compatible {
-        return Err(AppError::Unsupported("JetBrains 1.19 would rewrite this endpoint to a different route. Use a host root, a compatible versioned base, or the full inference URL matching the selected protocol; no configuration was written".into()));
+        return Err(AppError::Unsupported("The reviewed JetBrains BYOK runtime would rewrite this endpoint to a different route. Use a host root, a compatible versioned base, or the full inference URL matching the selected protocol; no configuration was written".into()));
     }
     Ok(effective)
 }

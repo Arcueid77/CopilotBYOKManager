@@ -24,7 +24,7 @@
   }
   function panel(status, error, snapshot, native) {
     const frozen = Boolean(snapshot.stateRecovery || snapshot.deploymentRecovery);
-    const disabled = !native || frozen;
+    const disabled = !native || frozen || status?.reviewSupported === false;
     const owned = status?.ownedConnectionIds ?? [];
     const selected = status?.selectedConnectionIds ?? [];
     return `<section class="app-sync-panel" data-app-sync-panel><div class="manager-section-head"><strong>${tr("实验性自动同步")}</strong><span class="manager-meta" role="status">${status ? label(status.phase) : error ? tr("同步状态读取失败") : tr("读取同步状态…")}</span></div>

@@ -1,4 +1,18 @@
 use super::{commands::*, *};
+#[test]
+fn status_reports_platform_review_support_without_granting_consent() {
+    let status = Status::default();
+    assert_eq!(
+        status.review_supported,
+        cfg!(all(windows, target_arch = "x86_64"))
+    );
+    assert!(!status.enabled);
+    assert!(status.selected_connection_ids.is_empty());
+    assert_eq!(
+        serde_json::to_value(status).unwrap()["reviewSupported"],
+        cfg!(all(windows, target_arch = "x86_64"))
+    );
+}
 use crate::{
     domain::{ClientStatus, ConnectionInput},
     state::StateStore,

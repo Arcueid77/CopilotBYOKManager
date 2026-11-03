@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<idea-plugin>
+  <id>com.github.copilot</id>
+  <name>GitHub Copilot</name>
+  <vendor url="https://github.com">GitHub</vendor>
+  <version>1.20.0-261-windows-x64</version>
+  <idea-version since-build="261.0"/>
+  <content><module name="github-copilot-intellij.core" loading="required"/></content>
+  <description>Synthetic public metadata for the reviewed modular Windows x64 distribution.</description>
+</idea-plugin>

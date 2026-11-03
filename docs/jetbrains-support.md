@@ -1,6 +1,6 @@
 # JetBrains GitHub Copilot integration
 
-CopilotBYOKManager implements the automatic adapter below. The reviewed version list and fixed inspection dates remain authoritative; the repository rename does not broaden supported plugin versions. See [current implementation status](implementation-status.md) for validation evidence. Rider runtime acceptance is deferred at the maintainer's request as of 2026-10-13.
+CopilotBYOKManager implements the automatic adapter below. The reviewed version list and fixed inspection dates define its compatibility. See [current implementation status](implementation-status.md) for validation evidence. Rider runtime acceptance is deferred at the maintainer's request as of 2026-10-13.
 
 ## Automatic BYOK deployment
 
@@ -23,6 +23,22 @@ Close IDEs before applying and reopen them to refresh cached model pickers. Sele
 ## Version and compatibility boundary
 
 Schema `jetbrains-byok-1.19-v1` admits the official all-platform `1.19.0-252` bundle and the six exact `1.19.0-261-{windows,macos,linux}-{x64,arm64}` distribution versions. The reviewed 252 and 261 Windows x64 language servers are byte-identical; their BYOK save commands and capability/provider contracts match. Unknown/future versions remain explicit read-only/unsupported until fixed schemas/fixtures are verified.
+
+The exact **`1.20.0-261-windows-x64`** distribution was additionally reviewed on 2026-11-03 and uses that same v1 store contract. Its modular plugin packaging retains the public top-level descriptor. The schema identity stays unchanged so existing durable ownership can survive an approved plugin upgrade. Other 1.20 distributions and future versions are not admitted by this review.
+
+### 2026-11-03 Windows x64 1.20 review
+
+The installed PyCharm profile reported `1.20.0-261-windows-x64`, which the previous exact-version list rejected. The official [Marketplace update 1203734](https://plugins.jetbrains.com/api/updates/1203734) identifies the fixed [Windows x64 ZIP](https://plugins.jetbrains.com/files/17718/1203734/github-copilot-intellij-1.20.0-261-windows-x64.zip). Static inspection established:
+
+- ZIP: 156,531,823 bytes, SHA-256 `d97b808fff89c9a2dcc10593058e15784d99c4cdf9bfdf120d222c9c0710ed9d`.
+- Language server: 133,016,192 bytes, SHA-256 `c955e24080c1ee3accd71106ca2d5128ed1a03b7fdedd20a1445bb69f8238886`, valid GitHub, Inc. Authenticode. It matches the installed public binary.
+- Descriptor JAR: SHA-256 `958dea60a3c0eb55e2b91ae9f9fe28d0fe91bf99dfa0914fcf315ad59b35c99a`. Modular core JAR: `f6155dfe2633821e94917594590edf42913bd23db017f1739b707bf429c2f5f3`.
+- The public pkg filesystem index and compressed JavaScript were decoded as data, without executing the upstream runtime. `BYOKPersistence` retains namespace `byok`, the three provider keys, the model-key override rule and raw provider/model JSON objects. `FilePersistenceManager` and `getXdgConfigPath` retain the roots documented above.
+- Save-provider/model RPC schemas retain `groupName`, `apiType` (`chatCompletions` / `responses` / `messages`), `deploymentUrl`, registration/custom-model flags and the existing capability/header fields. The custom endpoint resolver retains suffix stripping and version-base normalization. No private IDE settings, authentication material or conversations were inspected.
+
+`plugin-120-windows-v1.xml` is sanitized metadata for this distribution. Isolated tests cover modular discovery, disabled profiles, rejection of an old plan after an upgrade, and idempotent publication using reopened durable ownership with mixed 1.19/1.20 profiles. Runtime model visibility and requests require separate client acceptance.
+
+For an operator-invoked, read-only diagnosis of public plugin metadata, run `cargo run --release --locked -p copilot-byok-manager --example inspect_jetbrains`. It reports discovery and automatic-publication eligibility without opening BYOK or authentication files.
 
 The upstream custom-provider flow requires a nonempty key. Missing keys refuse writing; local endpoints require an explicitly supplied key accepted by that endpoint, not an invented secret. Query-bearing URLs are unsupported because the reviewed upstream custom endpoint resolver rewrites them. This includes Azure URLs relying on `api-version`; use a query-free compatible endpoint or the IDE's built-in Azure flow pending a separately verified adapter.
 

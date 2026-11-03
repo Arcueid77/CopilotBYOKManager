@@ -6,7 +6,7 @@
   "use strict";
   const i18n = typeof module === "object" && module.exports ? require("./i18n.js") : globalThis.CopilotBYOKManagerI18n;
   const tr = i18n.t;
-  function mount({ container, connection, targets, selectedIds, invoke, onApplied, onError, onBusyChange, native, autoPublish = false }) {
+  function mount({ container, connection, targets, selectedIds, invoke, onApplied, onError, onBusyChange, native, autoPublish = false, onClose }) {
     const opener = container.ownerDocument.activeElement;
     const manager = globalThis.CopilotBYOKManagerManager;
     const escape = manager.escape;
@@ -17,9 +17,9 @@
     root.setAttribute("aria-label", tr("发布配置"));
     root.innerHTML = `<header class="manager-section-head"><h2>${tr("发布 {0}", escape(connection.name))}</h2><button class="button ghost small" data-deployment-close>${tr("收起")}</button></header>
       ${native ? "" : `<p class="preview-banner">${tr("模拟发布，不修改客户端")}</p>`}
-      <p class="manager-meta">${tr("选择应用后发布，完成后显示结果。发布到 CLI 或移除模型时会先请你确认。")}</p>
-      <div class="manager-targets">${targets.map((target, index) => `<label class="manager-target"><input type="checkbox" name="deployment-target" id="target-${escape(target.id)}" value="${escape(target.id)}" data-target-index="${index}" ${target.detected && target.supportsWrite && (selectedIds ? selectedIds.includes(target.id) : target.kind !== "copilot-cli") ? "checked" : ""} ${!target.detected ? "disabled" : ""} /><span><strong>${escape(globalThis.CopilotBYOKManagerClients.name(target))}</strong><small>${!target.detected ? tr("未检测到") : target.supportsWrite ? tr("可自动发布") : tr("仅手动处理")}</small>${target.kind === "copilot-cli" && target.supportsWrite ? `<small class="manager-route-warning">${tr("写入 providers.json，保留其他供应商。请主动勾选。")}</small>` : ""}</span></label>`).join("")}</div>
-      <div id="deployment-preview" role="status"><p class="manager-meta">${tr("选择应用后即可发布。")}</p></div>
+      <p class="manager-meta">${tr("选择要发布到的应用。")}</p>
+      <div class="manager-targets">${targets.map((target, index) => `<label class="manager-target"><input type="checkbox" name="deployment-target" id="target-${escape(target.id)}" value="${escape(target.id)}" data-target-index="${index}" ${target.detected && target.supportsWrite && (selectedIds ? selectedIds.includes(target.id) : target.kind !== "copilot-cli") ? "checked" : ""} ${!target.detected ? "disabled" : ""} /><span><strong>${escape(globalThis.CopilotBYOKManagerClients.name(target))}</strong><small>${!target.detected ? tr("未检测到") : target.supportsWrite ? tr("可自动发布") : tr("仅手动处理")}</small></span></label>`).join("")}</div>
+      <div id="deployment-preview" role="status"></div>
       <footer class="manager-preview-actions"><button class="button ghost" id="preview-deployment">${tr("查看变更")}</button><button class="button primary" id="apply-deployment">${tr("发布配置")}</button></footer>`;
     container.append(root);
     const preview = root.querySelector("#preview-deployment");
@@ -50,9 +50,10 @@
       return true;
     }
     Object.defineProperty(dispose, "busy", { get: () => applying });
-    close.addEventListener("click", () => dispose(true));
+    close.addEventListener("click", () => { if (dispose(true) !== false) onClose?.(); });
     inputs.forEach(input => input.addEventListener("change", () => {
-      review.invalidate(); body.textContent = tr("目标已改变，发布时会重新检查。"); buttons();
+      const hadPreview = Boolean(review.plan);
+      review.invalidate(); body.textContent = hadPreview ? tr("目标已改变，发布时会重新检查。") : ""; buttons();
     }));
     async function generatePreview() {
       const targetIds = inputs.filter(input => input.checked).map(input => input.value);
@@ -65,7 +66,7 @@
       body.innerHTML = `<div class="manager-operations">${plan.operations.map(operation => {
         const target = targets.find(target => target.id === operation.targetId);
         const count = connection.models.filter(model => model.enabled).length;
-        return `<article class="manager-operation"><h3>${escape(target ? globalThis.CopilotBYOKManagerClients.name(target) : operation.title)} <span class="manager-meta">${operation.supported ? tr("自动写入") : tr("需手动处理")}</span></h3><p>${escape(manager.policy(target?.kind ?? operation.targetKind, operation.supported))}</p>${operation.supported && !count && operation.targetKind !== "github-copilot-app" ? `<p class="inline-error">${tr("空模型目录：将移除本连接的供应商分组。")}</p>` : ""}<details><summary>${tr("写入明细")}</summary><p>${escape(operation.description)}</p><ul>${operation.changes.map(change => `<li>${escape(change)}</li>`).join("")}</ul></details></article>`;
+        return `<article class="manager-operation"><h3>${escape(target ? globalThis.CopilotBYOKManagerClients.name(target) : operation.title)} <span class="manager-meta">${operation.supported ? tr("自动写入") : tr("需手动处理")}</span></h3><p>${operation.supported ? tr("更新此应用中的供应商与模型配置。") : tr("需手动处理")}</p>${operation.supported && !count && operation.targetKind !== "github-copilot-app" ? `<p class="inline-error">${tr("空模型目录：将移除本连接的供应商分组。")}</p>` : ""}<details><summary>${tr("写入明细")}</summary><p>${escape(operation.description)}</p><ul>${operation.changes.map(change => `<li>${escape(change)}</li>`).join("")}</ul><p>${escape(manager.policy(target?.kind ?? operation.targetKind, operation.supported))}</p></details></article>`;
       }).join("")}</div>${globalThis.CopilotBYOKManagerAppSync.removalReview(plan)}`;
       root.querySelector("[data-app-models-resolved]")?.addEventListener("change", buttons);
       return plan;

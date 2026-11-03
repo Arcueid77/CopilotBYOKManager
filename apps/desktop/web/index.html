@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="installer.css" />
     <link rel="stylesheet" href="account.css" />
     <link rel="stylesheet" href="setup-usage.css" />
+    <link rel="stylesheet" href="manager-components.css" />
     <link rel="stylesheet" href="manager.css" />
   </head>
   <body>
@@ -24,39 +25,40 @@
           </div>
         </div>
 
-        <nav id="primary-nav" aria-label="主导航" data-i18n-aria-label="主导航">
-          <button class="nav-item active" data-route="overview" aria-current="page">
+        <div class="nav-label" data-i18n="工作区">工作区</div>
+        <nav id="primary-nav" class="primary-nav" aria-label="主导航" data-i18n-aria-label="主导航">
+          <button class="nav-item active" data-route="overview" aria-current="page" aria-label="总览" data-i18n-aria-label="总览">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h6v9H4zm10 0h6v4h-6zM4 17h6v3H4zm10-5h6v8h-6z"/></svg>
             <span data-i18n="总览">总览</span>
           </button>
-          <button class="nav-item" data-route="connections">
+          <button class="nav-item" data-route="connections" aria-label="供应商" data-i18n-aria-label="供应商">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 10V7a4 4 0 0 1 8 0v3M5 10h14v11H5zm4 5h6"/></svg>
             <span data-i18n="供应商">供应商</span>
           </button>
-          <button class="nav-item" data-route="clients"><span data-i18n="应用">应用</span></button>
-          <button class="nav-item" data-route="about"><span data-i18n="关于">关于</span></button>
+          <button class="nav-item" data-route="clients" aria-label="应用" data-i18n-aria-label="应用"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg><span data-i18n="应用">应用</span></button>
+          <button class="nav-item" data-route="about" aria-label="关于" data-i18n-aria-label="关于"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6m0-10v.2"/></svg><span data-i18n="关于">关于</span></button>
         </nav>
 
-        <div class="sidebar-footer">
-          <div class="runtime-dot"></div>
+        <div class="sidebar-footer sidebar-bottom"><div class="runtime-status">
+          <div class="runtime-dot status-dot"></div>
           <div>
             <strong id="runtime-label" data-i18n="读取状态中">读取状态中</strong>
             <small id="runtime-detail" data-i18n="检查本地后端">检查本地后端</small>
           </div>
-        </div>
+        </div></div>
       </aside>
 
-      <main class="main-panel">
-        <header class="topbar">
+      <main class="main-panel main-shell">
+        <header class="topbar page-header">
           <div>
             <p class="eyebrow">CopilotBYOKManager</p>
             <h1 id="page-title" data-i18n="总览">总览</h1>
             <p id="page-subtitle" data-i18n="管理连接，预览后发布。">管理连接，预览后发布。</p>
           </div>
-          <div class="topbar-actions">
-            <label class="appearance-picker"><span data-i18n="外观">外观</span><select id="interface-theme" data-appearance-select aria-label="外观" data-i18n-aria-label="外观"><option value="system" data-i18n="跟随系统">跟随系统</option><option value="light" data-i18n="浅色">浅色</option><option value="dark" data-i18n="深色">深色</option></select></label>
-            <label class="language-picker"><span data-i18n="界面语言">界面语言</span><select id="interface-language" aria-label="界面语言" data-i18n-aria-label="界面语言"><option value="en" lang="en">English</option><option value="zh-CN" lang="zh-CN">简体中文</option></select></label>
-            <button id="refresh-button" class="button ghost" data-i18n="刷新">刷新</button>
-            <button id="overview-publish-button" class="button primary" data-action="jump-connections" data-i18n="发布到客户端" hidden>发布到客户端</button>
-            <button id="add-connection-button" class="button primary" data-i18n="添加连接">添加连接</button>
+          <div class="topbar-actions page-actions">
+            <button id="refresh-button" class="icon-button bordered" aria-label="刷新" data-i18n-aria-label="刷新"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5M6 8a7 7 0 0 1 12-1l2 5M4 12l2 5a7 7 0 0 0 12-1"/></svg></button>
+            <button id="overview-publish-button" class="button primary" data-action="publish-config" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V3m-5 5 5-5 5 5M4 14v6h16v-6"/></svg><span data-i18n="发布配置">发布配置</span></button>
+            <button id="add-connection-button" class="button primary"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span data-i18n="添加连接">添加连接</span></button>
           </div>
         </header>
         <section id="content" class="content" aria-live="polite"></section>
@@ -64,7 +66,8 @@
     </div>
 
     <div id="modal-root"></div>
-    <div id="toast-root" aria-live="assertive"></div>
+    <div id="toast-root" class="toast-root" aria-live="assertive"></div>
+    <select id="interface-language" hidden aria-label="界面语言" data-i18n-aria-label="界面语言"><option value="en" lang="en">English</option><option value="zh-CN" lang="zh-CN">简体中文</option></select>
     <script src="i18n-messages.js"></script>
     <script src="i18n.js"></script>
     <script src="ui-lifecycle.js"></script>
@@ -75,13 +78,15 @@
     <script src="setup-ui.js"></script>
     <script src="jetbrains-ui.js"></script>
     <script src="plan-session.js"></script>
+    <script src="client-presentation.js"></script>
     <script src="core-ui.js"></script>
     <script src="core-loader.js"></script>
     <script src="model-discovery.js"></script>
-    <script src="client-presentation.js"></script>
+    <script src="provider-editor.js"></script>
     <script src="manager-ui.js"></script>
     <script src="inline-deployment.js"></script>
     <script src="app-sync-ui.js"></script>
+    <script src="workspace-ui.js"></script>
     <script src="app.js"></script>
   </body>
 </html>
