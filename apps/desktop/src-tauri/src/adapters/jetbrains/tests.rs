@@ -391,12 +391,12 @@ fn preview_supports_automatic_byok_without_returning_credentials() {
 }
 
 #[test]
-fn forged_writable_flag_cannot_bypass_an_unreviewed_plugin_version() {
+fn forged_writable_flag_cannot_bypass_the_plugin_version_floor() {
     let root = tempfile::tempdir().unwrap();
     let jar = install(root.path(), "IntelliJIdea2026.2");
     let xml = String::from_utf8(XML.to_vec())
         .unwrap()
-        .replace("1.19.0", "1.21.0");
+        .replace("1.19.0", "1.12.1");
     fs::write(
         &jar,
         super::tests::jar(xml.as_bytes(), "META-INF/plugin.xml"),
@@ -716,7 +716,7 @@ fn owned_revocation_does_not_require_a_cleared_key_or_changed_endpoint_to_be_dep
 }
 
 #[test]
-fn byok_ownership_reopens_and_survives_a_reviewed_120_plugin_upgrade() {
+fn byok_ownership_reopens_after_a_compatible_121_plugin_upgrade() {
     use crate::{deployment, domain::PersistentState, state::StateStore, transaction};
     let root = tempfile::tempdir().unwrap();
     install(root.path(), "IntelliJIdea2026.2");
@@ -773,7 +773,7 @@ fn byok_ownership_reopens_and_survives_a_reviewed_120_plugin_upgrade() {
             fs::write(
                 &upgraded_descriptor,
                 jar(
-                    include_bytes!("fixtures/plugin-120-windows-v1.xml"),
+                    include_bytes!("fixtures/plugin-121-windows.xml"),
                     "META-INF/plugin.xml",
                 ),
             )

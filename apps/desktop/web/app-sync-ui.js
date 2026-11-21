@@ -10,6 +10,16 @@
   function label(phase) {
     return ({ disabled: tr("未开启"), consentRequired: tr("需要重新确认范围"), unsupportedSchema: tr("版本或配置暂不支持"), reviewRequired: tr("模型移除需要确认"), pendingAppExit: tr("等待关闭 Copilot App"), pendingSync: tr("等待同步"), paused: tr("所选供应商已暂停"), synchronizing: tr("正在同步"), syncedConfiguration: tr("配置已同步"), conflict: tr("配置有冲突"), failed: tr("同步未完成"), recoveryRequired: tr("需要核对恢复") })[phase] ?? tr("状态未知");
   }
+  function compatibilityLabel(issue) {
+    switch (issue) {
+      case "platform": return tr("自动同步需要 Windows x64。");
+      case "notInstalled": return tr("请先安装 Copilot App。");
+      case "version": return tr("无法识别已安装的 Copilot App 稳定版本。");
+      case "identity": return tr("无法验证 GitHub 发布的 x64 Copilot App。请检查安装来源。");
+      case "schema": return tr("此 App 数据库格式暂不支持自动同步，请使用配置指引。");
+      default: return "";
+    }
+  }
   function removalReview(plan) {
     if (!plan.appModelRemovals?.length) return "";
     return `<div class="app-sync-removal"><p>${tr("将从 Copilot App 移除这些模型：{0}", escape(plan.appModelRemovals.join(", ")))}</p><label class="checkbox-row"><input type="checkbox" data-app-models-resolved><span>${tr("我已在 App 中将当前和默认模型切换到其他模型，并关闭 App。")}</span></label></div>`;
@@ -24,11 +34,11 @@
   }
   function panel(status, error, snapshot, native) {
     const frozen = Boolean(snapshot.stateRecovery || snapshot.deploymentRecovery);
-    const disabled = !native || frozen || status?.reviewSupported === false;
+    const disabled = !native || frozen || status?.reviewSupported !== true;
     const owned = status?.ownedConnectionIds ?? [];
     const selected = status?.selectedConnectionIds ?? [];
     return `<section class="app-sync-panel" data-app-sync-panel><div class="manager-section-head"><strong>${tr("实验性自动同步")}</strong><span class="manager-meta" role="status">${status ? label(status.phase) : error ? tr("同步状态读取失败") : tr("读取同步状态…")}</span></div>
-      <p class="manager-meta">${status?.enabled ? tr("所选供应商保存后自动同步；关闭 App 后执行。") : tr("默认关闭。开启前选择供应商并核对密钥存储方式。")}</p>
+      <p class="manager-meta">${compatibilityLabel(status?.compatibilityIssue) || (status?.enabled ? tr("所选供应商保存后自动同步；关闭 App 后执行。") : tr("默认关闭。开启前选择供应商并核对密钥存储方式。"))}</p>
       ${selected.length ? `<p class="manager-meta">${tr("已选：{0}", escape(selected.map(id => snapshot.connections.find(c => c.id === id)?.name ?? id).join(", ")))}</p>` : ""}
       ${status?.diagnostic ? `<details><summary>${tr("详细原因")}</summary><p>${escape(status.diagnostic)}</p></details>` : ""}
       ${status?.results?.length ? `<p class="manager-meta">${tr("最近同步结果")}</p><ul class="app-sync-results">${status.results.map(result => `<li><span>${escape(result.name)}</span><span>${label(result.phase)}${Number.isInteger(result.modelCount) ? ` · ${tr("{0} 个模型", result.modelCount)}` : ""}${Number.isNaN(Date.parse(result.observedAt)) ? "" : ` · ${escape(new Date(result.observedAt).toLocaleString(i18n.locale()))}`}</span></li>`).join("")}</ul>` : ""}
@@ -47,6 +57,8 @@
     }).join("")}</div><p class="app-sync-close-hint">${tr("请先关闭 Copilot App，再继续。")}</p><div class="app-sync-error" data-sync-error role="alert" hidden></div>`;
   }
   function failureMessage(error) {
+    const reason = compatibilityLabel(error?.compatibilityIssue);
+    if (reason) return reason;
     if (error?.code === "appRunning") return tr("Copilot App 仍在后台运行。请从它的托盘菜单退出后再试。");
     if (error?.code === "appExitUnverified") return tr("无法确认 Copilot App 已退出。请检查后台进程后重试。");
     if (error?.code === "unsafePermissions") return tr("App 数据目录允许其他账号读取。请先收紧权限，再核对同步。");
@@ -105,6 +117,24 @@
         }));
       } });
     }
+    function checkBeforeChoosing() {
+      openModal({
+        title: tr("检查同步兼容性"), compact: true,
+        body: `<p data-sync-check role="status">${tr("正在检查 App 和数据库格式…")}</p>`,
+        async onOpen(root) {
+          try {
+            await invoke("check_app_sync_compatibility");
+            if (root.isConnected) choose();
+          } catch (error) {
+            if (root.isConnected) {
+              const result = root.querySelector("[data-sync-check]");
+              result.setAttribute("role", "alert");
+              result.textContent = failureMessage(error) || error?.message || tr("无法生成同步预览，请稍后重试。");
+            }
+          }
+        },
+      });
+    }
     async function revoke(id) {
       const plan = await invoke("preview_app_sync_revoke", { connectionId: id });
       openModal({ title: tr("移除 App 中的受管配置"), body: `<p>${tr("只移除本管理器拥有的 App 供应商和模型，并停止该供应商的自动同步。管理器中的供应商与密钥会保留。")}</p>${removalReview(plan)}<ul>${plan.operations.map(o => `<li>${escape(o.description)}</li>`).join("")}</ul>`, footer: `<button class="button ghost" data-modal-close>${tr("取消")}</button><button class="button danger" data-sync-revoke>${tr("确认移除")}</button>`, onOpen(root) {
@@ -125,7 +155,7 @@
     function handle(action, id) {
       if (!action.startsWith("app-sync-")) return false;
       if (busy) return true;
-      if (action === "app-sync-enable") choose();
+      if (action === "app-sync-enable") checkBeforeChoosing();
       else if (action === "app-sync-review") {
         const provider = snapshot().connections.find(c => c.id === id);
         if (provider) openDeployment(provider, ["github-copilot-app:local"]);
@@ -138,5 +168,5 @@
     }
     return { handle };
   }
-  return { label, panel, removalReview, riskBody, selectionBody, preparationError, create };
+  return { label, compatibilityLabel, panel, removalReview, riskBody, selectionBody, preparationError, create };
 });

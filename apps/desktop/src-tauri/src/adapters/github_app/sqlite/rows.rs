@@ -1,4 +1,4 @@
-use super::schema::sql_error;
+use super::schema::{sql_error, Format};
 use crate::{
     domain::{ApiProtocol, Connection as Provider, ProviderKind},
     error::{AppError, AppResult},
@@ -31,6 +31,9 @@ pub(super) struct ModelRow {
     pub created: String,
     pub updated: String,
     pub efforts: Option<String>,
+    // A migrated v1 row receives zero. Omitting false preserves existing owned-row proofs.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub vision: bool,
 }
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -132,27 +135,43 @@ pub(super) fn foreign_models(db: &Connection, id: &str) -> AppResult<i64> {
     .map_err(sql_error)
 }
 
-pub(super) fn read(db: &Connection, id: &str) -> AppResult<Option<Projection>> {
+pub(super) fn read(db: &Connection, id: &str, format: Format) -> AppResult<Option<Projection>> {
     if !valid_provider_id(id) {
         return Err(invalid());
     }
     if !exists(db, id)? {
         return Ok(None);
     }
-    let linked: bool = db
-        .query_row(
-            "SELECT account_id IS NOT NULL FROM model_providers WHERE id=?1",
-            [id],
-            |r| r.get(0),
-        )
-        .map_err(sql_error)?;
+    let linked: bool = format.has_account()
+        && db
+            .query_row(
+                "SELECT account_id IS NOT NULL FROM model_providers WHERE id=?1",
+                [id],
+                |r| r.get(0),
+            )
+            .map_err(sql_error)?;
     if linked {
         return Err(invalid());
     }
     let provider = db.query_row("SELECT id,CASE WHEN length(CAST(name AS BLOB))<=512 THEN name END,type,CASE WHEN length(CAST(settings_json AS BLOB))<=65536 THEN settings_json END,CASE WHEN length(created_at)<=64 THEN created_at END,CASE WHEN length(updated_at)<=64 THEN updated_at END FROM model_providers WHERE id=?1",[id],|r|Ok(ProviderRow{id:r.get(0)?,name:r.get(1)?,kind:r.get(2)?,settings:r.get(3)?,created:r.get(4)?,updated:r.get(5)?})).map_err(sql_error)?;
+    if format.has_legacy_columns() {
+        super::provider_settings::check_mirrors(db, &provider)?;
+    }
     let prefix = format!("{id}-m-");
-    let mut stmt=db.prepare("SELECT id,provider_id,CASE WHEN length(CAST(model_id AS BLOB))<=512 THEN model_id END,CASE WHEN length(CAST(wire_model AS BLOB))<=512 THEN wire_model END,CASE WHEN length(CAST(display_name AS BLOB))<=512 THEN display_name END,max_prompt_tokens,max_output_tokens,wire_api_override,CASE WHEN length(created_at)<=64 THEN created_at END,CASE WHEN length(updated_at)<=64 THEN updated_at END,CASE WHEN length(supported_reasoning_efforts)<=8192 THEN supported_reasoning_efforts END FROM provider_models WHERE provider_id=?1 AND substr(id,1,?2)=?3 ORDER BY id LIMIT 257").map_err(sql_error)?;
-    let oversized: bool = db.query_row("SELECT EXISTS(SELECT 1 FROM provider_models WHERE provider_id=?1 AND substr(id,1,?2)=?3 AND (length(CAST(id AS BLOB))>80 OR length(CAST(wire_model AS BLOB))>512 OR length(CAST(wire_api_override AS BLOB))>16 OR length(CAST(supported_reasoning_efforts AS BLOB))>8192))",params![id,prefix.len() as i64,prefix],|r|r.get(0)).map_err(sql_error)?;
+    let vision = match format {
+        Format::V1
+        | Format::Basic
+        | Format::JsonWithLegacyColumns
+        | Format::JsonWithLegacyColumnsAndAccount => "0",
+        Format::VisionV2 => "CASE WHEN supports_vision IN (0,1) THEN supports_vision END",
+    };
+    let efforts = if !format.has_efforts() {
+        "NULL"
+    } else {
+        "supported_reasoning_efforts"
+    };
+    let mut stmt=db.prepare(&format!("SELECT id,provider_id,CASE WHEN length(CAST(model_id AS BLOB))<=512 THEN model_id END,CASE WHEN length(CAST(wire_model AS BLOB))<=512 THEN wire_model END,CASE WHEN length(CAST(display_name AS BLOB))<=512 THEN display_name END,max_prompt_tokens,max_output_tokens,wire_api_override,CASE WHEN length(created_at)<=64 THEN created_at END,CASE WHEN length(updated_at)<=64 THEN updated_at END,CASE WHEN length({efforts})<=8192 THEN {efforts} END,{vision} FROM provider_models WHERE provider_id=?1 AND substr(id,1,?2)=?3 ORDER BY id LIMIT 257")).map_err(sql_error)?;
+    let oversized: bool = db.query_row(&format!("SELECT EXISTS(SELECT 1 FROM provider_models WHERE provider_id=?1 AND substr(id,1,?2)=?3 AND (length(CAST(id AS BLOB))>80 OR length(CAST(wire_model AS BLOB))>512 OR length(CAST(wire_api_override AS BLOB))>16 OR length(CAST({efforts} AS BLOB))>8192))"),params![id,prefix.len() as i64,prefix],|r|r.get(0)).map_err(sql_error)?;
     if oversized {
         return Err(invalid());
     }
@@ -170,6 +189,7 @@ pub(super) fn read(db: &Connection, id: &str) -> AppResult<Option<Projection>> {
                 created: r.get(8)?,
                 updated: r.get(9)?,
                 efforts: r.get(10)?,
+                vision: r.get(11)?,
             })
         })
         .map_err(sql_error)?
@@ -185,6 +205,7 @@ pub(super) fn desired(
     secret: Option<&str>,
     id: &str,
     before: Option<&Projection>,
+    format: Format,
 ) -> AppResult<Projection> {
     if !matches!(
         connection.provider_kind,
@@ -255,6 +276,11 @@ pub(super) fn desired(
             created: old.map_or_else(|| now.clone(), |v| v.created.clone()),
             updated: now.clone(),
             efforts: None,
+            vision: format == Format::VisionV2
+                && model
+                    .capabilities
+                    .vision
+                    .unwrap_or_else(|| old.is_some_and(|r| r.vision)),
         };
         if let Some(old) = old {
             let mut comparison = row.clone();
@@ -298,6 +324,7 @@ pub(super) fn write(
     id: &str,
     before: Option<&Projection>,
     after: Option<&Projection>,
+    format: Format,
 ) -> AppResult<()> {
     if let Some(value) = after {
         value.validate()?;
@@ -324,7 +351,9 @@ pub(super) fn write(
         }
         Some(value) => {
             let p = &value.provider;
-            if before.is_some() {
+            if format.has_legacy_columns() {
+                super::provider_settings::write_mirrors(db, p, before.is_some())?;
+            } else if before.is_some() {
                 db.execute("UPDATE model_providers SET name=?2,type=?3,settings_json=?4,created_at=?5,updated_at=?6 WHERE id=?1 AND account_id IS NULL",params![p.id,p.name,p.kind,p.settings,p.created,p.updated]).map_err(sql_error)?;
             } else {
                 db.execute("INSERT INTO model_providers(id,name,type,settings_json,account_id,created_at,updated_at) VALUES(?1,?2,?3,?4,NULL,?5,?6)",params![p.id,p.name,p.kind,p.settings,p.created,p.updated]).map_err(sql_error)?;
@@ -335,9 +364,21 @@ pub(super) fn write(
                     continue;
                 }
                 if old.is_some() {
-                    db.execute("UPDATE provider_models SET model_id=?3,wire_model=?4,display_name=?5,max_prompt_tokens=?6,max_output_tokens=?7,wire_api_override=?8,created_at=?9,updated_at=?10,supported_reasoning_efforts=?11 WHERE id=?1 AND provider_id=?2",params![model.id,id,model.model,model.wire,model.name,model.prompt,model.output,model.api,model.created,model.updated,model.efforts]).map_err(sql_error)?;
+                    db.execute("UPDATE provider_models SET model_id=?3,wire_model=?4,display_name=?5,max_prompt_tokens=?6,max_output_tokens=?7,wire_api_override=?8,created_at=?9,updated_at=?10 WHERE id=?1 AND provider_id=?2",params![model.id,id,model.model,model.wire,model.name,model.prompt,model.output,model.api,model.created,model.updated]).map_err(sql_error)?;
                 } else {
-                    db.execute("INSERT INTO provider_models(id,provider_id,model_id,wire_model,display_name,max_prompt_tokens,max_output_tokens,wire_api_override,created_at,updated_at,supported_reasoning_efforts) VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11)",params![model.id,id,model.model,model.wire,model.name,model.prompt,model.output,model.api,model.created,model.updated,model.efforts]).map_err(sql_error)?;
+                    db.execute("INSERT INTO provider_models(id,provider_id,model_id,wire_model,display_name,max_prompt_tokens,max_output_tokens,wire_api_override,created_at,updated_at) VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10)",params![model.id,id,model.model,model.wire,model.name,model.prompt,model.output,model.api,model.created,model.updated]).map_err(sql_error)?;
+                }
+                if model.efforts.as_ref() != old.and_then(|row| row.efforts.as_ref()) {
+                    if !format.has_efforts() {
+                        return Err(super::schema::incompatible());
+                    }
+                    db.execute("UPDATE provider_models SET supported_reasoning_efforts=?3 WHERE id=?1 AND provider_id=?2", params![model.id, id, model.efforts]).map_err(sql_error)?;
+                }
+                if model.vision != old.is_some_and(|row| row.vision) {
+                    if format != Format::VisionV2 {
+                        return Err(super::schema::incompatible());
+                    }
+                    db.execute("UPDATE provider_models SET supports_vision=?3 WHERE id=?1 AND provider_id=?2", params![model.id, id, model.vision]).map_err(sql_error)?;
                 }
             }
         }

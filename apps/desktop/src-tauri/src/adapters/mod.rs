@@ -1,6 +1,8 @@
 pub mod copilot_cli;
 pub mod github_app;
 pub mod jetbrains;
+pub(crate) mod json_support;
+mod version;
 pub mod vscode;
 #[cfg(windows)]
 pub(crate) mod vscode_install;

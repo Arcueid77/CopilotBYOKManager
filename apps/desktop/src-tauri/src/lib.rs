@@ -131,6 +131,7 @@ pub fn run() {
             window_shell::set_tray_locale,
             commands::get_dashboard,
             app_sync::commands::get_app_sync_status,
+            app_sync::commands::check_app_sync_compatibility,
             app_sync::commands::preview_app_sync_enable,
             app_sync::commands::enable_app_sync,
             app_sync::commands::disable_app_sync,

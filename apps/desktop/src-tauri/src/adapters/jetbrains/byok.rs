@@ -17,23 +17,31 @@ const OWNER: &str = "copilotByokManagerInstallationOwnerId";
 const CONNECTION: &str = "copilotByokManagerConnectionId";
 const MANAGED: &str = "copilotByokManagerManaged";
 const SCHEMA: &str = "copilotByokManagerSchemaVersion";
-// The reviewed 1.20 Windows x64 runtime retains this store contract. Keep its
-// identity stable so an approved plugin upgrade preserves durable ownership.
+// Durable identity of the BYOK storage format, independent of plugin updates.
 pub const SCHEMA_VERSION: &str = "jetbrains-byok-1.19-v1";
 
-/// Exact reviewed distribution versions, not a semver guess about future schemas.
 pub fn supported_version(version: &str) -> bool {
-    matches!(
-        version,
-        "1.19.0-252"
-            | "1.19.0-261-windows-x64"
-            | "1.19.0-261-windows-arm64"
-            | "1.19.0-261-macos-x64"
-            | "1.19.0-261-macos-arm64"
-            | "1.19.0-261-linux-x64"
-            | "1.19.0-261-linux-arm64"
-            | "1.20.0-261-windows-x64"
-    )
+    let Some((release, distribution)) = version.split_once('-') else {
+        return false;
+    };
+    let (build, classifier) = distribution
+        .split_once('-')
+        .map_or((distribution, None), |(build, tag)| (build, Some(tag)));
+    super::super::version::release_number(release).is_some_and(|v| v >= [1, 13, 0])
+        && build.len() == 3
+        && !build.starts_with('0')
+        && build.bytes().all(|b| b.is_ascii_digit())
+        && matches!(
+            classifier,
+            None | Some(
+                "windows-x64"
+                    | "windows-arm64"
+                    | "macos-x64"
+                    | "macos-arm64"
+                    | "linux-x64"
+                    | "linux-arm64"
+            )
+        )
 }
 
 pub fn store_path() -> AppResult<PathBuf> {
@@ -240,8 +248,37 @@ fn parse(bytes: Option<&[u8]>) -> AppResult<Map<String, Value>> {
     let Value::Object(map) = value else {
         return Err(invalid("JetBrains BYOK configuration must be an object"));
     };
-    // Other providers' values are preserved, not interpreted as our configuration.
+    if !map.is_empty()
+        && !map.keys().any(|key| {
+            ["-api-key", "-provider-config", "-models-config"]
+                .iter()
+                .any(|suffix| key.ends_with(suffix))
+        })
+    {
+        return Err(invalid("Unrecognized JetBrains BYOK store format"));
+    }
+    for (key, config) in &map {
+        if let Some(provider) = key.strip_suffix("-provider-config") {
+            if !config.is_object()
+                || !map.get(&keys(provider)[2]).is_some_and(Value::is_object)
+                || config
+                    .get(SCHEMA)
+                    .is_some_and(|v| v.as_str() != Some(SCHEMA_VERSION))
+            {
+                return Err(invalid(
+                    "Unsupported JetBrains BYOK provider configuration format",
+                ));
+            }
+        }
+        if key.ends_with("-models-config") && !config.is_object() {
+            return Err(invalid("Unsupported JetBrains BYOK model catalog format"));
+        }
+    }
     Ok(map)
+}
+
+pub(super) fn check_namespace(path: &Path) -> AppResult<()> {
+    parse(safe_io::read_optional(path, MAX_BYTES)?.as_deref()).map(|_| ())
 }
 
 fn projection(map: &Map<String, Value>, owned: &[String; 3]) -> AppResult<String> {

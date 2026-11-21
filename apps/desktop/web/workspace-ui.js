@@ -58,6 +58,10 @@
     return `<div class="app-identity"><span class="app-icon ${escape(group.id)}">${icon(group.icon)}</span><div><strong>${escape(group.name)}</strong><span>${tr("{0} 个实例", group.members.length)}</span></div></div>`;
   }
   function summary(group, snapshot, data) {
+    if (group.id === "copilot-app" && group.members.some(client => client.detected)) {
+      const unavailable = sync.compatibilityLabel(data.appSync?.compatibilityIssue);
+      if (unavailable) return `<span class="current-source">${escape(unavailable)}</span>`;
+    }
     const progress = group.id === "copilot-app" && data.appSync?.enabled && !["syncedConfiguration", "disabled"].includes(data.appSync.phase)
       ? `<span class="app-sync-inline-phase" data-sync-phase="${escape(data.appSync.phase)}" role="status">${tr("自动同步：{0}", escape(sync.label(data.appSync.phase)))}</span>` : "";
     if (group.members.length === 1) return `<div class="current-source">${manager.currentSources(group.members[0], snapshot, data, true)}${progress}</div>`;
@@ -69,7 +73,7 @@
     const disabled = blocked(snapshot) ? "disabled" : "";
     if (group.id === "copilot-app" && group.members.some(client => client.detected)) {
       if (data.appSync?.enabled) return `<button class="button small" data-action="manage-app-sync" ${disabled}>${tr("管理同步")}</button>`;
-      if (data.appSync?.reviewSupported === true) return `<button class="button primary small" data-action="app-sync-enable" ${!native || !snapshot.connections.some(c => c.enabled !== false) || disabled ? "disabled" : ""}>${tr("启用同步")}</button>`;
+      if (data.appSync?.reviewSupported === true) return `<button class="button primary small" data-action="app-sync-enable" ${!native || !snapshot.connections.some(c => c.enabled !== false) || disabled ? "disabled" : ""}>${tr("检查并启用同步")}</button>`;
       return `<button class="button small" data-action="setup-manual" ${disabled}>${tr("配置指引")}</button>`;
     }
     if (group.members.some(client => client.detected && client.supportsWrite)) return `<button class="button small" data-action="publish-family" data-id="${escape(group.id)}" ${disabled}>${tr("发布")}</button>`;

@@ -18,7 +18,7 @@ mod catalog;
 pub(crate) mod failure;
 pub(crate) mod history;
 #[cfg(windows)]
-mod identity;
+pub(crate) mod identity;
 pub(crate) mod progress;
 #[cfg(windows)]
 mod source;
@@ -561,8 +561,7 @@ fn cli_version(path: &Path) -> AppResult<String> {
     parse_cli_version(&output.stdout)
 }
 
-#[cfg(any(windows, test))]
-fn parse_cli_version(text: &str) -> AppResult<String> {
+pub(crate) fn parse_cli_version(text: &str) -> AppResult<String> {
     let first = text.lines().next().unwrap_or_default().trim();
     let version = first
         .strip_prefix("GitHub Copilot CLI ")
@@ -582,7 +581,6 @@ fn parse_cli_version(text: &str) -> AppResult<String> {
     Ok(version.into())
 }
 
-#[cfg(any(windows, test))]
 fn valid_version(text: &str) -> bool {
     let fields = text.split('.').collect::<Vec<_>>();
     fields.len() == 3

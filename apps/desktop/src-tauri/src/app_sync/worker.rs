@@ -65,17 +65,23 @@ pub(super) fn run_once(jobs: &Jobs, state: &ManagedState) -> AppResult<()> {
         return Err(AppError::PlanChanged);
     }
     let target = mode.target.as_ref().ok_or(AppError::PlanChanged)?;
-    if let Err(error) = sqlite::target::ensure_closed(&target.binary) {
-        jobs.set_phase(
-            if matches!(error, AppError::AppRunning | AppError::AppExitUnverified) {
-                Phase::PendingAppExit
+    let live = match target.refreshed() {
+        Ok(live) => live,
+        Err(error) => {
+            let phase = match error {
+                AppError::AppRunning | AppError::AppExitUnverified => Phase::PendingAppExit,
+                AppError::AppScopeChanged => Phase::ConsentRequired,
+                AppError::UnsafeAppPermissions => Phase::Failed,
+                _ => Phase::UnsupportedSchema,
+            };
+            if phase == Phase::PendingAppExit {
+                jobs.set_phase(phase, Some(error.to_string()));
             } else {
-                Phase::UnsupportedSchema
-            },
-            Some(error.to_string()),
-        );
-        return Ok(());
-    }
+                jobs.halt(phase, Some(error.to_string()));
+            }
+            return Ok(());
+        }
+    };
     for id in mode.scopes.keys() {
         let Some(connection) = connections.iter().find(|c| &c.id == id) else {
             jobs.set_phase(
@@ -108,7 +114,7 @@ pub(super) fn run_once(jobs: &Jobs, state: &ManagedState) -> AppResult<()> {
         if !connection.enabled {
             continue;
         }
-        let revision = crate::fingerprint::json("app-saved-connection-v1", connection)?;
+        let revision = crate::fingerprint::json("app-saved-connection-v2", &(connection, &live))?;
         if jobs.attempts.lock().map_err(|_| AppError::Lock)?.get(id) == Some(&revision) {
             continue;
         }
@@ -138,7 +144,12 @@ pub(super) fn run_once(jobs: &Jobs, state: &ManagedState) -> AppResult<()> {
                 jobs.set_phase(
                     if matches!(error, AppError::AppRunning | AppError::AppExitUnverified) {
                         Phase::PendingAppExit
-                    } else if matches!(error, AppError::Unsupported(_)) {
+                    } else if matches!(error, AppError::AppScopeChanged) {
+                        Phase::ConsentRequired
+                    } else if matches!(
+                        error,
+                        AppError::Unsupported(_) | AppError::AppCompatibility(_)
+                    ) {
                         Phase::UnsupportedSchema
                     } else {
                         Phase::Conflict

@@ -6,7 +6,7 @@
 
 **Configure one provider. Publish it safely across your Copilot clients.**
 
-Save your AI provider's endpoint, API key, and models in one place, then review publication to **VS Code, Copilot CLI, and reviewed JetBrains plugin versions**. Copilot App offers guided manual setup and default-off experimental synchronization.
+Save your AI provider's endpoint, API key, and models in one place, then review publication to **VS Code, Copilot CLI, and compatible JetBrains plugins**. Copilot App offers guided manual setup and default-off experimental synchronization.
 
 You do not need to maintain a separate provider configuration for every client. When you change an endpoint or key, or add or remove models, edit the connection, preview the changes, and publish them to the clients you want to update.
 
@@ -48,10 +48,10 @@ A **provider entry** is a reusable endpoint/key/model configuration. **Publishin
 | --- | --- | --- |
 | VS Code Stable / Insiders and detected profiles | Automatically adds or updates this connection's provider group while preserving other providers | After publishing, select the model in Copilot's model picker in the corresponding profile |
 | GitHub Copilot CLI | Publishes multiple providers and models to `providers.json` | Unchecked by default; confirm publication, start a new session and choose with `/model` |
-| GitHub Copilot plugin in JetBrains IDEs | Automatically writes shared BYOK configuration for reviewed plugin versions | Close the relevant IDEs first; reopen them after publishing, sign in, and select a model |
+| GitHub Copilot plugin in JetBrains IDEs | Automatically writes shared BYOK configuration for compatible stable plugins from 1.13.0 | Close the relevant IDEs first; reopen them after publishing, sign in, and select a model |
 | GitHub Copilot App | Manual setup guide with separate confirmation records for each provider | [Configure, select and confirm inside the App](#copilot-app) |
 
-The JetBrains adapter supports the [reviewed distributions in the version table](jetbrains-support.md#version-and-compatibility-boundary), including the exact Windows x64 1.20.0 distribution. IDEs using the same runtime directory share the configuration, including IDEs you did not select.
+Stable plugins from 1.13.0 can use the shared BYOK store. IDEs using the same runtime directory share a configuration. See the [compatibility rules](jetbrains-support.md#version-and-compatibility-boundary).
 
 Accepted protocols, endpoints, and model capabilities can differ between clients; review the publication preview. This app manages configuration. It does not provide model hosting, subscriptions, or free credits, and it does not replace a client's own access requirements.
 
@@ -177,16 +177,16 @@ Custom `COPILOT_HOME` or `COPILOT_PROVIDERS_CONFIG` paths are not automatically 
 
 **JetBrains**
 
-Reopen the relevant IDE, complete official GitHub Copilot sign-in, and select the published model in Copilot Chat's model picker. Sign in and select a model in each IDE. Unknown plugin versions are not written automatically. See [JetBrains usage and compatibility](jetbrains-support.md) for further limits.
+Reopen the relevant IDE, complete official GitHub Copilot sign-in, and select the published model in Copilot Chat's model picker. Sign in and select a model in each IDE. See [JetBrains usage and compatibility](jetbrains-support.md) for further limits.
 
 <a id="copilot-app"></a>
 
 **Copilot App: experimental automatic sync**
 
-This source includes opt-in synchronization for **Windows x64 App 1.1.25**. Earlier published packages still use the manual flow below. Other versions/platforms keep manual setup.
+Automatic sync supports the official **Windows x64 App with compatible JSON provider storage**. The 1.0.8 release introduced this schema. Close the App and choose **Check and enable sync** to verify the installation and storage format before selecting providers. A change to the approved storage format requires a new scope confirmation.
 
 1. Save providers and models on **Providers** and allow publishing. Close Copilot App. The App must already have created its database at `~/.copilot/data.db`.
-2. On **Apps → GitHub Copilot app → Experimental auto-sync**, select **Enable experimental sync**, choose up to 16 saved providers, then **Review scope and risks**.
+2. On **Apps → GitHub Copilot app → Experimental auto-sync**, select **Check and enable sync**, choose up to 16 saved providers, then **Review scope and risks**.
 3. Check the App version, database location and selected endpoints. Selected API keys will be stored as **plaintext Authorization headers** in the App database and may remain in WAL files, journals and backups. The dialog explains this storage route and database-format compatibility. Confirm **I understand — enable sync** to authorize that scope.
 4. Initial configuration and later saved changes synchronize automatically while App is closed. Unsaved edits stay in the editor. Endpoint/protocol/headers/credential-mode changes require turning sync off and reviewing enablement again. Add other providers by reviewing a new scope.
 5. **Configuration synchronized** confirms the managed entries were written. Restart App, select a model in its picker and initiate your own request when ready. **Waiting for Copilot App to close** resumes after closure. Conflicts/errors pause; use **Check and retry** after resolving them.
@@ -293,7 +293,7 @@ Start with the per-target results under **Overview → Latest deployment**, then
 1. Whether you published to the VS Code profile or JetBrains runtime directory you are actually using.
 2. Whether the target was written successfully or still requires manual setup.
 3. Whether the IDE needs reopening, or the CLI is running in a new terminal and session.
-4. Whether the client and plugin version are supported; JetBrains requires the exact reviewed versions.
+4. For JetBrains, check the plugin is enabled, version 1.13.0 or newer, and uses a supported BYOK file.
 5. Whether you completed official sign-in and explicitly selected the model in the client.
 
 **App configuration status (应用配置状态)** shows the current catalog for apps with supported reads. Copilot App shows owned-provider metadata while experimental sync is enabled, and separate per-provider manual confirmations when it is off.
@@ -306,7 +306,7 @@ Use **Preview revocation and deletion** on the relevant provider, review the tar
 
 ### Why is my JetBrains version unsupported?
 
-Automatic writes are enabled only for exact reviewed plugin distributions. Newer, unknown, disabled, or custom-path plugins may require manual handling. Report compatibility issues with the IDE and plugin versions; do not change version markers to bypass checks.
+Check the stable plugin version, standard installation location and shared BYOK file. If compatibility fails, include the IDE and plugin versions in your report.
 
 ### Why is publishing disabled, or why must I generate another preview?
 

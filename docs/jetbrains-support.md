@@ -1,6 +1,6 @@
 # JetBrains GitHub Copilot integration
 
-CopilotBYOKManager implements the automatic adapter below. The reviewed version list and fixed inspection dates define its compatibility. See [current implementation status](implementation-status.md) for validation evidence. Rider runtime acceptance is deferred at the maintainer's request as of 2026-10-13.
+Automatic publication supports stable GitHub Copilot plugins from 1.19.0. [Implementation status](implementation-status.md) tracks execution evidence and deferred Rider runtime testing.
 
 ## Automatic BYOK deployment
 
@@ -22,9 +22,13 @@ Close IDEs before applying and reopen them to refresh cached model pickers. Sele
 
 ## Version and compatibility boundary
 
-Schema `jetbrains-byok-1.19-v1` admits the official all-platform `1.19.0-252` bundle and the six exact `1.19.0-261-{windows,macos,linux}-{x64,arm64}` distribution versions. The reviewed 252 and 261 Windows x64 language servers are byte-identical; their BYOK save commands and capability/provider contracts match. Unknown/future versions remain explicit read-only/unsupported until fixed schemas/fixtures are verified.
+The [1.13.0 Marketplace release notes](https://plugins.jetbrains.com/api/updates/1103496) introduce custom BYOK providers. [GitHub announced custom endpoints on July 14](https://github.blog/changelog/2026-07-14-github-copilot-for-jetbrains-expands-byok-capabilities/). The Windows runtime inside [1.12.1](https://plugins.jetbrains.com/api/updates/1088134) persists keys and models but lacks the custom provider configuration key. The adjacent 1.13.0 runtime adds reading, saving and listing that key. Their extracted Windows runtime SHA-256 values are `941123c8dbd1c5f399c2a5534e077e1a7485e9ecbb63e6dec6e5a854bce3e9c9` and `de517ec83ed9b9ce9409c9a267612d57439a2ad36346e541c72262795338825a`.
 
-The exact **`1.20.0-261-windows-x64`** distribution was additionally reviewed on 2026-11-03 and uses that same v1 store contract. Its modular plugin packaging retains the public top-level descriptor. The schema identity stays unchanged so existing durable ownership can survive an approved plugin upgrade. Other 1.20 distributions and future versions are not admitted by this review.
+The official enabled `com.github.copilot` descriptor must report a stable numeric release of at least **1.13.0**, followed by an IDE build and an optional Windows/macOS/Linux x64/arm64 package classifier. The shared BYOK file must be missing or a compatible bounded JSON object. Provider configuration entries require object-shaped companion catalogs. Unknown user fields retain their original values.
+
+The durable store identity is `jetbrains-byok-1.19-v1`. An upgrade invalidates an open preview. A fresh plan can use the existing provider ownership.
+
+The [1.21.1 Windows x64 distribution](https://plugins.jetbrains.com/api/updates/1221870) contains the official descriptor, modular core and BYOK persistence using the same provider, key and model-catalog fields. ZIP SHA-256: `bef3f5fb2d14ef6df35b9f158534c4485df5cfc5a56373b1bd4be5af29010a2f`. A sanitized [descriptor](../apps/desktop/src-tauri/src/adapters/jetbrains/fixtures/plugin-121-windows.xml) exercises shared ownership after upgrade.
 
 ### 2026-11-03 Windows x64 1.20 review
 
@@ -48,7 +52,7 @@ Preview shows the effective inference URL. A host root uses `/v1` by default; Ch
 
 Recognized default JetBrains profiles: IntelliJ IDEA/Community, PyCharm/Community, WebStorm, GoLand, CLion, Rider, PhpStorm, RubyMine, DataGrip, RustRover. Windows/macOS plugin root is `<config>/JetBrains/<product><version>/plugins`; Linux uses separate XDG data `JetBrains/<product><version>`. Custom/portable roots, Android Studio/Google roots, remote backends and renamed plugin roots are not scanned.
 
-Discovery reads public classic JAR `META-INF/plugin.xml` (or loose metadata), exact ID `com.github.copilot`, vendor `GitHub`, version and `disabled_plugins.txt`. Descriptor candidates are public `github-copilot-intellij*.jar` / legacy `copilot.jar`, not every dependency JAR. Metadata may remain after uninstall. Missing, disabled, unreviewed versions and unsafe/error states stay distinct.
+Discovery reads public classic JAR `META-INF/plugin.xml` (or loose metadata), exact ID `com.github.copilot`, vendor `GitHub`, version and `disabled_plugins.txt`. Descriptor candidates are public `github-copilot-intellij*.jar` / legacy `copilot.jar`, not every dependency JAR. Metadata may remain after uninstall. Missing, disabled, below-floor or malformed versions and unsafe/error states stay distinct.
 
 Bounds: 128 root/plugin/library entries, 32 profiles, 64 MiB per descriptor JAR / 128 MiB total candidate bytes, 8192 classic ZIP entries / 2 MiB central directory, 256 KiB XML / depth 32 / 32768 events / bounded identities. Dedicated BYOK JSON: 4 MiB, depth 32, 2048 keys/array values, 512-byte keys, 64 KiB strings. Reject duplicate keys, malformed metadata, XML document types/custom entities, ZIP64/multipart layouts, linked/junction/reparse parents and nonregular sensitive files. Discovery never extracts/executes archives. Diagnostics never echo raw values.
 
@@ -68,7 +72,7 @@ The fixed Windows x64 update 1190136 was downloaded again: 127292229 bytes, SHA-
 
 The [official XML documentation](https://docs.github.com/en/copilot/how-tos/copilot-in-your-ide/set-up-copilot/configure-in-ide?tool=jetbrains) documents language enablement and per-IDE paths; it does not document the complete XML BYOK preference schema or a stable external provider-write API. No real IDE XML, Password Safe, authentication store or conversation was opened or modified. CopilotBYOKManager leaves preferences unchanged and requires separate per-IDE official sign-in and runtime acceptance. Hashes below were computed locally from the inspected downloads. See the [isolated runtime acceptance procedure](local-validation-plan.md#jetbrains-隔离真机验收).
 
-Dashboard source chips verify each owned provider projection independently against persisted proofs and report only its observed model count. Adding another Connection does not remove existing suppliers or select a model in a running IDE. Unknown versions, inaccessible catalogs and changed ownership remain explicit unavailable/changed states.
+Dashboard source chips verify each owned provider projection independently against persisted proofs and report only its observed model count. Adding another Connection does not remove existing suppliers or select a model in a running IDE. Unsupported versions or formats, inaccessible catalogs and changed ownership remain explicit unavailable/changed states.
 
 Verified 2026-10-10 before automatic implementation:
 

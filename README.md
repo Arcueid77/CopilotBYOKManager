@@ -23,7 +23,7 @@
   Community: <a href="https://linux.do">LINUX DO</a>
 </p>
 
-> **v0.2.3** — [Download Windows and macOS packages](https://github.com/Arcueid77/CopilotBYOKManager/releases).
+> **v0.2.4** — [Download Windows and macOS packages](https://github.com/Arcueid77/CopilotBYOKManager/releases).
 
 ![Overview — interface example with simulated data](docs/images/overview-en.png)
 
@@ -49,12 +49,12 @@ Configure providers in these clients:
 
 | Client | Mode | Current boundary and next step |
 | --- | --- | --- |
-| VS Code Stable / Insiders / profiles | Automatic | Owned provider groups. Select the model in the correct profile, then test. [Detection details](docs/vscode-detection.md) |
-| GitHub Copilot CLI | Automatic | Multiple providers and models in `providers.json`. Restart the CLI session and select with `/model`. [Client guide](docs/user-guide.md#5-select-and-verify-the-model-in-each-client) |
-| Reviewed JetBrains GitHub Copilot distributions | Automatic, version-pinned | Close/reopen IDEs, sign in separately, select and test. [Exact reviewed versions](docs/jetbrains-support.md#version-and-compatibility-boundary) |
-| GitHub Copilot App | Manual + experimental opt-in | Selected providers/models auto-sync after explicit enablement. Reviewed Windows x64 App 1.1.25 only; [setup and storage risks](docs/user-guide.md#copilot-app). Manual setup remains available. |
+| VS Code Stable 1.122+ / Insiders 1.121+ / profiles | Automatic | Owned provider groups. Select the model in the correct profile, then test. [Detection details](docs/vscode-detection.md) |
+| GitHub Copilot CLI 1.0.83+ | Automatic | Multiple providers and models in `providers.json`. Restart the CLI session and select with `/model`. [Client guide](docs/user-guide.md#5-select-and-verify-the-model-in-each-client) |
+| GitHub Copilot for JetBrains | Automatic on stable plugin 1.13.0+ with compatible BYOK configuration | Reopen the IDE, sign in and select the model. [Compatibility](docs/jetbrains-support.md#version-and-compatibility-boundary) |
+| GitHub Copilot App | Manual or opt-in automatic sync | Official Windows x64 App with a supported provider JSON database format (first observed in 1.0.8). [Setup and key storage](docs/user-guide.md#copilot-app) |
 
-JetBrains supports the exact plugin distributions listed above; IDEs sharing a runtime directory may see the same configuration. Client policies, subscriptions and provider access requirements still apply.
+IDEs sharing the same JetBrains runtime directory can see the same configuration. See the [version roadmap](ROADMAP.md) for upcoming work.
 
 <a id="download"></a>
 
@@ -120,7 +120,7 @@ Read [SECURITY.md](SECURITY.md) before sharing diagnostics. Use the [security pa
 ## Known limits
 
 - CLI uses the default `~/.copilot/providers.json`; custom configuration-root overrides are not supported yet. [Registry details](docs/copilot-cli-support.md)
-- Copilot App SQLite sync is off by default and version-gated; JetBrains is limited to exact reviewed distributions.
+- Copilot App SQLite sync is off by default and version-gated; JetBrains requires a compatible BYOK store and a stable plugin from 1.13.0.
 - Usage, Billing and Resources/MCP/Skills/Instructions are outside this edition. Existing data remains intact. [Feature availability](docs/feature-availability.md).
 
 ## Screenshots

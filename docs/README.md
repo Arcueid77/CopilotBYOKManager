@@ -6,6 +6,7 @@ Start with the product overview in [English](../README.md) or [简体中文](../
 
 | Document | Purpose |
 | --- | --- |
+| [Version roadmap / 版本路线图](../ROADMAP.md) | Upcoming milestones, user outcomes and validation criteria |
 | [English user guide](user-guide.md) / [中文用户手册](user-guide.zh-CN.md) | Four pages, provider fields, model discovery, client follow-up, revoke/recovery and FAQ |
 | [Release engineering](release-engineering.md) | English v0.1 scope, reproducible Windows/macOS builds, dry-run/Draft/publish and artifact checks |
 | [Apple secrets and acceptance](release-secrets.md) | Maintainer-only account/credential/environment setup, real Intel/Apple Silicon/Windows checks |

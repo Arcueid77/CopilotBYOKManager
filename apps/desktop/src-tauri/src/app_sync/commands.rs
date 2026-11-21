@@ -45,6 +45,11 @@ pub async fn get_app_sync_status(state: State<'_, ManagedState>) -> Result<Statu
 }
 
 #[tauri::command(rename_all = "camelCase")]
+pub async fn check_app_sync_compatibility() -> Result<(), CommandFailure> {
+    native(|| sqlite::target::review().map(|_| ())).await
+}
+
+#[tauri::command(rename_all = "camelCase")]
 pub async fn preview_app_sync_enable(
     state: State<'_, ManagedState>,
     connection_ids: Vec<String>,
@@ -102,7 +107,11 @@ pub(super) fn preview_enable(
     value.target = Some(target.clone());
     value.granted_at = Some(Utc::now());
     value.nonce = uuid::Uuid::new_v4().to_string();
-    if mode.target.as_ref() == Some(&target) {
+    if mode
+        .target
+        .as_ref()
+        .is_some_and(|old| old.same_store(&target))
+    {
         value.recovery_ids = mode.recovery_ids.clone();
     }
     for connection in &connections {
@@ -253,14 +262,23 @@ pub async fn retry_app_sync(state: State<'_, ManagedState>) -> Result<Status, Co
                 "Enable the reviewed App synchronization scope first".into(),
             ));
         }
-        let target = mode.target.as_ref().ok_or(AppError::PlanChanged)?;
+        let target = mode
+            .target
+            .as_ref()
+            .ok_or(AppError::PlanChanged)?
+            .refreshed()?;
         let store = state.store()?;
         store.ensure_writable()?;
         crate::deployment::ensure_no_pending_journal(store.path())?;
         for id in mode.scopes.keys() {
             let connection = store.connection(id)?;
-            mode.approve(&connection, target)?;
-            sqlite::check_owned(target, store.installation_owner_id(), id, store.ownership())?;
+            mode.approve(&connection, &target)?;
+            sqlite::check_owned(
+                &target,
+                store.installation_owner_id(),
+                id,
+                store.ownership(),
+            )?;
         }
         drop(store);
         let guard = state.app_sync.mode.lock().map_err(|_| AppError::Lock)?;

@@ -4,7 +4,7 @@ Updated 2026-11-01. User instructions: [English](user-guide.md#copilot-app) / [�
 
 ## Experimental automatic flow
 
-The Apps card loads sync status independently of the dashboard. A missing consent file means disabled and causes no App database read or write. **Enable experimental sync** selects 1–16 saved providers, previews the pinned App version/database and endpoint scope, then presents the concrete plaintext-key/WAL/backup risk dialog. Confirmation submits a native-held one-shot ID; closing either dialog leaves consent and target rows unchanged. Scope, state or target changes invalidate the preview.
+The Apps card loads sync status independently of the dashboard. A missing consent file means disabled and causes no App database read or write. **Check and enable sync** selects 1–16 saved providers, checks the installed App build and database format before provider selection, then previews the destination and endpoint scope, then presents the concrete plaintext-key/WAL/backup risk dialog. Confirmation submits a native-held one-shot ID; closing either dialog leaves consent and target rows unchanged. Scope, state or target changes invalidate the preview.
 
 After consent, the native worker loads saved Connections, coalesces saves and serializes through the managed-write lock. Each provider uses a fresh native plan and row-scoped journal; no draft or background inference is sent. App-running checks show PendingAppExit and resume after closure. Configuration fingerprints and native authorization are rechecked inside the SQLite transaction before commit. Only installation/Connection-owned provider/model rows are prepared, and other tables remain protected from cascading updates.
 
@@ -12,7 +12,7 @@ Model additions/renames can synchronize within the consent scope. Removals show 
 
 **Turn auto-sync off** invalidates queued/in-flight authorization and preserves committed rows. **Remove managed App configuration** is a separate `RevokeApp` plan: it stops that provider's sync scope, checks durable ownership/current rows and references, then removes its rows while retaining the manager's Connection/key. Recovery resources remain available when sync is disabled. Revoke-and-delete can additionally delete the manager Connection after all owned targets commit. Detach-only leaves App rows and stops future automatic sync through scope validation.
 
-Review is limited to Windows x64 App 1.1.25 and its exact executable/schema, the default `~/.copilot/data.db`, restrictive owner/file/sidecar ACLs, and OpenAI-compatible Completions/Responses. Unknown versions, custom roots, missing database and unsafe access fail without initialization. See [implementation status](implementation-status.md) for checked evidence and pending real-client acceptance.
+Automatic sync requires an official stable Windows x64 App, a compatible provider/model schema in the default `~/.copilot/data.db`, restrictive ACLs and a supported Chat Completions or Responses provider. The build is rechecked for the one-shot plan. [Version and schema details](copilot-app-sqlite-sync.md).
 
 ## Manual fallback
 

@@ -84,8 +84,24 @@ pub async fn get_jetbrains_setup_guide(
     .map_err(|_| "JetBrains guide lookup failed".to_string())?
 }
 
-pub fn discover_targets() -> Vec<ClientTarget> {
+pub fn discover_plugin_metadata() -> Vec<ClientTarget> {
     observe().into_iter().map(|o| o.target).collect()
+}
+
+pub fn discover_targets() -> Vec<ClientTarget> {
+    let mut targets = discover_plugin_metadata();
+    if targets.iter().any(|target| target.supports_write)
+        && byok::store_path()
+            .and_then(|path| byok::check_namespace(&path))
+            .is_err()
+    {
+        for target in targets.iter_mut().filter(|t| t.supports_write) {
+            target.supports_write = false;
+            target.status = ClientStatus::ReadOnly;
+            target.detail = "Cannot use the existing GitHub Copilot BYOK configuration format. Review Manage Models in the IDE.".into();
+        }
+    }
+    targets
 }
 
 fn observe() -> Vec<Observation> {
@@ -159,7 +175,14 @@ fn discover_at(config: &Path, plugins: &Path) -> AppResult<Vec<Observation>> {
                 target.detail = if disabled {
                     format!("GitHub Copilot {version} is installed but disabled in this profile. Enable it in Settings > Plugins; restart if requested.")
                 } else {
-                    format!("GitHub Copilot {version} metadata found. {} IDE installation, running state and account are not verified.", if target.supports_write { "Automatic shared BYOK configuration is available; restart IDEs after deployment to refresh model pickers." } else { "Automatic writes are disabled for this unreviewed schema/version." })
+                    format!(
+                        "GitHub Copilot {version}. {}",
+                        if target.supports_write {
+                            "Restart the IDE after publishing to refresh the model picker."
+                        } else {
+                            "Automatic publication requires a stable plugin 1.13.0 or newer in a supported distribution format."
+                        }
+                    )
                 };
                 target.diagnostic = Some("Standard paths may be stale. Custom idea.config.path / idea.plugins.path and portable installs are not scanned. Descriptor identity is not a binary signature verification. BYOK is shared by IDEs using the same runtime configuration root; it is not per-profile login state.".into());
                 digest

@@ -7,6 +7,11 @@ use uuid::Uuid;
 
 pub(crate) mod sqlite;
 
+/// Inspect a public executable without opening the user's configuration.
+pub fn verified_sync_build(binary: &std::path::Path) -> AppResult<String> {
+    sqlite::build::verify(binary).map(|(version, _)| version)
+}
+
 pub fn discover_target() -> ClientTarget {
     let path = installation_path();
     let detected = path.is_some();

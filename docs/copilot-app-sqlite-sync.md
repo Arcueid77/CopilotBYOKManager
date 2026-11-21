@@ -1,21 +1,31 @@
 # Copilot App experimental SQLite synchronization
 
-Decision: 2026-10-31. Implementation: 2026-11-01. **Experimental, default-off; real-client request acceptance remains open.**
+Updated 2026-11-21 for minimum-version compatibility. Experimental sync starts disabled. Real model-picker and provider-request acceptance is tracked in [implementation status](implementation-status.md).
 
 The maintainer approved direct SQLite provider/model synchronization instead of waiting indefinitely for a documented App write interface. The integration must be **off by default**, require manual enablement and a concrete risk-confirmation dialog, and then automatically synchronize the explicitly selected Connections into the selected Copilot App installation.
 
-The native adapter and Apps panel now implement this contract for the pinned Windows x64 App 1.1.25 build. Discovery alone remains manual. Only a confirmed, destination-scoped consent record enables writes for its saved Connections. Earlier published packages remain manual; this source change does not update those packages or grant consent.
+Stable official Windows x64 App builds qualify for a read-only compatibility check. The adapter recognizes the JSON provider store by its actual tables, constraints and references. Opening the four-page workspace checks public executable metadata. **Check and enable sync** checks the closed App and existing database before provider selection. The native preview and apply repeat the checks and bind the actual build.
 
 ## Reviewed implementation and storage
 
 - Official [App 1.1.25 Windows release](https://github.com/github/app/releases/tag/v1.1.25): setup SHA-256 `6ca31b9003dceefd434a62d5b58b59e44a07b6083d1628ef5a137039e64b130e`; extracted `github.exe` is 405,381,920 bytes, SHA-256 `1c741981f9b450a17401ab4a8f44bcc556d42bb6a43561c4c9305c39a997e97f`. Its Windows signature was valid. The executable was extracted for schema review, without installing or launching the App.
 - Configuration DDL extracted independently from that binary matches the sanitized [v1 fixture](../apps/desktop/src-tauri/tests/fixtures/copilot-app/schema-v1.sql). The adapter pins both provider/model tables, columns, defaults, unique keys and foreign keys, rejects unknown triggers and binds the external reference graph. `sessions.provider_id` can cascade to SET NULL, so temporary connection-local guards abort any cascade into unrelated tables. Session values are never selected.
-- Only OpenAI-compatible Chat Completions and Responses are mapped. Other protocols, Windows ARM64, macOS/Linux, unknown executable hashes/schema and custom `COPILOT_HOME` are unsupported. The App must have created its own database at `~/.copilot/data.db`; it must be closed, with no pending WAL, for review. The adapter never initializes App tables.
+- The adapter projects OpenAI-compatible Chat Completions and Responses to the default database. See the [manual flow](copilot-app-support.md) for other platforms, formats and providers.
 - `app-sync.json` beside the manager's `state.json` stores private versioned consent, target file/owner identity, selected Connection destination hashes and recovery IDs. It contains no keys. Missing files on fresh installs/upgrades mean off; invalid or externally changed consent stops writes and preserves the original file. State remains v2 and the manager's Usage DB remains v3.
 - Native workers coalesce saves, serialize through the existing managed-write lock and make fresh one-shot deployment plans. Endpoint/protocol/headers/credential-mode changes require renewed consent. Model removals pause for explicit review and active/default-model confirmation. Database errors/conflicts pause automatic retries; **Check and retry** first checks current owned fingerprints. No background model request is sent.
 - Enablement reports separate typed causes for an App still running in the background, an exit that cannot be verified, unsafe database access permissions and an actual competing manager write. Closing the App window can leave its background process running; use its normal Quit/Exit action. A write-lock conflict pauses synchronization for explicit retry rather than being reported as waiting for App exit. The manager does not change shared `.copilot` permissions automatically.
 - Recovery uses `deployment-journal.json`, containing only necessary owned-row preimages/postimages plus other explicitly planned resources. It is written privately before mutation and removed after durable success or completed compensation. Interrupted or conflicting recovery retains it until reviewed Restore or Keep current. No whole-database backup is made. Restores remain conditional on the exact owned postimage, current file identity/schema and a closed App, including when sync is disabled.
 - [App synchronization service](../apps/desktop/src-tauri/src/app_sync/mod.rs), [SQLite adapter](../apps/desktop/src-tauri/src/adapters/github_app/sqlite/mod.rs) and [bilingual UI](../apps/desktop/web/app-sync-ui.js) implement the vertical slice. [Implementation status](implementation-status.md) separates source/fixture checks from pending real App visibility, selection and request acceptance.
+
+## JSON provider storage boundary
+
+The [1.0.5 release notes](https://github.com/github/app/releases/tag/v1.0.5) and [GitHub announcement](https://github.blog/changelog/2026-06-23-github-copilot-app-support-for-byok/) describe the public Model Providers settings UI. The official [Windows 1.0.7 package](https://github.com/github/app/releases/tag/v1.0.7) still contains the older `byok_providers` / `byok_models` layout. [1.0.8](https://github.com/github/app/releases/tag/v1.0.8) adds `model_providers.settings_json` and `provider_models`. The extracted executable SHA-256 values are `d5a4856a98574b127a6c4df8add23825d91b6822bc86ec3ebc41d4e89daf948b` and `2fe4f885076db223ebdb999ea06f629191bdeeb91a9aa4bf152456da25d49243` respectively.
+
+The native gate checks the existing store. The early JSON layout also stores endpoint, wire API, auth mode and headers in scalar columns. The adapter writes those columns atomically with settings and rejects diverging mirrors. The 1.0.23 layout adds a nullable account reference, and 1.1.0 removes the scalar mirrors. Later releases add supported reasoning efforts and then model vision. Only the manager’s own provider and model rows can be changed. Changing the approved format or references requires a fresh scope review. [Early JSON fixture](../apps/desktop/src-tauri/tests/fixtures/copilot-app/schema-early-json.sql).
+
+## Windows x64 1.4.3 and schema v2
+
+The [official 1.4.3 package](https://github.com/github/app/releases/tag/v1.4.3) has SHA-256 `5617ca68cfb2c2c6815b1584ad496b9956b13dea8584db2694e2bfbfdb17606a`. Its extracted GitHub-signed executable reports product GitHub Copilot, version 1.4.3, SHA-256 `ea5463886513e3335b3a00beb96c294ae08288b8559d2d271d61b066b59fad1f`. The published schema and migration 206 add a checked, non-null `supports_vision` column with default 0. The [migration fixture](../apps/desktop/src-tauri/tests/fixtures/copilot-app/schema-v2-upgrade.sql) exercises existing ownership, vision changes, rollback and revocation. Unknown columns and triggers block writes. The App owns its migrations.
 
 ## Evidence and interface boundary
 
@@ -25,7 +35,7 @@ The native adapter and Apps panel now implement this contract for the pinned Win
 - The App database is distinct from Copilot CLI's `providers.json` and from the manager's `usage.sqlite3`. Do not reuse the CLI writer or the Usage importer.
 - Resolve the App's actual configuration root using a reviewed platform contract, including `COPILOT_HOME` only if verified for that version. Do not guess paths, scan other profiles, or create a partial App database when it does not exist.
 
-Before implementation, pin the relevant upstream commit and exact App versions, add sanitized fixtures, and record tested OS/architecture combinations. Unknown versions or schema drift remain Unsupported/SchemaError, never best-effort writes.
+A new storage format requires a versioned parser, sanitized success/failure fixtures and renewed scope confirmation. Supported updates with the same destination and format can continue under existing consent. The resource identity retains the v0.2.3 binding for owned rows.
 
 ## Opt-in and automatic synchronization
 

@@ -3,7 +3,7 @@
 use crate::error::{AppError, AppResult};
 use std::path::{Path, PathBuf};
 
-pub(super) struct ProductIdentity {
+pub(crate) struct ProductIdentity {
     pub product: String,
     pub version: String,
 }
@@ -15,7 +15,7 @@ fn unavailable() -> AppError {
     )
 }
 
-pub(super) fn product(path: &Path) -> AppResult<ProductIdentity> {
+pub(crate) fn product(path: &Path) -> AppResult<ProductIdentity> {
     #[cfg(feature = "local-e2e")]
     if crate::test_support::active() {
         // The test backend recognizes only exact files below its validated root.
@@ -231,7 +231,7 @@ fn verify_with(path: &Path, verifier: impl FnOnce(&Path) -> AppResult<String>) -
     Ok(())
 }
 
-fn trusted_publisher(path: &Path) -> AppResult<String> {
+pub(crate) fn trusted_publisher(path: &Path) -> AppResult<String> {
     use std::os::windows::ffi::OsStrExt;
     use windows_sys::Win32::Security::Cryptography::{
         CertGetNameStringW, CERT_NAME_SIMPLE_DISPLAY_TYPE,

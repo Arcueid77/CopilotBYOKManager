@@ -201,6 +201,8 @@ fn ownership_conflicts_still_block_but_manual_edits_and_removal_do_not() {
 fn parser_fails_closed_without_raw_values_or_duplicate_key_adoption() {
     for bytes in [
         b"[1,2]".as_slice(),
+        br#"{"providers":[],"models":[]}"#,
+        br#"{"x-provider-config":{},"x-models-config":[]}"#,
         b"{SECRET-DO-NOT-ECHO",
         b"{\"x\":1,\"x\":2}",
         b"{\"x\":{\"nested\":1,\"nested\":2}}",
@@ -238,12 +240,27 @@ fn namespace_paths_follow_the_reviewed_runtime_not_ide_options_or_password_safe(
     );
     assert!(supported_version("1.19.0-261-windows-x64"));
     assert!(supported_version("1.19.0-252"));
-    assert!(!supported_version("1.18.0-252"));
+    assert!(supported_version("1.13.0-251"));
+    assert!(supported_version("1.18.0-252"));
+    assert!(!supported_version("1.12.1-251"));
     assert!(supported_version("1.20.0-261-windows-x64"));
-    assert!(!supported_version("1.20.0-261-windows-arm64"));
-    assert!(!supported_version("1.20.0-261-macos-arm64"));
-    assert!(!supported_version("1.20.0-252"));
-    assert!(!supported_version("1.21.0-261-windows-x64"));
+    assert!(supported_version("1.20.0-261-windows-arm64"));
+    assert!(supported_version("1.20.0-261-macos-arm64"));
+    assert!(supported_version("1.20.0-252"));
+    assert!(supported_version("1.21.1-261-windows-x64"));
+    assert!(supported_version("2.0.0-263-linux-x64"));
+    for invalid in [
+        "1.9.99-261",
+        "1.19.0-eap",
+        "1.19.0-261-beta",
+        "1.19.0-261-linux-x86",
+        "1.19.00-261",
+        "1.19.0-261-windows-x64-extra",
+        "1.19.0",
+        "4294967296.0.0-261",
+    ] {
+        assert!(!supported_version(invalid), "{invalid}");
+    }
     assert!(!supported_version("1.19.0-261-win-x64"));
     let mut c = connection();
     c.base_url = "https://example.invalid/v1?api-version=future".into();

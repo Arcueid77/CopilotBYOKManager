@@ -1,7 +1,27 @@
 use std::path::Path;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum AppCompatibilityIssue {
+    #[error("Automatic App sync requires Windows x64")]
+    Platform,
+    #[error("Copilot App was not found in its supported installation locations")]
+    NotInstalled,
+    #[error("Cannot identify a stable GitHub Copilot App release")]
+    Version,
+    #[error("Cannot verify the official GitHub Copilot x64 executable and its GitHub publisher")]
+    Identity,
+    #[error("Unsupported Copilot App database schema; use manual configuration")]
+    Schema,
+}
+
 #[derive(Debug, thiserror::Error)]
 pub enum AppError {
+    #[error(transparent)]
+    AppCompatibility(#[from] AppCompatibilityIssue),
+    #[error("Copilot App storage changed. Review the synchronization scope again")]
+    AppScopeChanged,
+
     #[error("Operation cancelled; verify any effects already completed")]
     Cancelled,
 

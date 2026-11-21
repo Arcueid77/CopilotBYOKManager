@@ -8,10 +8,16 @@ const crypto = require('node:crypto');
 const http = require('node:http');
 const { spawn } = require('node:child_process');
 const binary = process.env.COPILOT_BYOK_MANAGER_CLI_TEST_BINARY;
-const digest = '76326203b73b12b5ef02d1061110dc27df52b24fa349f2af4380062fc4f5401b';
+const artifacts = new Map([
+  ['af47bd92079e989cb88bc3d5c1f4351a0bbe0cf3f423e600acd79d544a592d56', '1.0.82'],
+  ['d3f3bb7b8bbf68357ad29f514a179d09f76135483d8bfb643131b8600f671ee2', '1.0.83'],
+  ['76326203b73b12b5ef02d1061110dc27df52b24fa349f2af4380062fc4f5401b', '1.0.101'],
+]);
 assert.equal(process.platform, 'win32', 'This pinned artifact is Windows x64');
-assert.ok(binary && path.isAbsolute(binary), 'Set COPILOT_BYOK_MANAGER_CLI_TEST_BINARY to the isolated official 1.0.101 copilot.exe');
-assert.equal(crypto.createHash('sha256').update(fs.readFileSync(binary)).digest('hex'), digest, 'Pinned official binary digest');
+assert.ok(binary && path.isAbsolute(binary), 'Set COPILOT_BYOK_MANAGER_CLI_TEST_BINARY to a pinned official copilot.exe');
+const digest = crypto.createHash('sha256').update(fs.readFileSync(binary)).digest('hex');
+const version = artifacts.get(digest);
+assert.ok(version, 'Unknown official CLI artifact digest');
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'copilot-byok-manager-registry-'));
 const requests = [];
 const server = http.createServer((req, res) => {
@@ -49,7 +55,12 @@ async function run(name, config, selected, expected) {
     assert.deepEqual(requests.slice(offset), [expected]);
   } else {
     assert.notEqual(result.code, 0);
-    assert.match(result.output, /`providers` is not an array/);
+    const diagnostic = {
+      '1.0.82': /COPILOT_PROVIDER_BASE_URL/,
+      '1.0.83': /`providers` must be a JSON array/,
+      '1.0.101': /`providers` is not an array/,
+    };
+    assert.match(result.output, diagnostic[version]);
     assert.equal(requests.length, offset);
   }
 }
@@ -59,10 +70,15 @@ async function run(name, config, selected, expected) {
     const provider = name => ({ name, type: 'openai', wireApi: 'completions', baseUrl: `http://127.0.0.1:${server.address().port}/v1`, apiKey: 'fixture-only', headers: { 'X-Fixture': name } });
     const model = (provider, id, wireModel) => ({ id, provider, modelId: id, wireModel, name: `${provider} · ${id}`, maxContextWindowTokens: 128000, maxOutputTokens: 8192, capabilities: { supports: { vision: false, toolCalls: true } } });
     const config = { providers: [provider('alpha'), provider('beta')], models: [model('alpha', 'shared-model', 'alpha-wire'), model('alpha', 'org/code:latest', 'alpha-colon-wire'), model('beta', 'shared-model', 'beta-wire')] };
+    if (version === '1.0.82') {
+      await run('before-registry', config, 'alpha/shared-model', null);
+      console.log(JSON.stringify({ status: 'passed', cli: version, sha256: digest, syntheticRequests: requests.length, cases: 1 }));
+      return;
+    }
     await run('alpha-shared', config, 'alpha/shared-model', { model: 'alpha-wire', provider: 'alpha', key: true });
     await run('alpha-qualified', config, 'alpha/org/code:latest', { model: 'alpha-colon-wire', provider: 'alpha', key: true });
     await run('beta-shared', config, 'beta/shared-model', { model: 'beta-wire', provider: 'beta', key: true });
     await run('invalid-map', { providers: { alpha: provider('alpha') }, models: [] }, 'alpha/shared-model', null);
-    console.log(JSON.stringify({ status: 'passed', cli: '1.0.101', sha256: digest, syntheticRequests: requests.length, cases: 4, output: root }));
+    console.log(JSON.stringify({ status: 'passed', cli: version, sha256: digest, syntheticRequests: requests.length, cases: 4, output: root }));
   } finally { server.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; server.close(); });

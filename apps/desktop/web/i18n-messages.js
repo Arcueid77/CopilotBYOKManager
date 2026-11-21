@@ -5,6 +5,14 @@
   if (typeof module === "object" && module.exports) module.exports = messages;
   else root.CopilotBYOKManagerMessages = messages;
 })(globalThis, () => ({
+  "自动同步需要 Windows x64。": ["自动同步需要 Windows x64。", "Automatic sync requires Windows x64."],
+  "请先安装 Copilot App。": ["请先安装 Copilot App。", "Install Copilot App first."],
+  "无法识别已安装的 Copilot App 稳定版本。": ["无法识别已安装的 Copilot App 稳定版本。", "Could not identify the installed stable Copilot App release."],
+  "无法验证 GitHub 发布的 x64 Copilot App。请检查安装来源。": ["无法验证 GitHub 发布的 x64 Copilot App。请检查安装来源。", "Could not verify the official GitHub Copilot x64 app. Check the installation source."],
+  "此 App 数据库格式暂不支持自动同步，请使用配置指引。": ["此 App 数据库格式暂不支持自动同步，请使用配置指引。", "This App database format is unsupported. Use the setup guide."],
+  "检查同步兼容性": ["检查同步兼容性", "Check sync compatibility"],
+  "正在检查 App 和数据库格式…": ["正在检查 App 和数据库格式…", "Checking the App and its database format…"],
+  "检查并启用同步": ["检查并启用同步", "Check and enable sync"],
   "选择要发布到的应用。": ["选择要发布到的应用。", "Select the apps to publish to."],
   "更新此应用中的供应商与模型配置。": ["更新此应用中的供应商与模型配置。", "Update this app's provider and model configuration."],
   "{0} · 配置指引": ["{0} · 配置指引", "{0} · Setup guide"],
@@ -214,7 +222,7 @@
   "关闭窗口收起到系统托盘；点击托盘图标恢复，右键菜单可退出。普通最小化仍留在任务栏。": ["关闭窗口收起到系统托盘；点击托盘图标恢复，右键菜单可退出。普通最小化仍留在任务栏。", "Closing the window hides it to the system tray. Left-click to open the main window, or right-click and choose Exit CopilotBYOKManager. Ordinary minimize stays on the taskbar."],
   "系统托盘不可用，关闭窗口将正常退出。": ["系统托盘不可用，关闭窗口将正常退出。", "System tray is unavailable. Closing the window exits normally."],
   "一次配置供应商，用于多个 Copilot 应用。": ["一次配置供应商，用于多个 Copilot 应用。", "Configure a provider once, reuse it across Copilot apps."],
-  "核心配置版 · 预发布 · 0.2.3": ["核心配置版 · 预发布 · 0.2.3", "Core configuration edition · Pre-release · 0.2.3"],
+  "核心配置版 · 预发布 · 0.2.4": ["核心配置版 · 预发布 · 0.2.4", "Core configuration edition · Pre-release · 0.2.4"],
   "界面与窗口": ["界面与窗口", "Appearance and window"],
   "未推出功能记录": ["未推出功能记录", "Planned feature status"],
   "用量、账单与共享资源暂未开放，已有数据保留。规划记录不承诺上线日期。": ["用量、账单与共享资源暂未开放，已有数据保留。规划记录不承诺上线日期。", "Usage, Billing and shared resources are not available in this edition. Existing data is retained. The feature record promises no release dates."],
@@ -1974,9 +1982,9 @@
     "仅检测标准 IDE 目录；自定义与便携路径需手动核对。",
     "Only standard IDE directories are detected. Check custom and portable paths manually."
   ],
-  "自动写入需要已审核插件版本、已保存密钥和兼容端点。请核对下方原因。": [
-    "自动写入需要已审核插件版本、已保存密钥和兼容端点。请核对下方原因。",
-    "Automatic writes require a reviewed plugin version, saved key and compatible endpoint. Review the reasons below."
+  "自动发布需要 1.13.0 或更高稳定版插件、兼容的 BYOK 配置和已保存的供应商密钥。": [
+    "自动发布需要 1.13.0 或更高稳定版插件、兼容的 BYOK 配置和已保存的供应商密钥。",
+    "Automatic publication requires a stable plugin version 1.13.0 or newer, a compatible BYOK configuration and a saved provider key."
   ],
   "可自动发布 BYOK。": [
     "可自动发布 BYOK。",

@@ -1,5 +1,7 @@
 # CopilotBYOKManager VS Code installation and capability detection
 
+Our projection uses the Custom Endpoint provider in `chatLanguageModels.json`. Microsoft introduced it in [1.121 Insiders](https://code.visualstudio.com/updates/v1_121) and shipped it in [1.122 Stable](https://code.visualstudio.com/updates/v1_122). Each discovered edition uses its own public product metadata and minimum when qualifying a profile for publication.
+
 The Windows adapter recognizes the official `code.cmd` launcher as data, then invokes the verified adjacent `Code.exe` with the installed `cli.js` as the first argument. It sets `ELECTRON_RUN_AS_NODE=1` only in that child, removes `VSCODE_DEV` and inherited sensitive variables, and uses `CREATE_NO_WINDOW`. It never executes the wrapper or a shell command. The separate sign-in action does not spawn the GUI executable: it focuses a matching existing Windows editor or gives manual Accounts instructions. This avoids triggering saved-window and hot-exit restoration.
 
 This document records the detection contract; [local validation](local-validation-plan.md) records the 2026-09-11 sign-in correction and its test limits. The [current status](implementation-status.md) distinguishes later UI checks from real client/account acceptance.

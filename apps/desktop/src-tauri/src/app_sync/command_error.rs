@@ -16,6 +16,8 @@ pub enum FailureCode {
 #[serde(rename_all = "camelCase")]
 pub struct CommandFailure {
     pub code: FailureCode,
+    #[serde(rename = "compatibilityIssue", skip_serializing_if = "Option::is_none")]
+    pub compatibility_issue: Option<crate::error::AppCompatibilityIssue>,
     pub message: String,
 }
 
@@ -30,6 +32,10 @@ impl From<AppError> for CommandFailure {
         };
         Self {
             code,
+            compatibility_issue: match &error {
+                AppError::AppCompatibility(issue) => Some(*issue),
+                _ => None,
+            },
             message: crate::redact::redact_text(&error.to_string()),
         }
     }
@@ -38,6 +44,7 @@ impl CommandFailure {
     pub(super) fn worker_failure() -> Self {
         Self {
             code: FailureCode::Unavailable,
+            compatibility_issue: None,
             message: "Copilot App synchronization worker failed".into(),
         }
     }

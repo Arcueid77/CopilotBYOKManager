@@ -1,4 +1,6 @@
 //! Native-only scoped projections. Snapshots contain only this manager's owned rows.
+pub(super) mod build;
+mod provider_settings;
 mod rows;
 mod schema;
 mod security;
@@ -65,7 +67,8 @@ impl AppResource {
             self.target.database.display(),
             self.target.identity,
             self.target.schema,
-            self.target.version,
+            // Keep the v0.2.3 physical key for existing durable ownership.
+            "1.1.25", // historical resource-key component, independent of executable version
             self.target.binary.display(),
             self.provider_id
         );
@@ -86,11 +89,8 @@ impl AppResource {
         }
         let _guard = self.target.verify()?;
         let db = open_readonly(&self.target.database)?;
-        let (schema, _) = schema::inspect(&db)?;
-        if schema != self.target.schema {
-            return Err(AppError::PlanChanged);
-        }
-        rows::read(&db, &self.provider_id)?
+        self.target.check_schema(&db)?;
+        rows::read(&db, &self.provider_id, self.target.format)?
             .map(|p| p.bytes())
             .transpose()
     }
@@ -130,12 +130,9 @@ impl AppResource {
         let transaction = db
             .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)
             .map_err(schema::sql_error)?;
-        let (schema, references) = schema::inspect(&transaction)?;
-        if schema != self.target.schema {
-            return Err(AppError::PlanChanged);
-        }
-        schema::guard_references(&transaction, &references)?;
-        let current = rows::read(&transaction, &self.provider_id)?
+        let schema = self.target.check_schema(&transaction)?;
+        schema::guard_references(&transaction, &schema.references)?;
+        let current = rows::read(&transaction, &self.provider_id, schema.format)?
             .map(|p| p.bytes())
             .transpose()?;
         if current.as_deref() != expected {
@@ -147,8 +144,9 @@ impl AppResource {
             &self.provider_id,
             before.as_ref(),
             desired.as_ref(),
+            schema.format,
         )?;
-        let written = rows::read(&transaction, &self.provider_id)?
+        let written = rows::read(&transaction, &self.provider_id, schema.format)?
             .map(|p| p.bytes())
             .transpose()?;
         if written.as_deref() != after {
@@ -212,9 +210,7 @@ pub fn prepare(
     let resource_id = ownership::resource_id(&physical);
     let _guard = target.verify()?;
     let db = open_readonly(&target.database)?;
-    if schema::inspect(&db)?.0 != target.schema {
-        return Err(AppError::PlanChanged);
-    }
+    target.check_schema(&db)?;
     let has_row = rows::exists(&db, &app_resource.provider_id)?;
     let proof = records.iter().find(|r| {
         r.target_kind == crate::domain::ClientKind::GithubCopilotApp
@@ -254,6 +250,7 @@ pub fn prepare(
                 secret,
                 &app_resource.provider_id,
                 before_rows.as_ref(),
+                target.format,
             )?
             .bytes()?,
         )
@@ -283,9 +280,7 @@ pub fn observed_source(resource: &AppResource) -> AppResult<Option<(String, usiz
         return Err(AppError::PlanChanged);
     }
     let db = open_readonly(&resource.target.database)?;
-    if schema::inspect(&db)?.0 != resource.target.schema {
-        return Err(AppError::PlanChanged);
-    }
+    resource.target.check_schema(&db)?;
     let name:Option<String>=db.query_row("SELECT CASE WHEN length(CAST(name AS BLOB))<=512 THEN name END FROM model_providers WHERE id=?1",[&resource.provider_id],|r|r.get(0)).optional().map_err(schema::sql_error)?;
     name.map(|name| {
         let count: i64 = db
@@ -317,6 +312,7 @@ pub fn validate_input(connection: &Provider) -> AppResult<()> {
         None,
         &rows::provider_id("preview", &connection.id)?,
         None,
+        schema::Format::V1,
     )
     .map(|_| ())
 }

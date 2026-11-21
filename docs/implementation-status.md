@@ -1,6 +1,12 @@
 # CopilotBYOKManager implementation status
 
-Updated 2026-11-03 for the workspace redesign, reviewed JetBrains 1.20 Windows x64 support and 0.2.3 preparation. Initial release engineering started at `83a82db3555eb0defa278bd6e042b7c55a76088f`; source and evidence are recorded below. The [specification §21](mvp-implementation-spec.md#21-final-acceptance) and [feature availability](feature-availability.md) separate the core release from the retained extended milestone. Public versions and their exact build metadata are on [Releases](https://github.com/Arcueid77/CopilotBYOKManager/releases).
+Updated 2026-11-21 for v0.2.4 client upgrade compatibility. Initial release engineering started at `83a82db3555eb0defa278bd6e042b7c55a76088f`; source and evidence are recorded below. The [specification §21](mvp-implementation-spec.md#21-final-acceptance) and [feature availability](feature-availability.md) separate the core release from the retained extended milestone. Public versions and their exact build metadata are on [Releases](https://github.com/Arcueid77/CopilotBYOKManager/releases).
+
+## 2026-11-21 v0.2.4 compatibility
+
+The four-page release uses upstream JSON capability boundaries, native identity checks and actual BYOK/SQLite format checks. The App preflight runs on request before provider selection. Signed build identity is bound to the plan, while the existing physical resource key and v1 row proofs continue across compatible upgrades. The App owns schema migration. Tests on the 1.0.82 and 1.0.83 CLI distributions confirmed the file-loader boundary with two synthetic providers. The JetBrains 1.12.1 and 1.13.0 runtimes were compared against the Marketplace change notes. Actual App executable identity was checked for 1.0.7, 1.0.8, 1.0.23, 1.1.0 and 1.4.3. The JSON provider store was verified in Windows App 1.0.8, after the older table layout in 1.0.7. Its early scalar mirrors are conditionally checked and updated atomically. Migration 206 is handled by the vision-aware projection with separate scope confirmation. [Roadmap](../ROADMAP.md) · [JetBrains evidence](jetbrains-support.md) · [App evidence](copilot-app-sqlite-sync.md).
+
+Local checks completed on Windows with Rust 1.88: 331 native unit tests and six integrations, 108 web tests, 27 release tests, eight isolated browser scenarios, formatting and strict Clippy. The official CLI 1.0.82 rejected the registry-only fixture without sending a request. Version 1.0.83 completed three loopback model selections and rejected an invalid registry. Clean-system installation and real IDE/App model-picker requests are tracked separately.
 
 ## 2026-11-03 v0.2.3 release preparation
 

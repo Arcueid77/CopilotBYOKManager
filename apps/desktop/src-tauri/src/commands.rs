@@ -185,7 +185,8 @@ pub async fn get_dashboard(state: State<'_, ManagedState>) -> Result<DashboardSn
                 "An interrupted deployment requires recovery review; managed writes are disabled"
                     .to_string()
             });
-        let clients = crate::app_sync::targets(&state);
+        let mut clients = crate::app_sync::targets(&state);
+        crate::app_sync::qualify_json_targets(&state, &mut clients, &[]);
         let mut client_configurations =
             deployment::publication::observe(&clients, &connections, &owner_id);
         state.app_sync.observe(&state, &mut client_configurations);
@@ -599,7 +600,7 @@ pub async fn preview_deployment(
             .with_ownership(store.ownership());
             (connection, secret, context)
         };
-        let targets = crate::app_sync::targets_for_connection(&state, &connection);
+        let targets = crate::app_sync::targets_for_connection(&state, &connection, &target_ids);
         let plan = adapters::preview_resolved(&connection, &target_ids, &targets)
             .map_err(command_error)?;
         let context = context.with_app(
@@ -732,7 +733,13 @@ pub(crate) fn execute_stored_plan(
     let targets = if revoke {
         crate::app_sync::targets(state)
     } else {
-        crate::app_sync::targets_for_connection(state, &connection)
+        let selected = stored
+            .plan
+            .operations
+            .iter()
+            .map(|op| op.target_id.clone())
+            .collect::<Vec<_>>();
+        crate::app_sync::targets_for_connection(state, &connection, &selected)
     };
     deployment::validate_plan(&stored, &connection, &targets, &context)?;
     crate::app_sync::commands::authorize_plan(

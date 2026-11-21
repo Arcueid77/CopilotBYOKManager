@@ -1,6 +1,6 @@
 # CopilotBYOKManager feature availability
 
-Updated 2026-11-02. The **v0.2 release-candidate scope** retains the approved core configuration edition with four pages: **Overview, Providers, Apps and About**. Configure providers, publish to selected targets, inspect results and revoke owned configuration. Packages and versions are listed on [Releases](https://github.com/Arcueid77/CopilotBYOKManager/releases).
+Updated 2026-11-21. The core edition has four pages: Overview, Providers, Apps and About. [Version roadmap](../ROADMAP.md).
 
 ## Available in the current interface
 
@@ -15,7 +15,7 @@ See [implementation status](implementation-status.md) for the evidence attached 
 
 ## Experimental App integration
 
-[Copilot App SQLite synchronization](copilot-app-sqlite-sync.md) is implemented as a default-off experimental integration for the exact Windows x64 App 1.1.25 build. Enable it in Apps, choose providers and confirm the plaintext-key/database risks. Native plans, owned rows, scoped recovery, save coalescing and separate revocation are connected. Real App picker/request acceptance remains open; previously published packages still use manual setup. This is separate from the hidden extended services below.
+[Copilot App SQLite synchronization](copilot-app-sqlite-sync.md) is available on official Windows x64 App builds with a compatible provider/model JSON database format. Check compatibility, choose saved providers and confirm the key-storage disclosure.
 
 ## Planned capabilities not offered in this edition
 
@@ -47,7 +47,7 @@ Organization/enterprise Billing, provider invoices, cloud usage synchronization,
 
 ## 中文功能记录
 
-2026-11-01 已实现 Copilot App 的[实验性 SQLite 同步](copilot-app-sqlite-sync.md)，仅限精确审核的 Windows x64 App 1.1.25。默认关闭，选择供应商并确认风险后自动同步，支持暂停、模型移除复核、单独撤销和条件恢复。实际模型选择器与真实请求仍待验收；此前发布包继续使用手动流程。认证、会话和用量私有表不开放。
+官方 Windows x64 Copilot App 的供应商数据库格式兼容时可[检查并启用自动同步](copilot-app-sqlite-sync.md)。关闭 App、检查现有数据库格式，再选择供应商并确认密钥存储风险。
 
 当前为四页核心配置版：**总览、供应商、应用、关于**。先做好供应商配置、选择应用、直接发布或查看变更、结果核对和安全撤销。中英文、浅色/深色/跟随系统，以及 Windows 关闭到托盘属于本版界面能力。托盘采用 CC Switch 式规则：默认关闭至托盘，可在关于页改为直接退出；左键打开主窗口，右键显示本语言菜单，再次启动唤回已有实例。托盘和真实应用是否通过验收，以[实现状态](implementation-status.md)为准。
 

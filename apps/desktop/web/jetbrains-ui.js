@@ -10,7 +10,7 @@
   function guide(connection, target, operation) {
     const automatic = Boolean(operation?.supported);
     return `<details><summary>${tr("目标观察与诊断")}</summary><p>${e(target.detail)}</p><p>${e(target.path ?? tr("仅检测标准 IDE 目录；自定义与便携路径需手动核对。"))}</p></details>
-      ${automatic ? `<p><strong>${tr("可自动发布 BYOK。")}</strong>${tr("相同配置根路径的 IDE 共用")} <code>github-copilot/byok.json</code>${tr("，只写一次并保留其他供应商。")}</p>` : `<p>${tr("自动写入需要已审核插件版本、已保存密钥和兼容端点。请核对下方原因。")}</p>`}
+      ${automatic ? `<p><strong>${tr("可自动发布 BYOK。")}</strong>${tr("相同配置根路径的 IDE 共用")} <code>github-copilot/byok.json</code>${tr("，只写一次并保留其他供应商。")}</p>` : `<p>${tr("自动发布需要 1.13.0 或更高稳定版插件、兼容的 BYOK 配置和已保存的供应商密钥。")}</p>`}
       ${automatic ? `<ol class="manual-steps"><li>${tr("关闭使用同一配置根路径的 IDE。")}</li>
         <li>${tr("选择")}<strong>${tr("预览自动 BYOK")}</strong>${tr("，核对目标和模型，再确认发布。")}</li>
         <li>${tr("本软件自动写入密钥、端点和模型配置，无需在 Manage Models 中重新输入。")}</li>

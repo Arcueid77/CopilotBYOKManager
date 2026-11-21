@@ -1,17 +1,10 @@
 use super::{commands::*, *};
 #[test]
-fn status_reports_platform_review_support_without_granting_consent() {
+fn sync_review_requires_an_observed_compatible_installation() {
     let status = Status::default();
-    assert_eq!(
-        status.review_supported,
-        cfg!(all(windows, target_arch = "x86_64"))
-    );
+    assert!(!status.review_supported);
     assert!(!status.enabled);
     assert!(status.selected_connection_ids.is_empty());
-    assert_eq!(
-        serde_json::to_value(status).unwrap()["reviewSupported"],
-        cfg!(all(windows, target_arch = "x86_64"))
-    );
 }
 use crate::{
     domain::{ClientStatus, ConnectionInput},
@@ -369,4 +362,34 @@ fn managed_write_contention_is_not_reported_as_a_running_app() {
             .is_none());
         drop(lease);
     });
+}
+
+#[test]
+fn a_client_upgrade_invalidates_an_open_enable_plan_but_keeps_the_same_approved_store() {
+    let (_root, state, old, connections) = fixture();
+    let id = connections[0].id.clone();
+    let preview = preview_enable(&state, vec![id.clone()], || Ok(old.clone())).unwrap();
+    let mut upgraded = old.clone();
+    upgraded.version = "1.4.3".into();
+    upgraded.build_sha256 = Some("a".repeat(64));
+    assert!(old.same_scope(&upgraded));
+    assert!(matches!(
+        enable(&state, preview.id, true, || Ok(upgraded.clone())),
+        Err(AppError::PlanChanged)
+    ));
+    assert!(!state.app_sync.snapshot().unwrap().enabled);
+    approve(&state, &old, vec![id]);
+    assert!(state
+        .app_sync
+        .snapshot()
+        .unwrap()
+        .approve(&connections[0], &upgraded)
+        .is_ok());
+    upgraded.schema = "b".repeat(64);
+    assert!(state
+        .app_sync
+        .snapshot()
+        .unwrap()
+        .approve(&connections[0], &upgraded)
+        .is_err());
 }

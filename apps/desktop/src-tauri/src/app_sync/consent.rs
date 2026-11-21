@@ -79,7 +79,10 @@ impl Consent {
             crate::validation::validate_connection_id(id)?;
         }
         if let Some(target) = &self.target {
-            if target.version != crate::adapters::github_app::sqlite::target::VERSION
+            if !crate::adapters::github_app::sqlite::target::supported_version(&target.version)
+                || target.build_sha256.as_ref().is_some_and(|hash| {
+                    hash.len() != 64 || !hash.bytes().all(|b| b.is_ascii_hexdigit())
+                })
                 || target.schema.len() != 64
                 || !target.schema.bytes().all(|b| b.is_ascii_hexdigit())
                 || target.identity.is_empty()
@@ -95,7 +98,10 @@ impl Consent {
     }
     pub fn approve(&self, connection: &Connection, target: &Target) -> AppResult<()> {
         if !self.enabled
-            || self.target.as_ref() != Some(target)
+            || !self
+                .target
+                .as_ref()
+                .is_some_and(|saved| saved.same_scope(target))
             || self.scopes.get(&connection.id) != Some(&destination(connection)?)
         {
             return Err(AppError::Unsupported(

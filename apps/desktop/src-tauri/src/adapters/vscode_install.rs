@@ -348,6 +348,10 @@ fn named_profile_copilot(user: &Path) -> AppResult<Option<InstalledCopilot>> {
 }
 
 pub fn find_executable() -> Option<PathBuf> {
+    find_edition(None)
+}
+
+pub(super) fn find_edition(insiders: Option<bool>) -> Option<PathBuf> {
     #[cfg(feature = "local-e2e")]
     if crate::test_support::active() {
         return crate::test_support::executable("code.exe");
@@ -384,7 +388,19 @@ pub fn find_executable() -> Option<PathBuf> {
             }
         }
     }
-    candidates.into_iter().find(|path| path.is_file())
+    candidates.into_iter().find(|path| {
+        insiders.is_none_or(|value| {
+            path.file_name()
+                .and_then(OsStr::to_str)
+                .is_some_and(|name| {
+                    name.eq_ignore_ascii_case(if value {
+                        "Code - Insiders.exe"
+                    } else {
+                        "Code.exe"
+                    })
+                })
+        }) && path.is_file()
+    })
 }
 
 #[cfg(test)]

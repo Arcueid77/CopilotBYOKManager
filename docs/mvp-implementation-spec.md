@@ -1085,6 +1085,8 @@ CI must run relevant checks on Windows, macOS, and Linux; Windows must also perf
 
 ### 21.1 v0.1 core configuration release
 
+**2026-11-21 compatibility decision.** For v0.2.4 and later, evaluate the numeric stable plugin/App release and the actual configuration format. JetBrains has a 1.13.0 floor, an enabled official descriptor and a supported BYOK namespace. Copilot App checks the official GitHub Windows x64 executable and the installed SQLite provider/model format. The JSON-provider schema appears in the 1.0.8 binary and is absent from the preceding 1.0.7 release. The observed version binds each plan. Bind the concrete build to the preview. A changed store format requires a fresh scope confirmation. See the [JetBrains contract](jetbrains-support.md) and [App contract](copilot-app-sqlite-sync.md).
+
 The maintainer's 2026-10-17 release decision allows publication without publisher signing or completed manual acceptance. Automated checks, exact source/package verification and native safety invariants remain required. The following manual evaluation tracks product quality; unperformed checks remain unperformed and need not appear in release notes. Evaluate the final package and exact source SHA, not a prototype or another commit:
 
 1. Install the current-user Windows x64 NSIS package on a clean Windows 11 user/VM; check WebView2 handling, start menu, uninstall registration, startup, reopen and uninstall without deleting client configuration.

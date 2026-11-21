@@ -1,14 +1,18 @@
-use crate::error::{AppError, AppResult};
+use super::{
+    build,
+    schema::{Format, Inspected},
+};
+use crate::error::{AppCompatibilityIssue as Issue, AppError, AppResult};
 use serde::{Deserialize, Serialize};
 use std::{
     fs::{self, File},
-    io::Read,
+    io::{Seek, SeekFrom},
     path::{Path, PathBuf},
 };
 
-pub const VERSION: &str = "1.1.25";
-const EXE_SIZE: u64 = 405_381_920;
-const EXE_SHA: &str = "1c741981f9b450a17401ab4a8f44bcc556d42bb6a43561c4c9305c39a997e97f";
+pub use super::build::supported as supported_version;
+// v0.2.3 journals predate the per-plan executable digest.
+const LEGACY_EXE_SHA: &str = "1c741981f9b450a17401ab4a8f44bcc556d42bb6a43561c4c9305c39a997e97f";
 #[cfg(test)]
 thread_local! {pub(crate) static TEST_RUNNING:std::cell::Cell<bool>=const{std::cell::Cell::new(false)};}
 
@@ -20,6 +24,35 @@ pub struct Target {
     pub version: String,
     pub identity: String,
     pub schema: String,
+    #[serde(default, skip_serializing_if = "Format::is_v1")]
+    pub format: Format,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub build_sha256: Option<String>,
+}
+
+pub(crate) struct TargetGuard {
+    _database: File,
+    _executable: Option<File>,
+}
+
+fn digest(file: &mut File) -> AppResult<String> {
+    use sha2::{Digest, Sha256};
+    file.seek(SeekFrom::Start(0)).map_err(|_| Issue::Identity)?;
+    let mut hash = Sha256::new();
+    std::io::copy(file, &mut hash).map_err(|_| Issue::Identity)?;
+    Ok(format!("{:x}", hash.finalize()))
+}
+
+fn installation() -> AppResult<PathBuf> {
+    if !cfg!(all(windows, target_arch = "x86_64")) {
+        return Err(Issue::Platform.into());
+    }
+    super::super::installation_path().ok_or_else(|| Issue::NotInstalled.into())
+}
+
+#[cfg(not(test))]
+pub(crate) fn installation_version() -> AppResult<String> {
+    super::super::verified_sync_build(&installation()?)
 }
 
 pub fn database_path() -> AppResult<PathBuf> {
@@ -83,41 +116,64 @@ fn fresh_override() -> AppResult<bool> {
 }
 
 pub fn review() -> AppResult<Target> {
-    #[cfg(not(all(windows, target_arch = "x86_64")))]
-    {
-        Err(AppError::Unsupported(
-            "This App SQLite contract has been reviewed only for Windows x64 v1.1.25".into(),
-        ))
-    }
-    #[cfg(all(windows, target_arch = "x86_64"))]
-    {
-        let binary = super::super::installation_path().ok_or_else(|| {
-            AppError::Unsupported(
-                "Install the reviewed Copilot App version before enabling SQLite sync".into(),
-            )
-        })?;
-        ensure_closed(&binary)?;
-        verify_binary(&binary)?;
-        let database = crate::safe_io::resource_path(&database_path()?)?;
-        let guard = super::security::open_guard(&database)?;
-        let db = super::open_readonly(&database)?;
-        let (schema, _) = super::schema::inspect(&db)?;
-        Ok(Target {
-            database,
-            binary,
-            version: VERSION.into(),
-            identity: super::security::identity(&guard)?,
-            schema,
-        })
-    }
+    let binary = installation()?;
+    ensure_closed(&binary)?;
+    let (version, mut executable) = build::verify(&binary)?;
+    let database = crate::safe_io::resource_path(&database_path()?)?;
+    let guard = super::security::open_guard(&database)?;
+    let db = super::open_readonly(&database)?;
+    let schema = super::schema::inspect(&db)?;
+    Ok(Target {
+        database,
+        binary,
+        version,
+        build_sha256: Some(digest(&mut executable)?),
+        identity: super::security::identity(&guard)?,
+        schema: schema.fingerprint,
+        format: schema.format,
+    })
 }
 
 impl Target {
-    pub fn verify(&self) -> AppResult<File> {
-        if self.version != VERSION {
-            return Err(AppError::Unsupported(
-                "Unsupported Copilot App version".into(),
-            ));
+    pub fn same_scope(&self, other: &Self) -> bool {
+        self.same_store(other) && self.format == other.format
+    }
+
+    pub fn same_store(&self, other: &Self) -> bool {
+        self.database == other.database
+            && self.binary == other.binary
+            && self.identity == other.identity
+            && self.schema == other.schema
+    }
+
+    pub(super) fn check_schema(&self, db: &rusqlite::Connection) -> AppResult<Inspected> {
+        let inspected = super::schema::inspect(db)?;
+        if inspected.fingerprint != self.schema || inspected.format != self.format {
+            return Err(AppError::PlanChanged);
+        }
+        Ok(inspected)
+    }
+
+    pub(crate) fn refreshed(&self) -> AppResult<Self> {
+        #[cfg(test)]
+        if self.binary.as_os_str().is_empty() {
+            self.verify()?;
+            let fresh = fixture(&self.database)?;
+            return self.accept_refresh(fresh);
+        }
+        self.accept_refresh(review()?)
+    }
+
+    fn accept_refresh(&self, fresh: Self) -> AppResult<Self> {
+        if !self.same_scope(&fresh) {
+            return Err(AppError::AppScopeChanged);
+        }
+        Ok(fresh)
+    }
+
+    pub(crate) fn verify(&self) -> AppResult<TargetGuard> {
+        if !supported_version(&self.version) {
+            return Err(Issue::Version.into());
         }
         #[cfg(test)]
         if self.binary.as_os_str().is_empty()
@@ -129,20 +185,31 @@ impl Target {
             if super::security::identity(&file)? != self.identity {
                 return Err(AppError::PlanChanged);
             }
-            return Ok(file);
+            return Ok(TargetGuard {
+                _database: file,
+                _executable: None,
+            });
         }
         if self.database != crate::safe_io::resource_path(&database_path()?)?
             || super::super::installation_path().as_ref() != Some(&self.binary)
         {
             return Err(AppError::PlanChanged);
         }
-        verify_binary(&self.binary)?;
+        let (version, mut executable) = build::verify(&self.binary)?;
+        if version != self.version
+            || digest(&mut executable)? != self.build_sha256.as_deref().unwrap_or(LEGACY_EXE_SHA)
+        {
+            return Err(AppError::PlanChanged);
+        }
         ensure_closed(&self.binary)?;
         let file = super::security::open_guard(&self.database)?;
         if super::security::identity(&file)? != self.identity {
             return Err(AppError::PlanChanged);
         }
-        Ok(file)
+        Ok(TargetGuard {
+            _database: file,
+            _executable: Some(executable),
+        })
     }
 }
 
@@ -151,46 +218,16 @@ pub(crate) fn fixture(database: &Path) -> AppResult<Target> {
     let database = crate::safe_io::resource_path(database)?;
     let guard = super::security::open_guard(&database)?;
     let db = super::open_readonly(&database)?;
-    let (schema, _) = super::schema::inspect(&db)?;
+    let schema = super::schema::inspect(&db)?;
     Ok(Target {
         database,
         binary: PathBuf::new(),
-        version: VERSION.into(),
+        version: "1.1.25".into(),
+        build_sha256: None,
         identity: super::security::identity(&guard)?,
-        schema,
+        schema: schema.fingerprint,
+        format: schema.format,
     })
-}
-
-fn verify_binary(path: &Path) -> AppResult<()> {
-    use sha2::{Digest, Sha256};
-    crate::safe_file::ensure_regular_or_missing(path)?;
-    let file = File::open(path)
-        .map_err(|_| AppError::Unsupported("Cannot verify the Copilot App executable".into()))?;
-    if file.metadata().map_err(|_| AppError::PlanChanged)?.len() != EXE_SIZE {
-        return Err(AppError::Unsupported(
-            "Copilot App executable does not match the reviewed Windows x64 v1.1.25 build".into(),
-        ));
-    }
-    let mut hash = Sha256::new();
-    let mut buffer = [0u8; 65536];
-    let mut reader = file.take(EXE_SIZE + 1);
-    let mut total = 0;
-    loop {
-        let count = reader
-            .read(&mut buffer)
-            .map_err(|_| AppError::PlanChanged)?;
-        if count == 0 {
-            break;
-        }
-        total += count as u64;
-        hash.update(&buffer[..count]);
-    }
-    if total != EXE_SIZE || format!("{:x}", hash.finalize()) != EXE_SHA {
-        return Err(AppError::Unsupported(
-            "Copilot App executable hash is not reviewed; manual setup remains available".into(),
-        ));
-    }
-    Ok(())
 }
 
 pub fn ensure_closed(binary: &Path) -> AppResult<()> {

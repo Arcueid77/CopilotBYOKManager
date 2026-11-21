@@ -30,6 +30,7 @@ function fixture(){
     if(command==='set_tray_locale')return;
     if(command==='get_dashboard')return structuredClone(state);
     if(command==='get_app_sync_status')return structuredClone(sync);
+    if(command==='check_app_sync_compatibility')return;
     if(command==='get_manual_provider_status'||command==='get_installation_status'||command==='get_install_runs')return [];
     if(command==='get_setup_status')return {preferences:{},accounts:{surfaces:[],loginRuns:[]}};
     if(command==='get_window_behavior')return {trayAvailable:true,preferencesAvailable:true,closeAction:'tray',closeToTray:true};

@@ -65,6 +65,7 @@ pub struct ProviderResult {
 #[serde(rename_all = "camelCase")]
 pub struct Status {
     pub review_supported: bool,
+    pub compatibility_issue: Option<crate::error::AppCompatibilityIssue>,
     pub enabled: bool,
     pub phase: Phase,
     pub database_path: Option<String>,
@@ -78,7 +79,8 @@ pub struct Status {
 impl Default for Status {
     fn default() -> Self {
         Self {
-            review_supported: cfg!(all(windows, target_arch = "x86_64")),
+            review_supported: false,
+            compatibility_issue: None,
             enabled: false,
             phase: Phase::Disabled,
             database_path: None,
@@ -147,6 +149,20 @@ impl Jobs {
     }
     pub fn status(&self, state: &ManagedState) -> AppResult<Status> {
         let mut status = self.status.lock().map_err(|_| AppError::Lock)?.clone();
+        #[cfg(not(test))]
+        let installed = sqlite::target::installation_version();
+        #[cfg(test)]
+        let installed = self
+            .snapshot()
+            .ok()
+            .and_then(|m| m.target.map(|t| t.version))
+            .ok_or_else(|| AppError::from(crate::error::AppCompatibilityIssue::NotInstalled));
+        status.review_supported = installed.is_ok();
+        status.app_version = installed.as_ref().ok().cloned();
+        status.compatibility_issue = installed.err().map(|error| match error {
+            AppError::AppCompatibility(issue) => issue,
+            _ => crate::error::AppCompatibilityIssue::Identity,
+        });
         match self.snapshot() {
             Ok(mode) => {
                 status.enabled = mode.enabled;
@@ -154,10 +170,25 @@ impl Jobs {
                     .target
                     .as_ref()
                     .map(|t| t.database.to_string_lossy().into_owned());
-                status.app_version = mode.target.as_ref().map(|t| t.version.clone());
                 status.selected_connection_ids = mode.scopes.keys().cloned().collect();
                 if !mode.enabled {
                     status.phase = Phase::Disabled;
+                } else if !status.review_supported {
+                    status.phase = Phase::UnsupportedSchema;
+                } else if let Some(target) = mode.target.as_ref() {
+                    if status.app_version.as_deref() != Some(&target.version) {
+                        if let Err(error) = target.refreshed() {
+                            status.phase = match error {
+                                AppError::AppScopeChanged => Phase::ConsentRequired,
+                                AppError::AppRunning | AppError::AppExitUnverified => {
+                                    Phase::PendingAppExit
+                                }
+                                _ => Phase::UnsupportedSchema,
+                            };
+                            status.diagnostic =
+                                Some(crate::redact::redact_text(&error.to_string()));
+                        }
+                    }
                 }
                 let store = state.store()?;
                 status.owned_connection_ids = store
@@ -224,21 +255,32 @@ impl Jobs {
         }
         let target = mode.target.as_ref().ok_or(AppError::PlanChanged)?;
         mode.approve(connection, target)?;
+        let target = target.refreshed()?;
         Ok(Some(Approval {
-            target: target.clone(),
+            target,
             consent_revision: mode.revision()?,
             revoke: false,
         }))
     }
     pub fn decorate(&self, targets: &mut [ClientTarget]) {
-        let enabled = self.snapshot().is_ok_and(|v| v.enabled);
-        if !enabled {
+        let Some(scope) = self
+            .snapshot()
+            .ok()
+            .filter(|v| v.enabled)
+            .and_then(|v| v.target)
+        else {
             return;
-        }
+        };
         if let Some(target) = targets
             .iter_mut()
             .find(|t| t.kind == ClientKind::GithubCopilotApp && t.detected)
         {
+            if let Err(error) = scope.refreshed() {
+                target.supports_write = false;
+                target.status = crate::domain::ClientStatus::ReadOnly;
+                target.diagnostic = Some(crate::redact::redact_text(&error.to_string()));
+                return;
+            }
             target.supports_write = true;
             target.status = crate::domain::ClientStatus::Available;
             target.diagnostic = None;
@@ -293,20 +335,20 @@ impl Jobs {
         let Ok(store) = state.store() else {
             return;
         };
+        let owner = mode.owner_id;
+        let proofs: Vec<_> = store
+            .ownership()
+            .iter()
+            .filter(|p| p.target_kind == ClientKind::GithubCopilotApp)
+            .cloned()
+            .collect();
+        drop(store);
         let observed = (|| -> AppResult<Vec<crate::deployment::publication::ConfiguredSource>> {
             let mut sources = Vec::new();
-            for proof in store
-                .ownership()
-                .iter()
-                .filter(|p| p.target_kind == ClientKind::GithubCopilotApp)
-            {
-                let resource = sqlite::resource(
-                    target,
-                    &mode.owner_id,
-                    &proof.connection_id,
-                    "0".repeat(64),
-                    false,
-                )?;
+            let target = target.refreshed()?;
+            for proof in proofs {
+                let resource =
+                    sqlite::resource(&target, &owner, &proof.connection_id, "0".repeat(64), false)?;
                 if proof.resource_id
                     != crate::deployment::ownership::resource_id(
                         &crate::transaction::Resource::AppSqlite(Box::new(resource.clone())),
@@ -327,16 +369,25 @@ impl Jobs {
         if let Ok(sources) = observed {
             configuration.sources = sources;
             configuration.state = crate::deployment::publication::ConfigurationState::Available;
+        } else {
+            configuration.sources.clear();
+            configuration.state = crate::deployment::publication::ConfigurationState::Unavailable;
         }
     }
     pub fn stop_scope_for_revoke(&self, connection_id: &str, target: &Target) -> AppResult<()> {
         let mut mode = self.mode.lock().map_err(|_| AppError::Lock)?;
         let mut value = mode.snapshot()?;
-        if value.target.as_ref().is_some_and(|old| old != target) {
+        if value
+            .target
+            .as_ref()
+            .is_some_and(|old| !old.same_store(target))
+        {
             return Err(AppError::PlanChanged);
         }
-        value.target = Some(target.clone());
         value.scopes.remove(connection_id);
+        if value.scopes.is_empty() || !value.enabled {
+            value.target = Some(target.clone());
+        }
         value.recovery_ids.insert(connection_id.into());
         if value.scopes.is_empty() {
             value.enabled = false;
@@ -438,8 +489,26 @@ pub fn targets(state: &ManagedState) -> Vec<ClientTarget> {
     targets
 }
 
-pub fn targets_for_connection(state: &ManagedState, connection: &Connection) -> Vec<ClientTarget> {
+pub(crate) fn qualify_json_targets(
+    state: &ManagedState,
+    targets: &mut [ClientTarget],
+    selected: &[String],
+) {
+    #[cfg(test)]
+    if state.test_targets.is_some() {
+        return;
+    }
+    let _ = state;
+    crate::adapters::json_support::qualify(targets, selected);
+}
+
+pub fn targets_for_connection(
+    state: &ManagedState,
+    connection: &Connection,
+    selected: &[String],
+) -> Vec<ClientTarget> {
     let mut values = targets(state);
+    qualify_json_targets(state, &mut values, selected);
     let approved = state.app_sync.snapshot().is_ok_and(|mode| {
         mode.target
             .as_ref()
