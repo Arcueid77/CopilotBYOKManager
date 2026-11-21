@@ -1,6 +1,7 @@
 use crate::error::{AppError, AppResult};
 use keyring::{Entry, Error as KeyringError};
 
+#[cfg(not(test))]
 const SERVICE: &str = "io.github.avalonero.copilotbyokmanager.connections";
 
 #[cfg(test)]
@@ -22,8 +23,16 @@ pub(crate) fn with_fake_credentials<T>(task: impl FnOnce() -> T) -> T {
     task()
 }
 
+#[cfg(not(test))]
 fn entry(secret_ref: &str) -> AppResult<Entry> {
     Entry::new(SERVICE, secret_ref).map_err(|error| AppError::Secret(error.to_string()))
+}
+
+#[cfg(test)]
+fn entry(_: &str) -> AppResult<Entry> {
+    Err(AppError::Secret(
+        "Unit tests must use the in-memory credential store".into(),
+    ))
 }
 
 pub fn set(secret_ref: &str, value: &str) -> AppResult<()> {

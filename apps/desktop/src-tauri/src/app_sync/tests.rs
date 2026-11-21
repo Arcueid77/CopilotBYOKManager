@@ -366,30 +366,32 @@ fn managed_write_contention_is_not_reported_as_a_running_app() {
 
 #[test]
 fn a_client_upgrade_invalidates_an_open_enable_plan_but_keeps_the_same_approved_store() {
-    let (_root, state, old, connections) = fixture();
-    let id = connections[0].id.clone();
-    let preview = preview_enable(&state, vec![id.clone()], || Ok(old.clone())).unwrap();
-    let mut upgraded = old.clone();
-    upgraded.version = "1.4.3".into();
-    upgraded.build_sha256 = Some("a".repeat(64));
-    assert!(old.same_scope(&upgraded));
-    assert!(matches!(
-        enable(&state, preview.id, true, || Ok(upgraded.clone())),
-        Err(AppError::PlanChanged)
-    ));
-    assert!(!state.app_sync.snapshot().unwrap().enabled);
-    approve(&state, &old, vec![id]);
-    assert!(state
-        .app_sync
-        .snapshot()
-        .unwrap()
-        .approve(&connections[0], &upgraded)
-        .is_ok());
-    upgraded.schema = "b".repeat(64);
-    assert!(state
-        .app_sync
-        .snapshot()
-        .unwrap()
-        .approve(&connections[0], &upgraded)
-        .is_err());
+    crate::secrets::with_fake_credentials(|| {
+        let (_root, state, old, connections) = fixture();
+        let id = connections[0].id.clone();
+        let preview = preview_enable(&state, vec![id.clone()], || Ok(old.clone())).unwrap();
+        let mut upgraded = old.clone();
+        upgraded.version = "1.4.3".into();
+        upgraded.build_sha256 = Some("a".repeat(64));
+        assert!(old.same_scope(&upgraded));
+        assert!(matches!(
+            enable(&state, preview.id, true, || Ok(upgraded.clone())),
+            Err(AppError::PlanChanged)
+        ));
+        assert!(!state.app_sync.snapshot().unwrap().enabled);
+        approve(&state, &old, vec![id]);
+        assert!(state
+            .app_sync
+            .snapshot()
+            .unwrap()
+            .approve(&connections[0], &upgraded)
+            .is_ok());
+        upgraded.schema = "b".repeat(64);
+        assert!(state
+            .app_sync
+            .snapshot()
+            .unwrap()
+            .approve(&connections[0], &upgraded)
+            .is_err());
+    });
 }
