@@ -35,11 +35,25 @@ test('App primary action reflects native review availability and retains the con
     const before=ui.groupHeader(group,snapshot,{appSync:{enabled:false,reviewSupported:true}},true,false);
     assert.match(before,/data-action="app-sync-enable"/);assert.doesNotMatch(before,/manage-app-sync/);
     const unsupported=ui.groupHeader(group,snapshot,{appSync:{enabled:false,reviewSupported:false}},true,false);
-    assert.doesNotMatch(unsupported,/app-sync-enable/);assert.match(unsupported,/setup-manual/);
+    assert.doesNotMatch(unsupported,/app-sync-enable/);assert.match(unsupported,/client-guide/);
+    group.members[0].supportsWrite=true;
     const enabled=ui.groupHeader(group,snapshot,{appSync:{enabled:true,phase:'pendingAppExit'}},true,false);
-    assert.match(enabled,/manage-app-sync/);assert.doesNotMatch(enabled,/app-sync-enable/);
+    assert.match(enabled,/data-action="publish-family"/);assert.doesNotMatch(enabled,/manage-app-sync|app-sync-enable|data-sync-phase/);
+    group.members[0].supportsWrite=false;
     snapshot.stateRecovery='fixture recovery';
     assert.match(ui.groupHeader(group,snapshot,{appSync:{reviewSupported:true}},true,false),/data-action="app-sync-enable" disabled/);
+  }
+});
+
+test('an enabled App has the common Publish entry before any provider is approved',()=>{
+  const snapshot=fixture(),group=ui.groups(snapshot).find(g=>g.id==='copilot-app');
+  group.members[0].supportsWrite=true;
+  const data={appSync:{enabled:true,phase:'waitingForProviders',selectedConnectionIds:[]}};
+  for(const connections of [[],[source]]){
+    snapshot.connections=connections;
+    const html=ui.groupHeader(group,snapshot,data,true,false);
+    assert.match(html,/data-action="publish-family"/);
+    assert.doesNotMatch(html,/manage-app-sync|data-sync-phase|app-sync-open-providers/);
   }
 });
 test('provider workspace uses native bindings, escapes untrusted names and preserves selections when filtering',()=>{
@@ -87,7 +101,7 @@ test('every surface uses the same configuration state while synchronization prog
     assert.doesNotMatch(ui.groupHeader(app,snapshot,data,true,false),/配置已同步|Configuration synchronized/);
     data.appSync.phase='failed';
     const html=ui.groupHeader(app,snapshot,data,true,false);
-    assert.equal(ui.groupState(app,snapshot,data).state,'configured');assert.match(html,/data-sync-phase="failed"/);
+    assert.equal(ui.groupState(app,snapshot,data).state,'configured');assert.doesNotMatch(html,/data-sync-phase|app-sync-panel|manage-app-sync/);
     snapshot.clientConfigurations.find(c=>c.targetId==='app').state='unavailable';
     assert.equal(ui.groupState(app,snapshot,data).state,'unavailable');
   }

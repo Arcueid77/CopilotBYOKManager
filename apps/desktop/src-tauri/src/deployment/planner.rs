@@ -96,6 +96,10 @@ impl PlanStore {
         }
         let (writes, ownership_after) =
             prepare_writes(connection, secret, &mut plan, targets, &context)?;
+        plan.app_scope_confirmation = context
+            .app
+            .as_ref()
+            .is_some_and(|app| app.grant_epoch.is_some());
         plan.app_model_removals.clear();
         for write in &writes {
             if let crate::transaction::Resource::AppSqlite(resource) = &write.resource {
@@ -134,6 +138,16 @@ impl PlanStore {
 
     pub fn consume(&mut self, plan_id: &str) -> AppResult<StoredPlan> {
         self.consume_at(plan_id, Instant::now())
+    }
+
+    pub(crate) fn discard_review(&mut self, plan_id: &str) {
+        if plan_id.len() == 36
+            && self.plans.get(plan_id).is_some_and(|review| {
+                review.plan.purpose == crate::domain::DeploymentPurpose::Deploy
+            })
+        {
+            self.plans.remove(plan_id);
+        }
     }
 
     fn consume_at(&mut self, plan_id: &str, now: Instant) -> AppResult<StoredPlan> {
@@ -323,8 +337,17 @@ mod tests {
             .is_err());
         let id = store.plans.keys().next().unwrap().clone();
         assert!(PlanStore::default().consume(&id).is_err());
-        assert!(store.consume(&id).is_ok());
+        store.discard_review(&id);
         assert!(store.consume(&id).is_err());
+        assert!(store
+            .insert(
+                &connection,
+                None,
+                plan(&connection, &targets[0]),
+                &targets,
+                context()
+            )
+            .is_ok());
     }
 
     #[test]

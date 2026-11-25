@@ -4,7 +4,7 @@ Updated 2026-11-21 for minimum-version compatibility. Experimental sync starts d
 
 The maintainer approved direct SQLite provider/model synchronization instead of waiting indefinitely for a documented App write interface. The integration must be **off by default**, require manual enablement and a concrete risk-confirmation dialog, and then automatically synchronize the explicitly selected Connections into the selected Copilot App installation.
 
-Stable official Windows x64 App builds qualify for a read-only compatibility check. The adapter recognizes the JSON provider store by its actual tables, constraints and references. Opening the four-page workspace checks public executable metadata. **Check and enable sync** checks the closed App and existing database before provider selection. The native preview and apply repeat the checks and bind the actual build.
+Stable official Windows x64 App builds qualify for a read-only compatibility check. The adapter recognizes the JSON provider store by its actual tables, constraints and references. Opening the four-page workspace checks public executable metadata. The common publication preview checks the App installation and database before confirming provider writes. The native preview and apply repeat the checks and bind the actual build.
 
 ## Reviewed implementation and storage
 
@@ -39,15 +39,13 @@ A new storage format requires a versioned parser, sanitized success/failure fixt
 
 ## Opt-in and automatic synchronization
 
-1. New installations and upgrades start with App SQLite sync **disabled**. App discovery, existing manual confirmations, general provider publication and enabling another client cannot turn it on.
-2. The user explicitly chooses **Enable experimental Copilot App sync**. Show the target App/database location in the local UI, selected Connections, permitted operation scope and the risk dialog below. No key value appears in the dialog.
-3. Cancel, Escape or closing the dialog leaves the option disabled and performs no target writes. Only affirmative confirmation records a versioned, native-owned consent record bound to this installation, target root, adapter/schema contract and selected Connections.
-4. After confirmation, synchronize the selected provider/model projections initially and after relevant saved Connection changes. Coalesce repeated saves and serialize operations per physical database; never sync unsaved drafts. Each operation uses a fresh native-held one-shot plan, live target checks, prepare-all, journal and conditional recovery. Automatic synchronization preserves the complete deployment safety contract.
-5. The enable dialog authorizes this bounded automatic-sync mode, not arbitrary client operations. Adding another Connection/target, changing endpoint destination, changing credential-storage mode, expanding data scope or accepting a new schema contract requires renewed explicit review/confirmation. Ordinary model-list updates inside the approved scope may synchronize without repeating the same warning on every save.
-6. If App is running, show **Pending — close Copilot App to sync**. Do not kill it, close windows, lose unsaved work, or write concurrently. Resume only after a fresh safe-state check; if closure cannot be established, remain blocked/manual. Bounded lock contention or any uncertain commit outcome stops automatic retries until read-only reconciliation.
-7. Disabling the option cancels queued work and prevents subsequent writes. A transaction already committed remains committed; disabling must not falsely report rollback. Existing App configuration remains until separately reviewed revocation. Turning the feature back on requires the risk confirmation again.
+New installations start with the App sync switch off. Enabling the switch keeps an empty provider scope until the user publishes through the standard dialog. The switch alone changes the local preference.
 
-Consent stores only bounded IDs, scope, risk-text version and timestamps, never keys or authorization headers. It is not portable across machines and must not silently survive changed target identity or schema.
+The configuration card reads provider names and model counts from the compatible catalog when App sync is enabled. It includes unowned BYOK providers in the view. The common **Manage configuration** list offers edit and deletion for owned providers through the existing scope and revocation checks.
+
+An enabled App appears as a regular publication target. Review the App database and provider scope in the shared preview. On confirmation the native plan rechecks the provider revision, App build, database identity and settings revision, then reserves the recovery entry. It grants the selected provider's scope after the target write and read-back succeeded. Cancelled and stale plans cannot grant a scope.
+
+The worker synchronizes compatible changes for published providers under their approved scope. Changing credentials mode or provider destination requires a new reviewed publication. A running App blocks writes until it exits. Disabling sync cancels pending work. Reviewed revocation removes owned provider/model entries independently.
 
 ## Required risk dialog
 
@@ -73,7 +71,7 @@ Do not soften this to a generic “experimental feature” checkbox. A completed
 
 ## Credential and privacy contract
 
-The approved compatibility route permits materializing **only the selected Connection's manager-held provider key** into its owned App provider row after the above confirmation. It does not permit importing keys from App rows or borrowing any client's login credentials. Prefer a verified native credential integration if one becomes available, but do not claim cross-app keychain access without platform evidence or silently switch storage modes.
+Synchronization materializes the selected Connection's manager-held provider key in its owned App row after confirmation. The separate provider-extraction review can save a static provider key from the reviewed Bearer Authorization field of a non-account-linked App provider on explicit opt-in. The extraction uses the verified local adapter and stores the key in the system credential store.
 
 - No keys in frontend results, previews, ordinary state/preferences, logs, diagnostics, telemetry, screenshots or exports. Resolve secrets only in the native execution phase and redact errors before crossing IPC.
 - Validate endpoint/protocol/header mapping and reject incompatible or ambiguous entries. Do not forward keys to unrelated model-catalog or test endpoints.

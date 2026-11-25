@@ -2,6 +2,48 @@
 
 Updated 2026-11-21 for v0.2.4 client upgrade compatibility. Initial release engineering started at `83a82db3555eb0defa278bd6e042b7c55a76088f`; source and evidence are recorded below. The [specification §21](mvp-implementation-spec.md#21-final-acceptance) and [feature availability](feature-availability.md) separate the core release from the retained extended milestone. Public versions and their exact build metadata are on [Releases](https://github.com/Arcueid77/CopilotBYOKManager/releases).
 
+## 2026-11-25 · Save provider API keys with explicit extraction consent
+
+The extraction preview offers a local-only API key option for supported plaintext fields in VS Code, CLI, App and JetBrains BYOK configurations. A saved provider can receive a missing key on its own. The native save checks the selected source again, preserves existing credentials and rolls keys back if the state commit fails. A review with conflicting source keys can save metadata, and the corresponding app can be selected separately for its key.
+
+Local checks passed 354 Rust tests, 104 web tests, 27 release checks, 16 isolated browser scenarios and strict Clippy. Synthetic fixtures cover metadata-only saving, consent, stale credentials, conflicts, rollback and exclusion of App account-linked providers. The Windows GUI preview was built and opened.
+
+## 2026-11-25 · Consistent client configuration and publication views
+
+VS Code, CLI, App and JetBrains use common names, configuration states and primary actions across Overview, Apps and publication. The App lists compatible BYOK providers through its reviewed read-only catalog. Owned App configurations use the same management entry. Known App blockers stay on its target when other reviewed targets can proceed. Results and history retain the target's reason and readable name. Closing or replacing a publication review releases its unused native plan.
+
+Local checks passed 352 Rust tests, 104 web tests, 27 release checks, 15 isolated browser scenarios and strict Clippy. The interface scenarios compare each client across configured, empty, unreadable and unsupported states. They also cover selection, per-target blockers, management and history. The Windows GUI preview was built and opened.
+
+## 2026-11-24 · Preselect CLI and show publication blockers on target cards
+
+General publishing preselects detected writable targets, including CLI, and preserves the selected targets when switching providers. The preview updates the same cards with native eligibility. JetBrains checks the current provider key and endpoint. CLI identifies models that explicitly lack tool calling. Shared write details stay collapsed until opened, and the CLI write still requires confirmation.
+
+Local checks passed 352 Rust tests, 104 web tests, 27 release checks, 13 isolated browser scenarios and strict Clippy. The Windows GUI preview was built and opened.
+
+## 2026-11-24 · Manage client providers and shorten publication
+
+Apps can edit supported names and endpoints or delete a reviewed provider in VS Code, CLI and the shared JetBrains catalog. The native transaction keeps other provider data and uses one-shot confirmation. The same entry opens editing and revocation for synchronized Copilot App providers. General publication preselects the enabled App and prepares required reviews as targets are selected. An instance with a chosen provider can publish an ordinary change directly.
+
+Local validation passed 351 Rust tests, 104 web tests, 27 release checks, 12 isolated browser scenarios and strict Clippy. The new fixtures cover original configuration edits, scoped deletion, late file changes, ambiguous JSON and publication preselection. The Windows x64 GUI preview was built and opened.
+
+## 2026-11-23 · Publish to Copilot App through the common flow
+
+An enabled App appears as a regular publication target for saved providers. The common preview confirms a newly selected provider's App storage scope. Native publication reserves recovery metadata, verifies the write and binds the approved scope for saved updates. App status and publication results use the same views as the other clients. Its sync switch and separate revocation are available under the application details.
+
+Local Windows validation passed 346 Rust tests, 104 web tests, 27 release checks and ten isolated browser scenarios. The shared flow exercises an enabled App and VS Code in the same publication, closure and retry, explicit first-scope confirmation and a stale-plan rejection. The updated Windows GUI preview was built and opened.
+
+## 2026-11-23 · Extract configured providers
+
+Overview aligns the app name, observed providers, configuration state and action columns. Its saved-provider list represents the manager's own state. Extract appears per app family or instance when it can add a provider or model. Extract all opens a deduplicated review of the remaining candidates. Confirmed selections use the existing Connection format and atomic state commit.
+
+Local Windows checks passed 347 Rust tests, 104 web tests, 27 release tests and ten isolated browser scenarios. The extraction regression covers hiding actions after saving and showing an action again when only that app has a missing model. The Windows x64 GUI preview was built and opened.
+
+## 2026-11-22 · Enable App sync before the first provider
+
+On a supported installation the switch can be enabled while the provider list is empty or all providers are paused. First-run setup persists the manager's owner and a local waiting preference. Only a later, confirmed provider selection can start App database work. Manage sync opens the provider editor or the selection dialog as appropriate.
+
+Local Windows checks passed 338 Rust tests, 109 web tests, 27 release tests and nine isolated browser scenarios. The fresh-install regression reopens the saved preference, adds two providers and synchronizes only the explicitly confirmed one. The updated Windows GUI was built and opened for review.
+
 ## 2026-11-21 v0.2.4 compatibility
 
 The four-page release uses upstream JSON capability boundaries, native identity checks and actual BYOK/SQLite format checks. The App preflight runs on request before provider selection. Signed build identity is bound to the plan, while the existing physical resource key and v1 row proofs continue across compatible upgrades. The App owns schema migration. Tests on the 1.0.82 and 1.0.83 CLI distributions confirmed the file-loader boundary with two synthetic providers. The JetBrains 1.12.1 and 1.13.0 runtimes were compared against the Marketplace change notes. Actual App executable identity was checked for 1.0.7, 1.0.8, 1.0.23, 1.1.0 and 1.4.3. The JSON provider store was verified in Windows App 1.0.8, after the older table layout in 1.0.7. Its early scalar mirrors are conditionally checked and updated atomically. Migration 206 is handled by the vision-aware projection with separate scope confirmation. [Roadmap](../ROADMAP.md) · [JetBrains evidence](jetbrains-support.md) · [App evidence](copilot-app-sqlite-sync.md).

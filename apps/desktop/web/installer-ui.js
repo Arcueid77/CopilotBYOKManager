@@ -177,7 +177,7 @@
           <div class="install-component-icon" aria-hidden="true">${componentIcon(item.id)}</div>
           <span class="install-status ${statusClass(item.status)}">${escapeHtml(statusLabel(item.status))}</span>
         </div>
-        <h3>${escapeHtml(item.name)}</h3>
+        <h3>${escapeHtml(componentName(item.id, item.name))}</h3>
         <p>${escapeHtml(item.detail)}</p>
         <div class="install-card-footer">
           <span>${item.version ? tr("版本 {0}", escapeHtml(item.version)) : tr("版本不可用")}</span>
@@ -325,7 +325,7 @@
             (operation) => `
               <div class="install-plan-operation">
                 <div>
-                  <strong>${escapeHtml(operation.componentName)}</strong>
+                  <strong>${escapeHtml(componentName(operation.componentId, operation.componentName))}</strong>
                   <span>${escapeHtml(operation.description)}</span>
                 </div>
                 <div class="install-plan-meta">
@@ -510,8 +510,11 @@
       .forEach((button) => button.addEventListener("click", closeModal));
   }
 
-  function componentName(id) {
+  function componentName(id, fallback) {
+    if (id === "vscode-copilot-extension") return window.CopilotBYOKManagerClients.surfaceName("vs-code-copilot");
+    if (["copilot-cli", "github-copilot-app"].includes(id)) return window.CopilotBYOKManagerClients.surfaceName(id);
     return (
+      fallback ??
       observations?.find((item) => item.id === id)?.name ??
       browserObservations.find((item) => item.id === id)?.name ??
       id

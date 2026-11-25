@@ -33,7 +33,11 @@ test("a failed apply cannot replay its preview", async () => {
 
 test("selection changes invalidate both a ready preview and a late response", async () => {
   let resolve;
-  const session = createSession(() => new Promise((done) => { resolve = done; }));
+  const discarded = [];
+  const session = createSession((command, args) => {
+    if (command === "discard_deployment_preview") { discarded.push(args.planId); return; }
+    return new Promise(done => { resolve = done; });
+  });
   const pending = session.preview("c", ["old-target"]);
   session.invalidate();
   resolve({ id: "stale" });
@@ -44,6 +48,7 @@ test("selection changes invalidate both a ready preview and a late response", as
   await ready;
   session.invalidate();
   await assert.rejects(session.apply(), /Preview/);
+  assert.deepEqual(discarded, ["stale", "ready"]);
 });
 
 test("duplicate preview and apply clicks cannot start concurrent requests", async () => {

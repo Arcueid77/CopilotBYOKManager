@@ -15,7 +15,6 @@
   ].map(section => Object.freeze(section)));
   const environmentSections = Object.freeze([["components", "get_installation_status"], ["installRuns", "get_install_runs"]].map(Object.freeze));
   const accountSections = Object.freeze([["setup", "get_setup_status"]].map(Object.freeze));
-  const statuses = () => ({ applied: tr("配置变更已应用"), skipped: tr("未自动处理"), failed: tr("失败，请核对"), rolledBack: tr("已回滚"), "rolled-back": tr("已回滚"), interrupted: tr("已中断，待恢复"), partial: tr("部分完成"), prepared: tr("已准备"), applying: tr("处理中") });
   function recovery(snapshot, native) {
     if (!snapshot.stateRecovery && !snapshot.deploymentRecovery) return "";
     return '<section class="security-note core-recovery" role="alert"><div><h2>' + tr("安全恢复") + '</h2>' +
@@ -24,13 +23,12 @@
   }
   function history(snapshot) {
     const records = snapshot.deployments.slice().sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt)).slice(0, 100);
-    const labels = statuses();
     return '<details class="manager-section core-history" id="publication-history"><summary>' + tr("发布与撤销记录") + '</summary>' +
       (records.length ? '<ul class="manager-result-targets">' + records.map(record => {
-        const client = snapshot.clients.find(client => client.id === record.targetId);
         const provider = snapshot.connections.find(connection => connection.id === record.connectionId);
         const date = Number.isNaN(Date.parse(record.createdAt)) ? tr("时间未知") : new Date(record.createdAt).toLocaleString(i18n.locale());
-        return '<li><strong>' + escape(provider?.name ?? record.connectionId ?? tr("供应商已移除")) + ' → ' + escape(client ? clients.name(client) : record.targetId ?? tr("目标未知")) + '</strong><span>' + escape(labels[record.status] ?? record.status) + '</span><p>' + escape(date) + '</p>' + (record.detail ? '<details><summary>' + tr("操作明细") + '</summary><p>' + escape(record.detail) + '</p></details>' : '') + '</li>';
+        const blocker = clients.blockerText(record.blocker);
+        return '<li><strong>' + escape(provider?.name ?? tr("供应商已移除")) + ' → ' + escape(clients.publicationName(record, snapshot)) + '</strong><span>' + escape(clients.publicationStatus(record.status)) + '</span><p>' + escape(date) + '</p>' + (blocker ? '<p>' + escape(blocker) + '</p>' : '') + (record.detail ? '<details><summary>' + tr("操作明细") + '</summary><p>' + escape(record.detail) + '</p></details>' : '') + '</li>';
       }).join('') + '</ul>' : '<p class="manager-meta">' + tr("尚无发布记录") + '</p>') + '</details>';
   }
   function windowBehaviorDescription(data, native) {
@@ -46,7 +44,7 @@
     const behavior = windowBehaviorDescription(data, native);
     const closeAction = data.windowBehavior?.closeAction === "exit" ? "exit" : "tray";
     const closeControl = native ? '<label class="appearance-picker"><span>' + tr("关闭窗口时") + '</span><select data-close-action aria-label="' + tr("关闭窗口时") + '" ' + (data.windowBehavior?.preferencesAvailable === true && data.windowBehavior?.trayAvailable === true ? '' : 'disabled') + '><option value="tray" ' + (closeAction === "tray" ? 'selected' : '') + '>' + tr("收起到系统托盘") + '</option><option value="exit" ' + (closeAction === "exit" ? 'selected' : '') + '>' + tr("退出程序") + '</option></select></label>' : '';
-    return '<div class="core-about-grid"><section class="manager-section core-about core-about-intro"><img src="assets/app-icon.png" alt="" width="54" height="54" /><div><h2>CopilotBYOKManager</h2><p class="manager-meta">' + tr("一次配置供应商，用于多个 Copilot 应用。") + '</p></div><span class="version">' + tr("核心配置版 · 预发布 · 0.2.4") + '</span></section>' +
+    return '<div class="core-about-grid"><section class="manager-section core-about core-about-intro"><img src="assets/app-icon.png" alt="" width="54" height="54" /><div><h2>CopilotBYOKManager</h2><p class="manager-meta">' + tr("一次配置供应商，用于多个 Copilot 应用。") + '</p></div><span class="version">' + tr("核心配置版 · 预发布 · 0.2.5") + '</span></section>' +
       '<section class="manager-section core-about"><h2>' + tr("偏好") + '</h2><div class="preference-row"><span>' + tr("外观") + '</span><div class="segmented" role="group" aria-label="' + tr("外观") + '">' + [["system", tr("跟随系统")], ["light", tr("浅色")], ["dark", tr("深色")]].map(([value, label]) => '<button data-action="set-theme" data-theme-value data-value="' + value + '" aria-pressed="' + (theme === value) + '" class="' + (theme === value ? 'active' : '') + '">' + label + '</button>').join('') + '</div></div><div class="preference-row"><label for="workspace-language">' + tr("界面语言") + '</label><select id="workspace-language" class="select-control" data-interface-language><option value="en" lang="en" ' + (i18n.locale() === 'en' ? 'selected' : '') + '>English</option><option value="zh-CN" lang="zh-CN" ' + (i18n.locale() === 'zh-CN' ? 'selected' : '') + '>' + tr("简体中文") + '</option></select></div><div class="core-window-settings">' + closeControl + '</div><p class="manager-meta" data-window-explanation>' + behavior + '</p></section>' +
       '<section class="manager-section core-about"><h2>' + tr("帮助与反馈") + '</h2><nav class="manager-help-links" aria-label="' + tr("帮助与反馈") + '">' + [["manual", tr("英文使用手册")], ["manual-zh", tr("中文使用手册")], ["issues", tr("反馈问题")]].map(([key, label]) => '<a data-help-link="' + key + '" href="' + escape(urls[key]) + '" target="_blank" rel="noopener noreferrer">' + label + '</a>').join('') + '</nav><button class="button ghost small" data-action="view-planned-features">' + tr("未推出功能记录") + '</button><p class="manager-boundary">' + tr("反馈前请删除密钥、账号认证与对话内容。") + '</p></section>' +
       '<details class="manager-section core-about core-about-storage"><summary>' + tr("本地存储与安全") + '</summary><p class="manager-meta">' + tr("配置保存在本地，登录凭据留在各官方客户端。") + '</p><p class="manager-meta">' + tr("状态文件") + ': ' + escape(snapshot.statePath) + '</p><p class="manager-meta">' + tr("状态版本") + ': v' + escape(snapshot.version) + '</p><p class="manager-meta">' + tr("状态恢复") + ': ' + (snapshot.stateRecovery ? tr("只读恢复") : tr("正常")) + '</p></details></div>';

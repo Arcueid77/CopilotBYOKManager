@@ -4,15 +4,12 @@ Updated 2026-11-01. User instructions: [English](user-guide.md#copilot-app) / [ä
 
 ## Experimental automatic flow
 
-The Apps card loads sync status independently of the dashboard. A missing consent file means disabled and causes no App database read or write. **Check and enable sync** selects 1â€“16 saved providers, checks the installed App build and database format before provider selection, then previews the destination and endpoint scope, then presents the concrete plaintext-key/WAL/backup risk dialog. Confirmation submits a native-held one-shot ID; closing either dialog leaves consent and target rows unchanged. Scope, state or target changes invalidate the preview.
+**Enable sync** saves the local preference on a compatible installation. After enablement the App is a standard publish target. First publication for a provider confirms the destination and storage scope in the regular publish dialog. The native plan binds the App build and database, stages recovery metadata before writing and records the approved provider scope after the checked write.
 
-After consent, the native worker loads saved Connections, coalesces saves and serializes through the managed-write lock. Each provider uses a fresh native plan and row-scoped journal; no draft or background inference is sent. App-running checks show PendingAppExit and resume after closure. Configuration fingerprints and native authorization are rechecked inside the SQLite transaction before commit. Only installation/Connection-owned provider/model rows are prepared, and other tables remain protected from cascading updates.
+Published providers sync compatible saved changes. Changes to endpoint, protocol, headers or credential mode require a fresh publication review. Quit the App before publishing, and review model references in the same publication preview before removing models.
 
-Model additions/renames can synchronize within the consent scope. Removals show ReviewRequired and require a normal reviewed publication after switching active/default models in App. Endpoint, protocol, header or credential-mode changes show ConsentRequired. Database/schema/conflict errors halt automatic retries; **Check and retry** reconciles owned fingerprints before restarting. Per-provider results retain their observation time. The model-count catalog is read only from owned metadata while experimental sync is enabled and the target is safely observable; manual assertions remain separate.
+The application details offer the sync switch and separate owned-configuration revocation. Current configuration and publication history use the shared client display.
 
-**Turn auto-sync off** invalidates queued/in-flight authorization and preserves committed rows. **Remove managed App configuration** is a separate `RevokeApp` plan: it stops that provider's sync scope, checks durable ownership/current rows and references, then removes its rows while retaining the manager's Connection/key. Recovery resources remain available when sync is disabled. Revoke-and-delete can additionally delete the manager Connection after all owned targets commit. Detach-only leaves App rows and stops future automatic sync through scope validation.
-
-Automatic sync requires an official stable Windows x64 App, a compatible provider/model schema in the default `~/.copilot/data.db`, restrictive ACLs and a supported Chat Completions or Responses provider. The build is rechecked for the one-shot plan. [Version and schema details](copilot-app-sqlite-sync.md).
 
 ## Manual fallback
 
@@ -52,7 +49,7 @@ The guide uses the App's reviewed `Model providers` runbook. The manager does no
 
 Records are keyed by Connection ID. Confirming B preserves A's record; a newly created provider with the same display name has its own identity. Current revisions fingerprint the whole Connection, including its update time and publishing flag. Saving provider edits or toggling **Allow publishing** therefore invalidates an existing confirmation. If the App entry already matches, review it and confirm again. There is no time-based expiry for these provider records.
 
-The App card displays user-confirmation records rather than an observed App model catalog. Editing or deleting a provider directly inside the App does not update the manager's record; check that entry in the App and record a fresh confirmation after correcting it.
+When the reviewed App catalog is available, the card shows its current provider names and model counts. The manual-only flow displays separate user-confirmation records. If you edit a manually confirmed provider, check the entry in the App and record a fresh confirmation.
 
 ## Mixed publication
 

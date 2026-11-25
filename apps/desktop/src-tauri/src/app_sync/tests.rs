@@ -24,6 +24,99 @@ fn input(connection: &Connection) -> ConnectionInput {
         clear_secret: false,
     }
 }
+
+#[test]
+fn a_fresh_install_can_wait_across_restart_and_only_sync_a_later_confirmed_provider() {
+    crate::secrets::with_fake_credentials(|| {
+        let root = sqlite::tests::private_root();
+        let path = root.path().join("state.json");
+        let app_db = root.path().join("data.db");
+        let open = || {
+            ManagedState::new(
+                StateStore::open_at(path.clone()),
+                crate::account::LoginStore::open_at(root.path().join("login.json")),
+                crate::github_auth::GithubAuthorizationStore::isolated(
+                    root.path().join("github.json"),
+                ),
+                None,
+                None,
+            )
+        };
+        let state = open();
+        let owner = state.store().unwrap().installation_owner_id().to_owned();
+        let installed = || Ok("1.4.3".to_owned());
+        assert!(enable_waiting(&state, 1, installed).is_err());
+        assert!(!path.exists());
+        let status = enable_waiting(&state, 0, installed).unwrap();
+        assert!(status.enabled && status.review_supported);
+        assert_eq!(status.phase, Phase::WaitingForProviders);
+        assert!(status.selected_connection_ids.is_empty());
+        assert!(status.database_path.is_none());
+        assert!(path.is_file());
+        let revision = state.app_sync.snapshot().unwrap().revision().unwrap();
+        enable_waiting(&state, 0, installed).unwrap();
+        assert_eq!(
+            state.app_sync.snapshot().unwrap().revision().unwrap(),
+            revision
+        );
+        drop(state);
+
+        let mut state = open();
+        assert_eq!(state.store().unwrap().installation_owner_id(), owner);
+        assert!(state.app_sync.snapshot().unwrap().waiting_for_providers());
+        super::worker::run_once(&state.app_sync, &state).unwrap();
+        assert!(!app_db.exists());
+        let mut draft = input(&sqlite::tests::provider());
+        draft.id = None;
+        let added = state
+            .store()
+            .unwrap()
+            .upsert_connection(draft.clone())
+            .unwrap();
+        draft.name = "Other provider".into();
+        let other = state.store().unwrap().upsert_connection(draft).unwrap();
+        state.test_targets = Some(vec![ClientTarget {
+            id: TARGET_ID.into(),
+            kind: ClientKind::GithubCopilotApp,
+            name: "Fixture".into(),
+            path: None,
+            detail: String::new(),
+            detected: true,
+            supports_write: false,
+            status: ClientStatus::ReadOnly,
+            diagnostic: None,
+        }]);
+        state.app_sync.schedule();
+        super::worker::run_once(&state.app_sync, &state).unwrap();
+        assert!(state.app_sync.approval(&added, false).unwrap().is_none());
+        assert_eq!(
+            state.app_sync.status(&state).unwrap().phase,
+            Phase::WaitingForProviders
+        );
+        assert!(state.store().unwrap().ownership().is_empty());
+        assert!(!app_db.exists());
+
+        let target = sqlite::tests::database(&app_db);
+        let ids = vec![added.id.clone()];
+        let abandoned = preview_enable(&state, ids.clone(), || Ok(target.clone())).unwrap();
+        assert!(enable(&state, abandoned.id, false, || Ok(target.clone())).is_err());
+        assert!(state.app_sync.snapshot().unwrap().waiting_for_providers());
+        approve(&state, &target, ids);
+        assert!(enable_waiting(&state, 0, installed).is_err());
+        super::worker::run_once(&state.app_sync, &state).unwrap();
+        assert!(scoped(&state, &target, &added.id).read().unwrap().is_some());
+        assert!(scoped(&state, &target, &other.id).read().unwrap().is_none());
+        state
+            .app_sync
+            .stop_scope_for_revoke(&added.id, &target)
+            .unwrap();
+        let waiting = state.app_sync.snapshot().unwrap();
+        assert!(waiting.waiting_for_providers());
+        assert!(waiting.granted_at.is_none());
+        assert!(waiting.recovery_ids.contains(&added.id));
+        assert!(state.app_sync.approval(&added, false).unwrap().is_none());
+    });
+}
 fn fixture() -> (tempfile::TempDir, ManagedState, Target, Vec<Connection>) {
     let root = sqlite::tests::private_root();
     let target = sqlite::tests::database(&root.path().join("data.db"));
@@ -303,8 +396,23 @@ fn app_running_waits_without_writes_and_conflicts_require_reconciliation_before_
         approve(&state, &target, vec![connection.id.clone()]);
         sqlite::target::TEST_RUNNING.with(|flag| flag.set(true));
         let result = super::worker::run_once(&state.app_sync, &state);
+        let reviewed =
+            crate::commands::review_publication(&state, &connection.id, &[TARGET_ID.into()]);
         sqlite::target::TEST_RUNNING.with(|flag| flag.set(false));
         result.unwrap();
+        let plan = reviewed.unwrap();
+        assert_eq!(
+            plan.operations[0].blocker,
+            Some(crate::domain::DeploymentBlocker::ClientRunning)
+        );
+        assert!(!plan.operations[0].supported);
+        assert!(state
+            .plans()
+            .unwrap()
+            .consume(&plan.id)
+            .unwrap()
+            .writes
+            .is_empty());
         assert_eq!(
             state.app_sync.status(&state).unwrap().phase,
             Phase::PendingAppExit
@@ -393,5 +501,85 @@ fn a_client_upgrade_invalidates_an_open_enable_plan_but_keeps_the_same_approved_
             .unwrap()
             .approve(&connections[0], &upgraded)
             .is_err());
+    });
+}
+
+#[test]
+fn enabled_app_uses_normal_publication_for_an_unscoped_provider() {
+    crate::secrets::with_fake_credentials(|| {
+        let (_root, state, app, connections) = fixture();
+        let first = &connections[0];
+        let second = &connections[1];
+        let ids = [TARGET_ID.to_owned()];
+        let review = || crate::commands::review_publication(&state, &second.id, &ids);
+        let apply = |plan_id, consent| {
+            crate::commands::apply_reviewed_publication(&state, plan_id, true, false, consent)
+        };
+        assert!(!review().unwrap().operations[0].supported);
+        approve(&state, &app, vec![first.id.clone()]);
+        assert!(!state
+            .app_sync
+            .snapshot()
+            .unwrap()
+            .scopes
+            .contains_key(&second.id));
+        let plan = review().unwrap();
+        assert!(plan.operations[0].supported && plan.app_scope_confirmation);
+        let second_resource = scoped(&state, &app, &second.id);
+        assert!(second_resource.read().unwrap().is_none());
+        assert!(apply(&plan.id, false).is_err());
+        assert!(apply(&plan.id, true).is_err());
+        assert!(!state
+            .app_sync
+            .snapshot()
+            .unwrap()
+            .scopes
+            .contains_key(&second.id));
+        let plan = review().unwrap();
+        let result = apply(&plan.id, true).unwrap();
+        assert_eq!(
+            result.records[0].status,
+            crate::domain::DeploymentStatus::Applied
+        );
+        assert!(second_resource.read().unwrap().is_some());
+        let mode = state.app_sync.snapshot().unwrap();
+        assert!(mode.scopes.contains_key(&first.id));
+        assert!(mode.approve(second, &app).is_ok());
+        assert!(!review().unwrap().app_scope_confirmation);
+    });
+}
+
+#[test]
+fn enabled_empty_scope_lists_app_as_ready_and_a_stale_confirmation_cannot_establish_it() {
+    crate::secrets::with_fake_credentials(|| {
+        let (_root, state, app, connections) = fixture();
+        enable_waiting(&state, 0, || Ok(app.version.clone())).unwrap();
+        // An inert reviewed target stands in for the installation on all test runners.
+        let mut settings = state.app_sync.mode.lock().unwrap();
+        let mut waiting = settings.snapshot().unwrap();
+        waiting.target = Some(app.clone());
+        settings.save(waiting).unwrap();
+        drop(settings);
+        let c = &connections[0];
+        let ids = [TARGET_ID.to_owned()];
+        assert!(super::publication_targets(&state, &ids)[0].supports_write);
+        let plan = crate::commands::review_publication(&state, &c.id, &ids).unwrap();
+        assert!(plan.app_scope_confirmation);
+        state.app_sync.settings_epoch.fetch_add(1, Ordering::AcqRel);
+        assert!(matches!(
+            crate::commands::apply_reviewed_publication(&state, &plan.id, true, false, true),
+            Err(AppError::PlanChanged)
+        ));
+        assert!(scoped(&state, &app, &c.id).read().unwrap().is_none());
+        assert!(state.app_sync.snapshot().unwrap().scopes.is_empty());
+        let plan = crate::commands::review_publication(&state, &c.id, &ids).unwrap();
+        let published =
+            crate::commands::apply_reviewed_publication(&state, &plan.id, true, false, true)
+                .unwrap();
+        assert_eq!(
+            published.records[0].status,
+            crate::domain::DeploymentStatus::Applied
+        );
+        assert!(state.app_sync.snapshot().unwrap().approve(c, &app).is_ok());
     });
 }

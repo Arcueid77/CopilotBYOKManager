@@ -56,7 +56,7 @@ pub fn preview(connection: &Connection, target: &ClientTarget) -> DeploymentOper
             title:format!("Synchronize {} to GitHub Copilot App",connection.name),
             description:"Update this installation's provider and enabled models in the reviewed App database".into(),
             changes:vec![format!("Provider: {}",connection.name),format!("Endpoint: {}",connection.base_url),format!("{} enabled model(s)",connection.models.iter().filter(|m|m.enabled).count()),"Restart App and choose a published model".into()],
-            supported:target.detected,requires_restart:true,
+            supported:target.detected,blocker:None,requires_restart:true,
         };
     }
     DeploymentOperation {
@@ -79,6 +79,7 @@ pub fn preview(connection: &Connection, target: &ClientTarget) -> DeploymentOper
                 .to_string(),
         ],
         supported: false,
+        blocker: None,
         requires_restart: false,
     }
 }
@@ -88,7 +89,7 @@ pub fn preview_revocation(connection: &Connection, target: &ClientTarget) -> Dep
         title:format!("Remove {} from GitHub Copilot App",connection.name),
         description:"Remove only durably owned provider/model rows after checking their current fingerprints".into(),
         changes:vec!["Stop automatic synchronization for this provider".into(),"Keep other providers, defaults, accounts and sessions unchanged".into()],
-        supported:target.detected,requires_restart:true}
+        supported:target.detected,blocker:None,requires_restart:true}
 }
 
 pub fn apply(

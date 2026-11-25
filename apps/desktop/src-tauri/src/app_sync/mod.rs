@@ -2,6 +2,7 @@
 mod command_error;
 pub mod commands;
 pub mod consent;
+mod publication;
 #[cfg(test)]
 mod tests;
 mod worker;
@@ -32,12 +33,14 @@ pub struct Approval {
     pub target: Target,
     pub consent_revision: String,
     pub revoke: bool,
+    pub grant_epoch: Option<u64>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum Phase {
     Disabled,
+    WaitingForProviders,
     ConsentRequired,
     UnsupportedSchema,
     ReviewRequired,
@@ -120,22 +123,26 @@ pub struct Jobs {
 impl Jobs {
     pub fn new(state_path: &Path, owner: &str) -> Self {
         let mode = consent::Store::open(state_path, owner);
-        let enabled = mode.snapshot().is_ok_and(|r| r.enabled);
+        let initial = mode.snapshot().ok();
+        let enabled = initial.as_ref().is_some_and(|r| r.enabled);
+        let active = initial.as_ref().is_some_and(|r| r.has_scope());
         Self {
             mode: Mutex::new(mode),
             plans: Mutex::new(HashMap::new()),
             status: Mutex::new(Status {
                 enabled,
-                phase: if enabled {
+                phase: if active {
                     Phase::PendingSync
+                } else if enabled {
+                    Phase::WaitingForProviders
                 } else {
                     Phase::Disabled
                 },
                 ..Status::default()
             }),
             attempts: Mutex::new(BTreeMap::new()),
-            signal: (Mutex::new(enabled), Condvar::new()),
-            cancelled: AtomicBool::new(!enabled),
+            signal: (Mutex::new(active), Condvar::new()),
+            cancelled: AtomicBool::new(!active),
             halted: AtomicBool::new(false),
             stopping: AtomicBool::new(false),
             active: AtomicUsize::new(0),
@@ -148,7 +155,6 @@ impl Jobs {
         self.mode.lock().map_err(|_| AppError::Lock)?.snapshot()
     }
     pub fn status(&self, state: &ManagedState) -> AppResult<Status> {
-        let mut status = self.status.lock().map_err(|_| AppError::Lock)?.clone();
         #[cfg(not(test))]
         let installed = sqlite::target::installation_version();
         #[cfg(test)]
@@ -157,6 +163,14 @@ impl Jobs {
             .ok()
             .and_then(|m| m.target.map(|t| t.version))
             .ok_or_else(|| AppError::from(crate::error::AppCompatibilityIssue::NotInstalled));
+        self.status_for_installation(state, installed)
+    }
+    fn status_for_installation(
+        &self,
+        state: &ManagedState,
+        installed: AppResult<String>,
+    ) -> AppResult<Status> {
+        let mut status = self.status.lock().map_err(|_| AppError::Lock)?.clone();
         status.review_supported = installed.is_ok();
         status.app_version = installed.as_ref().ok().cloned();
         status.compatibility_issue = installed.err().map(|error| match error {
@@ -173,6 +187,10 @@ impl Jobs {
                 status.selected_connection_ids = mode.scopes.keys().cloned().collect();
                 if !mode.enabled {
                     status.phase = Phase::Disabled;
+                } else if mode.waiting_for_providers() {
+                    status.phase = Phase::WaitingForProviders;
+                    status.diagnostic = None;
+                    status.results.clear();
                 } else if !status.review_supported {
                     status.phase = Phase::UnsupportedSchema;
                 } else if let Some(target) = mode.target.as_ref() {
@@ -241,16 +259,18 @@ impl Jobs {
                     target,
                     consent_revision: "0".repeat(64),
                     revoke: true,
+                    grant_epoch: None,
                 }));
             }
             return Ok(Some(Approval {
                 target: sqlite::target::review()?,
                 consent_revision: "0".repeat(64),
                 revoke: true,
+                grant_epoch: None,
             }));
         }
         let mode = self.snapshot()?;
-        if !mode.enabled {
+        if !mode.has_scope() {
             return Ok(None);
         }
         let target = mode.target.as_ref().ok_or(AppError::PlanChanged)?;
@@ -260,31 +280,23 @@ impl Jobs {
             target,
             consent_revision: mode.revision()?,
             revoke: false,
+            grant_epoch: None,
         }))
     }
     pub fn decorate(&self, targets: &mut [ClientTarget]) {
-        let Some(scope) = self
-            .snapshot()
-            .ok()
-            .filter(|v| v.enabled)
-            .and_then(|v| v.target)
-        else {
+        if !cfg!(any(test, all(windows, target_arch = "x86_64")))
+            || !self.snapshot().is_ok_and(|mode| mode.enabled)
+        {
             return;
-        };
+        }
         if let Some(target) = targets
             .iter_mut()
             .find(|t| t.kind == ClientKind::GithubCopilotApp && t.detected)
         {
-            if let Err(error) = scope.refreshed() {
-                target.supports_write = false;
-                target.status = crate::domain::ClientStatus::ReadOnly;
-                target.diagnostic = Some(crate::redact::redact_text(&error.to_string()));
-                return;
-            }
             target.supports_write = true;
             target.status = crate::domain::ClientStatus::Available;
             target.diagnostic = None;
-            target.detail="Experimental provider synchronization; the App must be closed before SQLite writes".into();
+            target.detail = "Publish provider and model settings".into();
         }
     }
     pub fn authorize(
@@ -319,59 +331,63 @@ impl Jobs {
         state: &ManagedState,
         configurations: &mut [crate::deployment::publication::ClientConfiguration],
     ) {
-        let Ok(mode) = self.snapshot() else {
-            return;
+        use crate::deployment::{
+            ownership,
+            publication::{ConfigurationIssue, ConfigurationState},
         };
-        if !mode.enabled {
+        let Ok(mode) = self.snapshot() else { return };
+        if !mode.enabled && mode.target.is_none() {
             return;
         }
-        let Some(target) = mode.target.as_ref() else {
-            return;
-        };
         let Some(configuration) = configurations.iter_mut().find(|c| c.target_id == TARGET_ID)
         else {
             return;
         };
-        let Ok(store) = state.store() else {
-            return;
-        };
-        let owner = mode.owner_id;
-        let proofs: Vec<_> = store
-            .ownership()
-            .iter()
-            .filter(|p| p.target_kind == ClientKind::GithubCopilotApp)
-            .cloned()
-            .collect();
-        drop(store);
-        let observed = (|| -> AppResult<Vec<crate::deployment::publication::ConfiguredSource>> {
-            let mut sources = Vec::new();
-            let target = target.refreshed()?;
-            for proof in proofs {
-                let resource =
-                    sqlite::resource(&target, &owner, &proof.connection_id, "0".repeat(64), false)?;
+        let observed = (|| {
+            let target = match mode.target {
+                Some(target) => target.refreshed()?,
+                None => sqlite::target::review()?,
+            };
+            let proofs = state.store()?.ownership().to_vec();
+            let mut owned = BTreeMap::new();
+            for proof in proofs
+                .iter()
+                .filter(|proof| proof.target_kind == ClientKind::GithubCopilotApp)
+            {
+                let resource = sqlite::resource(
+                    &target,
+                    &mode.owner_id,
+                    &proof.connection_id,
+                    "0".repeat(64),
+                    false,
+                )?;
                 if proof.resource_id
-                    != crate::deployment::ownership::resource_id(
-                        &crate::transaction::Resource::AppSqlite(Box::new(resource.clone())),
-                    )
+                    == ownership::resource_id(&crate::transaction::Resource::AppSqlite(Box::new(
+                        resource.clone(),
+                    )))
                 {
-                    continue;
-                }
-                if let Some((name, count)) = sqlite::observed_source(&resource)? {
-                    sources.push(crate::deployment::publication::ConfiguredSource::new(
-                        &name,
-                        Some(&proof.connection_id),
-                        count,
-                    )?);
+                    owned.insert(resource.provider_id, proof.connection_id.clone());
                 }
             }
-            Ok(sources)
+            sqlite::import::observed_catalog(&target, &owned)
         })();
-        if let Ok(sources) = observed {
-            configuration.sources = sources;
-            configuration.state = crate::deployment::publication::ConfigurationState::Available;
-        } else {
-            configuration.sources.clear();
-            configuration.state = crate::deployment::publication::ConfigurationState::Unavailable;
+        match observed {
+            Ok(sources) => {
+                configuration.sources = sources;
+                configuration.state = ConfigurationState::Available;
+            }
+            Err(error) => {
+                configuration.sources.clear();
+                configuration.issue =
+                    matches!(error, AppError::AppRunning | AppError::AppExitUnverified)
+                        .then_some(ConfigurationIssue::ClientRunning);
+                configuration.state = match error {
+                    AppError::Unsupported(_) | AppError::AppCompatibility(_) => {
+                        ConfigurationState::Unsupported
+                    }
+                    _ => ConfigurationState::Unavailable,
+                };
+            }
         }
     }
     pub fn stop_scope_for_revoke(&self, connection_id: &str, target: &Target) -> AppResult<()> {
@@ -390,7 +406,7 @@ impl Jobs {
         }
         value.recovery_ids.insert(connection_id.into());
         if value.scopes.is_empty() {
-            value.enabled = false;
+            value.granted_at = None;
             self.cancelled.store(true, Ordering::Release);
         }
         value.nonce = uuid::Uuid::new_v4().to_string();
@@ -413,7 +429,7 @@ impl Jobs {
         if self.stopping.load(Ordering::Acquire) {
             return;
         }
-        if !self.halted.load(Ordering::Acquire) && self.snapshot().is_ok_and(|c| c.enabled) {
+        if !self.halted.load(Ordering::Acquire) && self.snapshot().is_ok_and(|c| c.has_scope()) {
             self.set_phase(Phase::PendingSync, None);
             self.wake();
         }
@@ -433,6 +449,9 @@ impl Jobs {
     pub fn halt(&self, phase: Phase, diagnostic: Option<String>) {
         self.halted.store(true, Ordering::Release);
         self.set_phase(phase, diagnostic);
+    }
+    pub(crate) fn resume_after_publication(&self) {
+        self.halted.store(false, Ordering::Release);
     }
     pub fn active(&self) -> bool {
         self.active.load(Ordering::Acquire) != 0
@@ -502,32 +521,9 @@ pub(crate) fn qualify_json_targets(
     crate::adapters::json_support::qualify(targets, selected);
 }
 
-pub fn targets_for_connection(
-    state: &ManagedState,
-    connection: &Connection,
-    selected: &[String],
-) -> Vec<ClientTarget> {
+pub fn publication_targets(state: &ManagedState, selected: &[String]) -> Vec<ClientTarget> {
     let mut values = targets(state);
     qualify_json_targets(state, &mut values, selected);
-    let approved = state.app_sync.snapshot().is_ok_and(|mode| {
-        mode.target
-            .as_ref()
-            .is_some_and(|target| mode.approve(connection, target).is_ok())
-    });
-    if !approved {
-        if let Some(app) = values
-            .iter_mut()
-            .find(|t| t.kind == ClientKind::GithubCopilotApp)
-        {
-            app.supports_write = false;
-            app.status = if app.detected {
-                crate::domain::ClientStatus::ReadOnly
-            } else {
-                crate::domain::ClientStatus::NotInstalled
-            };
-            app.detail = "Manual provider setup".into();
-        }
-    }
     values
 }
 

@@ -169,7 +169,7 @@ html[data-theme="dark"] .app-icon.jetbrains { background: #382630; }
 .status-pill { display: inline-flex; align-items: center; gap: 5px; min-height: 24px; padding: 3px 8px; border: 1px solid transparent; border-radius: 999px; font-size: 10.5px; font-weight: 580; white-space: nowrap; }
 .status-pill::before { width: 5px; height: 5px; border-radius: 50%; background: currentColor; content: ""; }
 .status-pill.configured, .status-pill.success { color: var(--success); background: var(--success-soft); }
-.status-pill.empty, .status-pill.manual { color: var(--muted); border-color: var(--border); background: var(--panel-subtle); }
+.status-pill.empty, .status-pill.manual, .status-pill.disabled { color: var(--muted); border-color: var(--border); background: var(--panel-subtle); }
 .status-pill.warning { color: var(--warning); background: var(--warning-soft); }
 .status-pill.danger { color: var(--danger); background: var(--danger-soft); }
 .row-chevron { color: var(--subtle); }
@@ -560,11 +560,15 @@ html, body { background: var(--bg); }
 .app-provider-field { display: grid; min-width: 0; gap: 7px; color: var(--muted); font-size: 12px; }
 .app-provider-field select { width: 100%; min-width: 0; }
 .app-card-footer { display: flex; align-items: flex-start; flex-wrap: wrap; gap: 12px; margin-top: 18px; padding-top: 12px; border-top: 1px solid var(--border); }
+.existing-providers { display: grid; gap: 8px; }
+.existing-provider-row { display: flex; justify-content: space-between; align-items: start; flex-wrap: wrap; gap: 8px 16px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--panel-subtle); overflow-wrap: anywhere; }
+.existing-provider-row > div:first-child { display: grid; gap: 4px; min-width: 0; }
+.existing-provider-row small { color: var(--muted); }
+#existing-provider-form { display: grid; gap: 12px; }
 .app-details { flex: 1; min-width: 0; }
 .app-details .path-line { white-space: normal; overflow-wrap: anywhere; }
 .app-group-instances .app-sync-panel { margin-top: 18px; }
 .app-sync-panel { padding: 16px; border: 1px solid var(--border); border-radius: 10px; background: var(--panel-subtle); }
-.app-sync-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
 .app-sync-results { padding-left: 18px; }
 .app-sync-results li { margin-top: 8px; }
 .app-sync-results li > span { display: block; overflow-wrap: anywhere; }
@@ -625,6 +629,7 @@ html, body { background: var(--bg); }
 .modal .manager-target > span { min-width: 0; }
 .modal .manager-target strong { font-size: 13px; overflow-wrap: anywhere; }
 .modal .manager-target small { font-size: 12px; }
+.modal .manager-target small.target-blocked { color: var(--danger); }
 .modal .manager-preview-actions { display: flex; justify-content: flex-end; gap: 10px; margin: 20px -24px -22px; padding: 16px 24px; border-top: 1px solid var(--border); background: var(--panel); }
 .modal .manager-operation { margin-top: 12px; padding: 14px; border: 1px solid var(--border); border-radius: 10px; }
 .modal .manager-operation h3 { font-size: 13px; }
@@ -692,3 +697,62 @@ details[open]:not(.provider-more) > summary { margin-bottom: 12px; }
 .app-config-main > .status-pill, .status-row > .status-pill { font-size: 12px; font-weight: 600; }
 .current-source .app-sync-inline-phase { margin-top: 5px; color: var(--accent); font-size: 12px; font-weight: 400; }
 .current-source .app-sync-inline-phase:is([data-sync-phase="failed"], [data-sync-phase="conflict"], [data-sync-phase="recoveryRequired"]) { color: var(--danger); }
+
+/* Overview uses the same column boundaries for every app, including empty rows. */
+.app-status-list { --roster-columns: minmax(185px, 1.12fr) minmax(130px, 1fr) 106px 96px; }
+.app-status-list .roster-head, .app-status-list .status-row {
+  display: grid; grid-template-columns: var(--roster-columns); align-items: center;
+  gap: 14px; padding-inline: 18px; text-align: start;
+}
+.roster-head { min-height: 36px; border-bottom: 1px solid var(--border); background: var(--panel-subtle); color: var(--muted); font-size: 11px; font-weight: 600; }
+.roster-head > :last-child { text-align: end; }
+.app-status-list .status-row { min-height: 72px; }
+.app-status-list .status-row[data-action] { cursor: pointer; }
+.app-status-list .status-row[data-action]:hover { background: var(--panel-subtle); }
+.app-status-list .status-pill { justify-self: start; grid-column: 3; grid-row: 1; }
+.app-status-list .roster-providers { grid-column: 2; grid-row: 1; display: grid; gap: 4px; margin: 0; padding: 0; }
+.roster-provider { display: flex; align-items: baseline; flex-wrap: wrap; gap: 2px 10px; min-width: 0; }
+.roster-provider strong { font-size: 12.5px; font-weight: 600; overflow-wrap: anywhere; }
+.roster-provider small, .roster-providers > small, .roster-providers .roster-dash { color: var(--muted); font-size: 11.5px; margin: 0; }
+.roster-actions, .start-actions { display: flex; align-items: center; justify-content: flex-end; gap: 7px; }
+.roster-actions .row-chevron { flex: none; cursor: pointer; }
+.start-actions { flex-wrap: wrap; }
+.app-config-main > .current-source { color: var(--muted); font-size: 12px; }
+.import-review { display: grid; gap: 12px; }
+.import-review > p { margin: 0; }
+.import-consent { padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--panel-subtle); }
+.import-consent .manager-meta { margin: 5px 0 0 27px; }
+.import-toolbar { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--muted); }
+.import-toolbar label { display: inline-flex; align-items: center; gap: 8px; color: var(--text); cursor: pointer; }
+.import-choices { display: grid; gap: 8px; }
+.import-choice { padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--panel-subtle); }
+.import-choice:has(input:checked) { border-color: var(--accent-border); background: var(--accent-soft); }
+.import-choice-label { display: grid; grid-template-columns: 16px minmax(0,1fr) auto; align-items: start; gap: 10px; cursor: pointer; }
+.import-choice-label input[type=checkbox], .import-toolbar input[type=checkbox] { width: 16px; height: 16px; min-height: 0; margin: 2px 0 0; padding: 0; accent-color: var(--accent); }
+.import-choice-info { display: grid; gap: 3px; min-width: 0; }
+.import-choice-info strong { font-size: 13px; color: var(--text-strong); overflow-wrap: anywhere; }
+.import-choice-info code, .import-models li code { font-size: 11.5px; color: var(--muted); overflow-wrap: anywhere; }
+.import-badge { font-size: 11px; color: var(--accent); white-space: nowrap; }
+.import-origin { display: flex; flex-wrap: wrap; gap: 4px 7px; margin: 8px 0 4px 26px; }
+.import-origin span { color: var(--text); background: var(--panel); border: 1px solid var(--border); border-radius: 5px; padding: 1px 6px; font-size: 10.5px; overflow-wrap: anywhere; }
+.import-only { margin-inline-start: auto; padding: 1px 6px; border: 1px solid var(--border-strong); border-radius: 5px; background: var(--panel); color: var(--accent); font: inherit; font-size: 11px; cursor: pointer; }
+.import-only:hover, .import-only:focus-visible { border-color: var(--accent); }
+.import-models { margin-left: 26px; color: var(--muted); font-size: 11px; }
+.import-models summary, .import-issues summary { width: fit-content; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.import-models ul, .import-issues ul { margin: 6px 0 0; padding-left: 18px; }
+.import-issues, .import-empty { color: var(--muted); font-size: 12px; }
+@media (max-width: 860px) {
+  .app-status-list { --roster-columns: minmax(170px,1fr) minmax(112px,.85fr) 89px 86px; }
+  .app-status-list .roster-head, .app-status-list .status-row { gap: 8px; padding-inline: 12px; }
+}
+@media (max-width: 690px) {
+  .app-status-list .roster-head { display: none; }
+  .app-status-list .status-row { grid-template-columns: minmax(0,1fr) auto; gap: 5px 10px; }
+  .app-status-list .app-identity { grid-column: 1; grid-row: 1; }
+  .app-status-list .roster-providers { grid-column: 1; grid-row: 2; padding-left: 53px; }
+  .app-status-list .status-pill { grid-column: 1; grid-row: 3; margin-left: 53px; }
+  .roster-actions { grid-column: 2; grid-row: 1 / span 3; }
+  .start-actions { justify-content: flex-start; }
+  .import-choice-label { grid-template-columns: 16px minmax(0,1fr); }
+  .import-badge { grid-column: 2; }
+}

@@ -4,7 +4,7 @@ CopilotBYOKManager manages developer-tool configuration, may launch allowlisted 
 
 The v0.1 four-page core edition does not expose or automatically query Usage, Billing, separate personal-usage authorization or Resources. Their existing data and backend security contracts remain protected; the sections below cover retained code as well as currently exposed features.
 
-The dedicated configuration directory and credential namespace must not adopt other applications' secrets or client authentication material.
+The dedicated credential namespace may hold provider API keys explicitly imported from reviewed BYOK sources. Client login and account credentials belong to their original applications.
 
 ## Do not publish secrets or private workspace content
 
@@ -73,6 +73,12 @@ Do not attach a real token or raw session log. Extract the smallest synthetic re
 The [SQLite adapter](docs/copilot-app-sqlite-sync.md) implements only the manager's selected BYOK provider/model projection for official Windows x64 App builds after publisher, product, architecture and provider JSON database-format verification. It starts disabled and requires explicit enablement and a target-scoped risk confirmation. The Authorization-header route stores the selected provider key in plaintext in App SQLite rows; SQLite WAL/rollback journals and filesystem backups may retain it too. Manager-side OS credential storage does not encrypt these copies. The enable dialog discloses this before writing. The native adapter checks owner identity and restrictive Windows ACLs on the database, parent and sidecars.
 
 Keys must stay out of previews, logs, diagnostics, exports, issues and screenshots. Restrict reads to reviewed schema metadata and bounded configuration rows; never enumerate account, session or conversation tables. Recovery data must be scoped, private and documented; do not silently copy the full App database. Unknown versions/schema, unsafe paths, lock contention, a running App or external edits fail closed. Disabling sync stops future writes but neither removes existing target keys nor guarantees erasure from journals/backups; show separate, reviewed owned-configuration revocation and key-rotation guidance. The exact invariants and acceptance gates are in the linked plan.
+
+## Provider extraction
+
+The visibility check compares supported provider configurations and key availability with the saved catalog. The review returns bounded configuration metadata and key availability. The apply command rechecks the selected configuration and credential fingerprints. With explicit consent, it saves a static provider API key in the operating system credential store under the selected Connection. The operation is local. Keys and fingerprints stay out of IPC payloads, application state, logs and backups. Existing keys are preserved and conflicting source keys require a narrower selection. For the supported App provider schema, key import accepts the reviewed static Bearer Authorization field in non-account-linked provider rows.
+
+Direct editing and deletion target one reviewed provider in an allowlisted VS Code, CLI or JetBrains configuration file. The editor exposes bounded names and endpoints. It preserves credentials on edit and uses the native write lock, stale-plan checks and private transaction journal. Compatible App observations read only non-account-linked provider names and model counts through the verified read-only adapter. App mutation stays within its approved owned-row protocol.
 
 ## Installer handling expectations
 

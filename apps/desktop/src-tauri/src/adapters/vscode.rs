@@ -9,6 +9,8 @@ use std::fs;
 use std::path::{Component, Path, PathBuf};
 use uuid::Uuid;
 
+pub(crate) mod existing;
+
 const LANGUAGE_MODELS_FILE: &str = "chatLanguageModels.json";
 const PROFILE_STORAGE_FILE: &str = "storage.json";
 const MAX_CONFIG_BYTES: u64 = 8 * 1024 * 1024;
@@ -170,6 +172,7 @@ pub fn preview(connection: &Connection, target: &ClientTarget) -> DeploymentOper
             .unwrap_or_else(|| "VS Code is not available".to_string()),
         changes,
         supported: target.detected && target.supports_write,
+        blocker: None,
         requires_restart: false,
     }
 }
@@ -331,6 +334,67 @@ pub(crate) fn observe_current(
     Ok(sources)
 }
 
+pub(crate) fn import_catalog(
+    path: &Path,
+    collect_keys: bool,
+) -> AppResult<crate::provider_import::Catalog> {
+    use crate::provider_import::{protocol, repeats_private, Catalog, ModelFields};
+    let mut catalog = Catalog::for_scan(collect_keys);
+    let groups = read_groups(path)?;
+    if groups.len() > 256 {
+        return Err(crate::provider_import::too_large());
+    }
+    for group in groups.iter().filter(|g| g["vendor"] == "customendpoint") {
+        let Some(models) = group["models"].as_array().filter(|m| !m.is_empty()) else {
+            catalog.skipped += 1;
+            continue;
+        };
+        for model in models {
+            let url = model
+                .get("url")
+                .or_else(|| group.get("url"))
+                .and_then(Value::as_str)
+                .unwrap_or_default();
+            let wire = match model.get("apiType").or_else(|| group.get("apiType")) {
+                Some(value) => value.as_str().and_then(|s| protocol(Some(s))),
+                None if url.trim_end_matches('/').ends_with("/messages") => {
+                    Some(ApiProtocol::Messages)
+                }
+                None if url.trim_end_matches('/').ends_with("/responses") => {
+                    Some(ApiProtocol::Responses)
+                }
+                None => protocol(None),
+            };
+            catalog.add(
+                ModelFields {
+                    provider: group["name"].as_str().unwrap_or_default(),
+                    endpoint: url,
+                    protocol: wire,
+                    kind: None,
+                    id: model["id"].as_str().unwrap_or_default(),
+                    name: model["name"].as_str().unwrap_or_default(),
+                    api_key: group.get("apiKey").and_then(Value::as_str),
+                    caps: crate::domain::ModelCapabilities {
+                        tool_calling: model["toolCalling"].as_bool(),
+                        vision: model["vision"].as_bool(),
+                        reasoning: model["thinking"].as_bool(),
+                        context_window: model["contextWindow"]
+                            .as_u64()
+                            .or_else(|| model["maxInputTokens"].as_u64()),
+                        max_output_tokens: model["maxOutputTokens"].as_u64(),
+                    },
+                },
+                |s| {
+                    [model, group]
+                        .iter()
+                        .any(|v| repeats_private(s, v["apiKey"].as_str(), v.get("requestHeaders")))
+                },
+            )?;
+        }
+    }
+    Ok(catalog)
+}
+
 fn default_user_roots() -> Vec<(Edition, PathBuf)> {
     let Some(config_dir) = crate::platform::config_dir() else {
         return Vec::new();
@@ -430,12 +494,16 @@ fn read_groups(path: &Path) -> AppResult<Vec<Value>> {
     let Some(bytes) = crate::safe_io::read_optional(path, MAX_CONFIG_BYTES)? else {
         return Ok(Vec::new());
     };
-    let text = std::str::from_utf8(&bytes)
+    parse_groups(path, &bytes)
+}
+
+fn parse_groups(path: &Path, bytes: &[u8]) -> AppResult<Vec<Value>> {
+    let text = std::str::from_utf8(bytes)
         .map_err(|_| AppError::Config("VS Code model configuration is not valid UTF-8".into()))?;
     if text.trim().is_empty() {
         return Ok(Vec::new());
     }
-    let value: Value = json5::from_str(text).map_err(|_| {
+    let value: Value = serde_json::from_str(text).or_else(|_| json5::from_str(text)).map_err(|_| {
         // JSON5 diagnostics echo whole source lines, including foreign API keys.
         // Redaction cannot know every secret or key name in client-owned data.
         AppError::Config(format!(

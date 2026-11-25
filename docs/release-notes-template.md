@@ -1,28 +1,26 @@
 # CopilotBYOKManager v{{VERSION}}
 
-一次配置供应商，把模型发布到多个 Copilot 应用。
+Reuse provider configurations across Copilot Chat in VS Code and JetBrains, Copilot CLI and the Copilot App.
 
-- VS Code 稳定版从 **1.122**、Insiders 从 **1.121** 起支持 Custom Endpoint。Copilot CLI 从 **1.0.83** 起读取 `providers.json`。发布时核对选定客户端的版本。
-- JetBrains GitHub Copilot 稳定版从 **1.13.0** 起支持自动发布。升级后，共享 BYOK 配置格式兼容即可继续使用已有供应商。
-- 官方 Windows x64 Copilot App 按实际数据库格式开放可选同步，支持从 **1.0.8** 首次出现的供应商 JSON 表开始的兼容结构。在应用页点击 **检查并启用同步**，核对数据库格式后选择供应商。支持 App 1.4.3 的模型视觉能力字段。
-- 更新客户端后，打开的预览需要重新核对。原有供应商可以更新和撤销。App 数据库格式变化时，重新确认同步范围。
+- **Extract existing providers.** Bring in endpoints and models from supported app configurations, individually or together. With confirmation, you can also save available API keys in the local system credential store and fill in missing keys on saved providers. Extraction runs locally without uploads.
+- **Manage existing configurations.** Open **Manage configuration** in an app instance. Edit or delete supported entries in VS Code, CLI and JetBrains. Manage synchronized Copilot App providers from the same entry.
+- **Review one publication plan.** Global publication preselects eligible targets, including CLI and a compatible Copilot App with sync enabled. Each card shows its own result or blocker, and the publication history retains the reason.
+- **Publish to an enabled Copilot App alongside other targets.** The shared review handles first-time provider consent and shows when Copilot App needs to be closed.
 
 ### 下载与安装 / Downloads
 
 {{FILES}}
 
-Windows x64 用户可运行安装器，或解压便携 ZIP。macOS 15+ 用户可打开 Universal DMG，将应用拖入 Applications。`SHA256SUMS.txt` 提供校验和。
+Run Windows x64 Setup or extract the standalone ZIP. On macOS 15 or later, open the Universal DMG and drag the app to Applications. Verify package hashes with `SHA256SUMS.txt`.
 
-### English
+### 简体中文
 
-Configure providers once and publish to Copilot Chat in VS Code, Copilot CLI, JetBrains and the Copilot App.
+- **提取已有供应商。** 可单独或批量提取端点和模型。用户确认后，可将明文 API Key 保存到本机系统凭据库，也能为已保存的供应商补齐密钥。提取不上传。
+- **管理原有配置。** 在应用实例中打开「管理配置」。VS Code、CLI 和 JetBrains 支持编辑或删除适配的配置，已同步到 Copilot App 的供应商也从同一入口管理。
+- **统一发布预览。** 全局发布默认勾选符合条件的应用，包括 CLI 和已启用同步的兼容 Copilot App。各目标的阻塞原因直接显示在卡片上，并保留到发布记录。
+- **一并发布到 Copilot App。** 首次同步供应商在同一预览中确认。App 在后台运行时，对应目标会提示退出后重新核对。
 
-- Publication checks the client that consumes the file: VS Code Stable **1.122** or Insiders **1.121** for Custom Endpoint, and Copilot CLI **1.0.83** for `providers.json`.
-- Stable JetBrains plugin **1.13.0 and newer** can publish to a compatible shared BYOK store. Existing managed providers survive compatible plugin updates.
-- Official Windows x64 Copilot App builds with a compatible JSON provider database support opt-in sync. The first observed release with this format was **1.0.8**. Choose **Check and enable sync** to check your installation before selecting providers. App 1.4.3 model vision settings are supported.
-- Review again after a client update before applying a pending plan. A change to the approved App storage format asks you to confirm its scope again.
-
-Run Windows Setup or extract the standalone ZIP. On macOS 15 or later, open the Universal DMG and drag the app to Applications.
+Windows x64 用户可运行安装器或解压便携 ZIP。macOS 15 及以上用户可打开 Universal DMG，将应用拖入 Applications。可用 `SHA256SUMS.txt` 核对文件。
 
 [English guide](https://github.com/Arcueid77/CopilotBYOKManager/blob/{{COMMIT}}/docs/user-guide.md) · [中文手册](https://github.com/Arcueid77/CopilotBYOKManager/blob/{{COMMIT}}/docs/user-guide.zh-CN.md) · [Roadmap / 路线图](https://github.com/Arcueid77/CopilotBYOKManager/blob/{{COMMIT}}/ROADMAP.md)
 

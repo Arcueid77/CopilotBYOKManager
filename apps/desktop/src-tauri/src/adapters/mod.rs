@@ -1,3 +1,4 @@
+mod bounded_json;
 pub mod copilot_cli;
 pub mod github_app;
 pub mod jetbrains;
@@ -108,7 +109,9 @@ fn preview_for_purpose(
             .ok_or_else(|| AppError::InvalidInput(format!("Unknown client target: {target_id}")))?;
         let operation = match target.kind {
             ClientKind::VsCodeCopilot => vscode::preview(connection, target),
-            ClientKind::CopilotCli => copilot_cli::preview(connection, target),
+            ClientKind::CopilotCli => {
+                copilot_cli::preview(connection, target, purpose.is_revocation())
+            }
             ClientKind::GithubCopilotApp if purpose.is_revocation() => {
                 github_app::preview_revocation(connection, target)
             }
@@ -132,6 +135,7 @@ fn preview_for_purpose(
         target_ids: canonical_ids,
         operations,
         app_model_removals: Vec::new(),
+        app_scope_confirmation: false,
         created_at: Utc::now(),
     })
 }

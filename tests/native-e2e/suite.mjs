@@ -110,7 +110,7 @@ export async function nativeSuite(options, record) {
       for (const checkbox of await d.browser.$$('input[name="deployment-target"]')) {
         if (await checkbox.isEnabled() && !(await checkbox.isSelected())) await checkbox.click();
       }
-      await d.click('#preview-deployment');
+      await d.browser.$('#deployment-preview .deployment-write-details').waitForExist();
       const button = await d.browser.$('#apply-deployment'); await button.waitForClickable(); await button.click();
       await until(() => fs.readFileSync(settings, 'utf8').includes('copilotByokManager'), 'Native deployment did not write');
       await until(async () => { const state = await d.ipc('get_dashboard'); return !state.deploymentRecovery && state.deployments.some(r => r.status === 'applied'); }, 'Deployment audit did not finish');
@@ -486,7 +486,7 @@ export async function nativeSuite(options, record) {
       await d.click(`${card} [data-action="deploy-connection"]`);
       assert.equal(await d.browser.$('#modal-root #deployment-preview').isExisting(),false);
       assert.equal(await d.browser.$('#apply-deployment').isEnabled(),true);
-      // Preview VS Code only; CLI replacement requires its own explicit selection.
+      // Preview VS Code only and leave CLI outside this review.
       const vsTarget=(await d.ipc('get_dashboard')).clients.find(c=>c.kind==='vs-code-copilot'&&c.detected);
       for(const checkbox of await d.browser.$$('input[name="deployment-target"]')) {
         if(await checkbox.isEnabled() && await checkbox.isSelected() !== ((await checkbox.getValue())===vsTarget.id)) await checkbox.click();

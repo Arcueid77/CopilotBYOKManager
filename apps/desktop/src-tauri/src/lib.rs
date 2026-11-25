@@ -14,6 +14,8 @@ mod installer;
 mod model_discovery;
 mod native_process;
 mod platform;
+mod provider_import;
+mod provider_management;
 mod redact;
 mod resources;
 mod safe_file;
@@ -130,10 +132,17 @@ pub fn run() {
             window_shell::set_close_action,
             window_shell::set_tray_locale,
             commands::get_dashboard,
+            provider_import::get_provider_import_availability,
+            provider_import::preview_provider_import,
+            provider_import::apply_provider_import,
+            provider_management::list_existing_providers,
+            provider_management::preview_existing_provider_change,
+            provider_management::apply_existing_provider_change,
             app_sync::commands::get_app_sync_status,
             app_sync::commands::check_app_sync_compatibility,
             app_sync::commands::preview_app_sync_enable,
             app_sync::commands::enable_app_sync,
+            app_sync::commands::enable_app_sync_waiting,
             app_sync::commands::disable_app_sync,
             app_sync::commands::retry_app_sync,
             app_sync::commands::preview_app_sync_revoke,
@@ -162,6 +171,7 @@ pub fn run() {
             model_discovery::discover_connection_models,
             commands::delete_connection,
             commands::preview_deployment,
+            commands::discard_deployment_preview,
             adapters::jetbrains::get_jetbrains_setup_guide,
             commands::preview_revoke_and_delete,
             commands::apply_deployment_plan,

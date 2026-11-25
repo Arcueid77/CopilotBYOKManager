@@ -44,7 +44,7 @@
       return true;
     }
     function changed(event) {
-      if (event.target.name && event.target.closest("#connection-form, #resource-form")) dirty = true;
+      if (event.target.name && event.target.closest("#connection-form, #resource-form, #existing-provider-form")) dirty = true;
     }
     function requestClose() {
       if (!active) return true;

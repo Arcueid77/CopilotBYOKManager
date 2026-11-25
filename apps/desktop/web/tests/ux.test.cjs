@@ -36,7 +36,9 @@ test('publication guidance provides next steps for the applied client', () => {
   const connection = snapshot.connections[0];
   assert.doesNotMatch(manager.publicationSteps({ status: 'applied', targetKind: 'vs-code-copilot' }, connection).join(''), /JetBrains|终端/);
   assert.match(manager.publicationSteps({ status: 'applied', targetKind: 'copilot-cli' }, connection).join(''), /新的 CLI 会话.*\/model/);
-  assert.match(manager.publicationSteps({ status: 'applied', targetKind: 'jetbrains-copilot' }, connection).join(''), /重启此 IDE/);
+  const restart = manager.publicationSteps({ status: 'applied', targetKind: 'jetbrains-copilot' }, connection);
+  assert.match(restart.join(''), /重启应用后.*模型选择器/);
+  assert.deepEqual(restart, manager.publicationSteps({ status: 'applied', targetKind: 'github-copilot-app' }, connection));
   assert.deepEqual(manager.publicationSteps({ status: 'rolledBack', targetKind: 'copilot-cli' }, connection), []);
   assert.deepEqual(manager.publicationSteps({ status: 'applied', targetKind: 'vs-code-copilot' }, undefined), []);
 });

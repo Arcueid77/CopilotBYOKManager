@@ -122,6 +122,7 @@ async function nativeFixture() {
     const pending = delayed.get(cmd);
     if (pending) await new Promise((resolve, reject) => { pending.resolve = resolve; pending.reject = reject; });
     if (cmd === "get_dashboard") return structuredClone({ version: 2, connections, clients, deployments, clientConfigurations: clients.map(client => ({ targetId: client.id, state: configurationErrors.has(client.id) ? "unavailable" : client.supportsWrite ? "available" : "unsupported", sources: publications.filter(source => source.targetId === client.id).map(source => ({ connectionId: source.connectionId, name: source.name ?? connections.find(connection => connection.id === source.connectionId)?.name, modelCount: source.modelCount })) })), stateRecovery, deploymentRecovery, statePath: "Fixture only", usageDb: { state: "available", schemaVersion: 2 } });
+    if (cmd === "get_provider_import_availability") return { targetIds: [], batch: false };
     if (cmd === "get_install_runs") return installRun ? structuredClone([installRun]) : [];
     if (cmd === "preview_install") return { id:"install-fixture",requestedComponentIds:["copilot-cli","github-copilot-app"],createdAt:now,expiresAt:new Date(Date.now()+900000).toISOString(),operations:["copilot-cli","github-copilot-app"].map(componentId=>({componentId,componentName:componentId,source:"Fixture",version:"fixture",architecture:"x64",dependencies:[],description:"Synthetic installation"})) };
     if (cmd === "apply_install_plan") {

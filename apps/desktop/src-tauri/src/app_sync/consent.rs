@@ -12,7 +12,7 @@ use std::{
 };
 
 pub const RISK_VERSION: u32 = 1;
-pub const MAX_SELECTED: usize = 16;
+pub const MAX_SELECTED: usize = crate::validation::MAX_CONNECTIONS;
 const MAX_BYTES: u64 = 128 * 1024;
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -45,6 +45,12 @@ impl Consent {
     pub fn revision(&self) -> AppResult<String> {
         fingerprint::json("copilot-app-consent-v1", self)
     }
+    pub fn has_scope(&self) -> bool {
+        self.enabled && !self.scopes.is_empty()
+    }
+    pub fn waiting_for_providers(&self) -> bool {
+        self.enabled && self.scopes.is_empty()
+    }
     pub fn validate(&self, owner: &str) -> AppResult<()> {
         if self.version != 1
             || self.risk_version != RISK_VERSION
@@ -58,11 +64,10 @@ impl Consent {
         {
             return Err(invalid());
         }
-        if self.enabled
-            && (self.target.is_none()
-                || self.scopes.is_empty()
-                || self.granted_at.is_none()
-                || uuid::Uuid::parse_str(&self.nonce).is_err())
+        if (self.enabled && uuid::Uuid::parse_str(&self.nonce).is_err())
+            || (self.has_scope() && (self.target.is_none() || self.granted_at.is_none()))
+            || (self.waiting_for_providers() && self.granted_at.is_some())
+            || (!self.recovery_ids.is_empty() && self.target.is_none())
         {
             return Err(invalid());
         }
@@ -97,7 +102,7 @@ impl Consent {
         Ok(())
     }
     pub fn approve(&self, connection: &Connection, target: &Target) -> AppResult<()> {
-        if !self.enabled
+        if !self.has_scope()
             || !self
                 .target
                 .as_ref()

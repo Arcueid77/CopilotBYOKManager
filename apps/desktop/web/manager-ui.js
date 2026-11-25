@@ -42,10 +42,10 @@
         const connection = snapshot.connections.find(connection => connection.id === source.connectionId);
         if (source.manual) return `<span class="manager-source" data-source-state="${escape(source.state)}">${escape(source.name)} · ${source.state === "userConfirmed" ? tr("你已确认") : tr("修改后待确认")}</span>`;
         const text = Number.isInteger(source.modelCount) && source.modelCount >= 0 ? tr("{0} 个模型", source.modelCount) : tr("模型数量未知");
-        return `<span class="manager-source" data-source-state="configured">${escape(source.name || connection?.name || tr("供应商"))} · ${text}${connection?.enabled === false ? tr(" · 已停用，配置保留") : ""}</span>`;
+        return `<span class="manager-source" data-source-state="configured">${escape(clients.sourceName(source, snapshot))} · ${text}${connection?.enabled === false ? tr(" · 已停用，配置保留") : ""}</span>`;
       });
       const visible = chips.slice(0, 3).join("") + (chips.length > 3 ? compact ? `<span class="manager-extra-summary">${tr("另有 {0} 个来源", chips.length - 3)}</span>` : `<details class="manager-extra-sources"><summary>${tr("另有 {0} 个来源", chips.length - 3)}</summary><div class="manager-sources">${chips.slice(3).join("")}</div></details>` : "");
-      return `<div class="app-current-state" data-configuration-state="${escape(current.state)}">${!compact || !visible ? `<p class="manager-meta">${escape(current.label)}</p>` : ""}${visible ? `<div class="manager-sources">${visible}</div>` : ""}</div>`;
+      return `<div class="app-current-state" data-configuration-state="${escape(current.state)}">${visible ? `<div class="manager-sources">${visible}</div>` : `<p class="manager-meta">${escape(current.detail)}</p>`}</div>`;
   }
 
   function sourceRows(snapshot, data = {}) {
@@ -63,31 +63,35 @@
     return rows;
   }
 
-  function lastResult(snapshot, native) {
+  function lastResult(snapshot, native, showHistory = true) {
     const records = snapshot.deployments.slice().sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
     if (!records.length) return `<p class="manager-meta">${tr("尚无发布记录")}</p>`;
     const last = records[0], batch = last.planId ? records.filter(record => record.planId === last.planId) : [last];
     const applied = batch.filter(record => record.status === "applied").length;
     const failed = batch.filter(record => record.status === "failed").length;
     const manual = batch.filter(record => record.status === "skipped").length;
-    const statuses = { applied: tr("配置变更已应用"), skipped: tr("未自动处理"), failed: tr("失败，请核对"), rolledBack: tr("已回滚"), "rolled-back": tr("已回滚"), interrupted: tr("已中断，待恢复"), partial: tr("部分完成"), prepared: tr("已准备"), applying: tr("处理中") };
-    return `<div class="manager-result"><span>${tr("{0}{1} · {2} 个目标配置已处理{3}{4}", native ? "" : tr("模拟 · "), date(last.createdAt), applied, manual ? tr(" · {0} 个未自动处理", manual) : "", failed ? tr(" · {0} 个失败", failed) : "")}</span><button class="button ghost small" data-action="view-publication-history">${tr("查看记录")}</button></div>
+    return `<div class="manager-result"><span>${tr("{0}{1} · {2} 个目标已应用{3}{4}", native ? "" : tr("模拟 · "), date(last.createdAt), applied, manual ? tr(" · {0} 个未自动处理", manual) : "", failed ? tr(" · {0} 个失败", failed) : "")}</span>${showHistory ? `<button class="button ghost small" data-action="view-publication-history">${tr("查看记录")}</button>` : ""}</div>
       <ul class="manager-result-targets">${batch.map(record => {
         const client = snapshot.clients.find(client => client.id === record.targetId);
         const connection = snapshot.connections.find(connection => connection.id === record.connectionId);
         const steps = publicationSteps(record, connection);
-        const manual = record.status === "skipped" && record.targetKind === "github-copilot-app" && connection;
-        return `<li><strong>${escape(connection?.name ?? record.connectionId ?? tr("供应商已移除"))} → ${escape(client ? clients.name(client) : record.targetId ?? record.targetKind ?? tr("目标未知"))}</strong><span>${escape(statuses[record.status] ?? tr("状态需核对"))}</span>${steps.map(text => `<p>${escape(text)}</p>`).join("")}${manual ? `<button class="button ghost small manager-result-action" data-action="setup-manual" data-id="${escape(connection.id)}">${tr("查看 {0} 的手动配置步骤", escape(connection.name))}</button>` : ""}${record.status !== "applied" && record.detail ? `<details><summary>${tr("操作明细")}</summary><p>${escape(record.detail)}</p></details>` : ""}</li>`;
+        const blocker = clients.blockerText(record.blocker);
+        const canEdit = record.status === "skipped" && clients.canFixProvider(record.blocker) && connection && !snapshot.stateRecovery && !snapshot.deploymentRecovery;
+        const canGuide = record.status === "skipped" && !blocker && client;
+        const manualGuide = record.status === "skipped" && !blocker && record.targetKind === "github-copilot-app" && connection;
+        const action = canEdit ? `<button class="button ghost small manager-result-action" data-action="edit-connection" data-id="${escape(connection.id)}">${tr("编辑供应商")}</button>`
+          : canGuide ? `<button class="button ghost small manager-result-action" data-action="client-guide" data-id="${escape(client.id)}" data-provider-id="${escape(connection?.id ?? "")}">${tr("配置指引")}</button>`
+          : manualGuide ? `<button class="button ghost small manager-result-action" data-action="setup-manual" data-id="${escape(connection.id)}">${tr("配置指引")}</button>` : "";
+        return `<li><strong>${escape(connection?.name ?? tr("供应商已移除"))} → ${escape(clients.publicationName(record, snapshot))}</strong><span>${escape(clients.publicationStatus(record.status))}</span>${blocker ? `<p>${escape(blocker)}</p>` : ""}${steps.map(text => `<p>${escape(text)}</p>`).join("")}${action}${record.status !== "applied" && record.detail ? `<details><summary>${tr("操作明细")}</summary><p>${escape(record.detail)}</p></details>` : ""}</li>`;
       }).join("")}</ul>`;
   }
 
   function publicationSteps(record, connection) {
     if (["revokeApp", "revokeAndDelete"].includes(record.purpose)) return [];
-    if (record.status !== "applied") return record.status === "skipped" && record.targetKind === "github-copilot-app" ? [tr("此客户端保持手动配置，请在 App 内添加本次连接。")] : [];
+    if (record.status !== "applied") return [];
     if (!connection?.models.some(model => model.enabled)) return [];
     if (record.targetKind === "copilot-cli") return [tr("请启动新的 CLI 会话，用 /model 选择供应商与模型。")];
-    if (record.targetKind === "jetbrains-copilot") return [tr("请先重启此 IDE，再到客户端的模型选择器中选用刚发布的模型。")];
-    if (record.targetKind === "github-copilot-app") return [tr("重新启动 App，在模型选择器中选择已同步的模型。")];
+    if (["jetbrains-copilot", "github-copilot-app"].includes(record.targetKind)) return [tr("重启应用后，在模型选择器中选用刚发布的模型。")];
     if (["vs-code-copilot", "vscode-copilot"].includes(record.targetKind)) return [tr("请到客户端的模型选择器中选用刚发布的模型。")];
     return [];
   }

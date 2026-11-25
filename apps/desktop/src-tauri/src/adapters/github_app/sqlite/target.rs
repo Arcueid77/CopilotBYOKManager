@@ -50,7 +50,6 @@ fn installation() -> AppResult<PathBuf> {
     super::super::installation_path().ok_or_else(|| Issue::NotInstalled.into())
 }
 
-#[cfg(not(test))]
 pub(crate) fn installation_version() -> AppResult<String> {
     super::super::verified_sync_build(&installation()?)
 }

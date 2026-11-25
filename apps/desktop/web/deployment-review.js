@@ -8,22 +8,31 @@
     let plan = null;
     let busy = false;
     let generation = 0;
+    function discard(review) {
+      if (review?.id) void Promise.resolve().then(() => invoke("discard_deployment_preview", { planId: review.id })).catch(() => {});
+    }
     return {
       get plan() { return plan; },
       get busy() { return busy; },
       invalidate() {
         generation += 1;
+        discard(plan);
         plan = null;
       },
       async preview(connectionId, targetIds) {
         if (busy) throw new Error(tr("A deployment request is already in progress"));
+        discard(plan);
         plan = null;
         const request = ++generation;
         busy = true;
         try {
           const result = await invoke("preview_deployment", { connectionId, targetIds });
           if (request === generation) plan = result;
+          else discard(result);
           return plan;
+        } catch (error) {
+          if (request === generation) throw error;
+          return null;
         } finally {
           busy = false;
         }
@@ -37,7 +46,11 @@
         generation += 1;
         busy = true;
         try {
-          return await invoke("apply_deployment_plan", { planId, confirmed: true, ...(options.appModelReferencesResolved === true ? { appModelReferencesResolved: true } : {}) });
+          return await invoke("apply_deployment_plan", {
+            planId, confirmed: true,
+            ...(options.appModelReferencesResolved === true ? { appModelReferencesResolved: true } : {}),
+            ...(options.appScopeConfirmed === true ? { appScopeConfirmed: true } : {}),
+          });
         } finally {
           busy = false;
         }

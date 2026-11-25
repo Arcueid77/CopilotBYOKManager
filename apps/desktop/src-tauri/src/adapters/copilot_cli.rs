@@ -1,6 +1,6 @@
 use crate::domain::{
-    ApiProtocol, ClientKind, ClientStatus, ClientTarget, Connection, DeploymentOperation,
-    ProviderKind,
+    ApiProtocol, ClientKind, ClientStatus, ClientTarget, Connection, DeploymentBlocker,
+    DeploymentOperation, ProviderKind,
 };
 use crate::error::{AppError, AppResult};
 use std::collections::BTreeMap;
@@ -12,10 +12,18 @@ mod current;
 pub(crate) mod discovery;
 #[cfg(any(windows, test))]
 mod env_snapshot;
+pub(crate) mod existing;
 #[cfg(test)]
 mod ownership_tests;
 mod provider_registry;
 mod registry_schema;
+#[cfg(test)]
+pub(crate) use provider_registry::import_at as import_catalog_at_for_test;
+
+pub(crate) fn import_catalog(collect_keys: bool) -> AppResult<crate::provider_import::Catalog> {
+    provider_registry::ensure_default_root()?;
+    provider_registry::import_at(&provider_registry::path()?, collect_keys)
+}
 
 pub(crate) fn observe_current(
     connections: &[Connection],
@@ -33,6 +41,10 @@ pub(crate) fn routing_fingerprint() -> AppResult<String> {
 
 pub(crate) fn has_custom_home() -> AppResult<bool> {
     Ok(provider_registry::override_presence()?[0])
+}
+
+pub(crate) fn check_publication_root() -> AppResult<()> {
+    provider_registry::ensure_default_root()
 }
 
 pub(crate) fn model_selection_id(
@@ -119,20 +131,42 @@ pub fn discover_target() -> ClientTarget {
     }
 }
 
-pub fn preview(connection: &Connection, target: &ClientTarget) -> DeploymentOperation {
+fn supports_models(connection: &Connection) -> bool {
+    connection
+        .enabled_models()
+        .all(|model| model.capabilities.tool_calling != Some(false))
+}
+
+pub fn preview(
+    connection: &Connection,
+    target: &ClientTarget,
+    revoke: bool,
+) -> DeploymentOperation {
     let model = connection
         .default_model()
         .map(|model| model.model_id.as_str())
         .unwrap_or("<no enabled model>");
+    let writable = target.detected && target.supports_write;
+    let compatible = revoke || supports_models(connection);
+    let supported = writable && compatible;
     DeploymentOperation {
         id: Uuid::new_v4().to_string(),
         target_id: target.id.clone(),
         target_kind: ClientKind::CopilotCli,
         title: format!("Activate {} for Copilot CLI", connection.name),
-        description: format!(
-            "Publish {} enabled model(s) to ~/.copilot/providers.json",
-            connection.models.iter().filter(|m| m.enabled).count()
-        ),
+        description: if supported {
+            format!(
+                "Publish {} enabled model(s) to ~/.copilot/providers.json",
+                connection.enabled_models().count()
+            )
+        } else if writable {
+            "Copilot CLI requires tool-calling models; disable incompatible models before publishing".into()
+        } else {
+            target
+                .diagnostic
+                .clone()
+                .unwrap_or_else(|| target.detail.clone())
+        },
         changes: vec![
             "Update this provider and all enabled models; preserve other providers".to_string(),
             "Store the materialized provider key in the private providers.json file".to_string(),
@@ -140,7 +174,8 @@ pub fn preview(connection: &Connection, target: &ClientTarget) -> DeploymentOper
             "Keep the current CLI default model and independent environment configuration"
                 .to_string(),
         ],
-        supported: target.detected && target.supports_write,
+        supported,
+        blocker: (writable && !compatible).then_some(DeploymentBlocker::ModelToolCallingRequired),
         requires_restart: true,
     }
 }

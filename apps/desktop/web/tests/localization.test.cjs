@@ -11,7 +11,7 @@ const usage = require("../usage-ui.js");
 function panelModule(file, apiName, panelId) {
   const panel = { dataset: {}, innerHTML: "" };
   const content = { querySelector: (selector) => selector === panelId ? panel : null };
-  const window = { __TAURI__: { core: { invoke() { throw new Error("Rendering must not invoke native writes"); } } } };
+  const window = { CopilotBYOKManagerClients: require("../client-presentation.js"), __TAURI__: { core: { invoke() { throw new Error("Rendering must not invoke native writes"); } } } };
   const document = {
     querySelector: (selector) => selector === "#content" ? content : {},
     addEventListener() {},

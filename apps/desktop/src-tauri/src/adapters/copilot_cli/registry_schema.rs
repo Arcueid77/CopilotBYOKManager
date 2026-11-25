@@ -1,11 +1,8 @@
 //! Registry v1: reviewed against the official CLI 1.0.101 distribution.
 //! Validate before editing; retain foreign entries and exact JSON numbers.
 use crate::error::{AppError, AppResult};
-use serde::de::{DeserializeSeed, MapAccess, SeqAccess, Visitor};
-use serde::Deserializer;
 use serde_json::{Map, Value};
 use std::collections::HashSet;
-use std::fmt;
 
 pub(super) const MAX_BYTES: u64 = 1024 * 1024;
 pub(super) const MAX_ENTRIES: usize = 256;
@@ -13,67 +10,6 @@ pub(super) const SCHEMA: &str = "copilot-cli-registry-1.0.101-v1";
 
 pub(super) fn unsupported() -> AppError {
     AppError::Unsupported("Unsupported Copilot providers.json schema; check the provider and model arrays in the CLI configuration".into())
-}
-
-// First reject duplicate keys and bound nesting. Value's arbitrary_precision
-// parsing in the second pass must preserve foreign metadata without rounding.
-struct Checked(usize);
-impl<'de> DeserializeSeed<'de> for Checked {
-    type Value = ();
-    fn deserialize<D: Deserializer<'de>>(self, d: D) -> Result<(), D::Error> {
-        if self.0 > 32 {
-            return Err(serde::de::Error::custom("excessive nesting"));
-        }
-        d.deserialize_any(self)
-    }
-}
-impl<'de> Visitor<'de> for Checked {
-    type Value = ();
-    fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("bounded unambiguous JSON")
-    }
-    fn visit_map<A: MapAccess<'de>>(self, mut a: A) -> Result<(), A::Error> {
-        let mut keys = HashSet::new();
-        while let Some(key) = a.next_key::<String>()? {
-            if keys.len() >= 2048 || key.len() > 512 || !keys.insert(key) {
-                return Err(serde::de::Error::custom("unsupported object"));
-            }
-            a.next_value_seed(Checked(self.0 + 1))?;
-        }
-        Ok(())
-    }
-    fn visit_seq<A: SeqAccess<'de>>(self, mut a: A) -> Result<(), A::Error> {
-        let mut count = 0;
-        while a.next_element_seed(Checked(self.0 + 1))?.is_some() {
-            count += 1;
-            if count > 2048 {
-                return Err(serde::de::Error::custom("oversized array"));
-            }
-        }
-        Ok(())
-    }
-    fn visit_str<E: serde::de::Error>(self, s: &str) -> Result<(), E> {
-        if s.len() > 64 * 1024 {
-            Err(E::custom("oversized string"))
-        } else {
-            Ok(())
-        }
-    }
-    fn visit_bool<E: serde::de::Error>(self, _: bool) -> Result<(), E> {
-        Ok(())
-    }
-    fn visit_i64<E: serde::de::Error>(self, _: i64) -> Result<(), E> {
-        Ok(())
-    }
-    fn visit_u64<E: serde::de::Error>(self, _: u64) -> Result<(), E> {
-        Ok(())
-    }
-    fn visit_f64<E: serde::de::Error>(self, _: f64) -> Result<(), E> {
-        Ok(())
-    }
-    fn visit_unit<E: serde::de::Error>(self) -> Result<(), E> {
-        Ok(())
-    }
 }
 
 pub(super) fn text<'a>(v: &'a Value, key: &str) -> AppResult<&'a str> {
@@ -90,9 +26,7 @@ pub(super) fn parse(bytes: Option<&[u8]>) -> AppResult<Map<String, Value>> {
             if bytes.len() as u64 > MAX_BYTES {
                 return Err(unsupported());
             }
-            let mut d = serde_json::Deserializer::from_slice(bytes);
-            Checked(0).deserialize(&mut d).map_err(|_| unsupported())?;
-            d.end().map_err(|_| unsupported())?;
+            crate::adapters::bounded_json::check_json(bytes).map_err(|_| unsupported())?;
             let Value::Object(root) = serde_json::from_slice(bytes).map_err(|_| unsupported())?
             else {
                 return Err(unsupported());

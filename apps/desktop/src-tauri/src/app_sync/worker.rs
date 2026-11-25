@@ -45,6 +45,10 @@ pub(super) fn run(jobs: Arc<Jobs>, state: ManagedState, app: tauri::AppHandle) {
 
 pub(super) fn run_once(jobs: &Jobs, state: &ManagedState) -> AppResult<()> {
     let mode = jobs.snapshot()?;
+    if mode.waiting_for_providers() {
+        jobs.set_phase(Phase::WaitingForProviders, None);
+        return Ok(());
+    }
     if !mode.enabled || jobs.cancelled.load(Ordering::Acquire) {
         jobs.set_phase(Phase::Disabled, None);
         return Ok(());
@@ -91,7 +95,7 @@ pub(super) fn run_once(jobs: &Jobs, state: &ManagedState) -> AppResult<()> {
             return Ok(());
         };
         if mode.approve(connection, target).is_err() {
-            jobs.set_phase(Phase::ConsentRequired,Some("Provider destination or configuration scope changed; disable sync and review enablement again".into()));
+            jobs.set_phase(Phase::ConsentRequired,Some("Provider destination or scope changed; publish the provider again to review the new scope".into()));
             return Ok(());
         }
     }

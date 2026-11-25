@@ -1,6 +1,6 @@
 # Release engineering: v0.2 core configuration edition
 
-The maintainer authorized v0.2.4 on 2026-11-21 for minimum-version compatibility. Verify the immutable tag on Windows and macOS and promote the original Draft attachments as a public pre-release.
+The v0.2.5 candidate adds provider extraction with opt-in local key storage, management of existing configurations and a shared publication review. Verify the immutable tag on Windows and macOS and promote the original Draft attachments as a public pre-release.
 
 The maintainer's **2026-10-17 decision permits publication without publisher signing or completed manual acceptance**, and requests feature/download notes without signing or acceptance notices. Automated checks, exact source/package provenance and native safety contracts remain required. The scope is Overview / Providers / Apps / About; hidden Usage, Billing and Resources stay retained and unmounted. See [release criteria (中文)](release-criteria.md) and [specification §21](mvp-implementation-spec.md#21-final-acceptance).
 
@@ -113,14 +113,14 @@ gh workflow run release.yml --ref main -f ref=main -f platform=all -f mode=dry-r
 gh workflow run release.yml --ref main -f ref=<FULL_REVIEWED_SHA> -f platform=macos -f mode=dry-run
 
 # Only after version alignment and approval to create/push the actual tag:
-git tag -a v0.2.4 <FULL_REVIEWED_SHA> -m "CopilotBYOKManager v0.2.4"
-git push origin v0.2.4
+git tag -a v0.2.5 <FULL_REVIEWED_SHA> -m "CopilotBYOKManager v0.2.5"
+git push origin v0.2.5
 
 # A tag push defaults to Draft. Explicitly rerun/update a Draft if needed:
-gh workflow run release.yml --ref main -f ref=v0.2.4 -f platform=all -f mode=draft
+gh workflow run release.yml --ref main -f ref=v0.2.5 -f platform=all -f mode=draft
 
 # After verifying the Draft files, with maintainer publication authorization:
-gh workflow run release.yml --ref main -f ref=v0.2.4 -f platform=all -f mode=publish
+gh workflow run release.yml --ref main -f ref=v0.2.5 -f platform=all -f mode=publish
 ```
 
 Download and inspect Draft assets, SHA256SUMS and metadata before promotion. Update the [release notes template](release-notes-template.md) **before tagging**. Internal evidence stays truthful; release notes need no signing or acceptance notices. The workflow does not change repository settings or create Apple credentials. Stable/Latest promotion remains a separate maintainer decision.

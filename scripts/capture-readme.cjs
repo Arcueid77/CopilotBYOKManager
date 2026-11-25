@@ -79,8 +79,7 @@ function seedPreview() {
       await page.keyboard.press('Escape');
       await theme('dark'); await visit('connections');
       await page.locator('.provider-detail [data-action="deploy-connection"]').click();
-      await page.locator('#preview-deployment').click();
-      await page.locator('#deployment-preview .manager-operation').first().waitFor();
+      await page.locator('#deployment-preview .deployment-write-details').waitFor();
       await page.waitForFunction(() => !document.querySelector('#apply-deployment').disabled);
       await page.locator('#deployment-preview summary').first().click();
       await page.locator('#inline-deployment').scrollIntoViewIfNeeded();

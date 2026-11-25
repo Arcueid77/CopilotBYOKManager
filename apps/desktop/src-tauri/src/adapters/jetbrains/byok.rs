@@ -1,7 +1,7 @@
 //! Versioned projection of the dedicated BYOK namespace used by the official
 //! language server. Authentication files and IDE Password Safe are never opened.
 use crate::deployment::ownership::{self, TargetOwnership};
-use crate::domain::{ApiProtocol, Connection};
+use crate::domain::{ApiProtocol, Connection, DeploymentBlocker};
 use crate::error::{AppError, AppResult};
 use crate::{fingerprint, safe_file, safe_io, transaction, validation};
 use serde::de::{MapAccess, Visitor};
@@ -10,6 +10,8 @@ use serde_json::{json, Map, Value};
 use std::collections::BTreeMap;
 use std::fmt;
 use std::path::{Path, PathBuf};
+
+pub(crate) mod existing;
 
 const MAX_BYTES: u64 = 4 * 1024 * 1024;
 const MAX_KEYS: usize = 2048;
@@ -78,12 +80,19 @@ pub fn observed_resources() -> AppResult<Vec<transaction::Resource>> {
     )?)])
 }
 
-pub fn compatibility(connection: &Connection) -> AppResult<()> {
-    effective_endpoint(connection)?;
-    if !connection.has_secret {
-        return Err(AppError::Unsupported("JetBrains custom endpoints require a stored provider API key, including local endpoints that require a nonempty key in Manage Models".into()));
+pub(super) fn publication_endpoint(
+    connection: &Connection,
+    has_key: bool,
+) -> Result<String, (DeploymentBlocker, AppError)> {
+    let endpoint = effective_endpoint(connection)
+        .map_err(|error| (DeploymentBlocker::IncompatibleEndpoint, error))?;
+    if !has_key {
+        return Err((
+            DeploymentBlocker::MissingProviderKey,
+            AppError::Unsupported("Save a provider API key before publishing to JetBrains".into()),
+        ));
     }
-    Ok(())
+    Ok(endpoint)
 }
 
 /// Mirror the reviewed resolver without making a request. A terminal URL must
@@ -337,6 +346,68 @@ pub fn prepare_owned(
     prepare_at(&store_path()?, connection, secret, owner, proofs, revoke)
 }
 
+pub(crate) fn import_catalog(
+    path: &Path,
+    collect_keys: bool,
+) -> AppResult<crate::provider_import::Catalog> {
+    use crate::provider_import::{protocol, repeats_private, Catalog, ModelFields};
+    let map = parse(safe_io::read_optional(path, MAX_BYTES)?.as_deref())?;
+    let mut catalog = Catalog::for_scan(collect_keys);
+    for (key, config) in &map {
+        let Some(id) = key.strip_suffix("-provider-config") else {
+            continue;
+        };
+        let fields = keys(id);
+        let models = map
+            .get(&fields[2])
+            .and_then(Value::as_object)
+            .ok_or_else(|| invalid("Unsupported provider catalog"))?;
+        if models.is_empty() {
+            catalog.skipped += 1;
+        }
+        for (model_id, model) in models {
+            if model["isRegistered"].as_bool() == Some(false) {
+                continue;
+            }
+            let caps = &model["modelCapabilities"];
+            let wire = match config.get("apiType") {
+                None => protocol(None),
+                Some(v) => v.as_str().and_then(|s| protocol(Some(s))),
+            };
+            let model_key = format!("{id}-{model_id}-api-key");
+            catalog.add(
+                ModelFields {
+                    provider: config["groupName"].as_str().unwrap_or(id),
+                    endpoint: model["deploymentUrl"].as_str().unwrap_or_default(),
+                    protocol: wire,
+                    kind: None,
+                    id: model_id,
+                    name: caps["name"].as_str().unwrap_or_default(),
+                    api_key: map
+                        .get(&model_key)
+                        .or_else(|| map.get(&fields[0]))
+                        .and_then(Value::as_str),
+                    caps: crate::domain::ModelCapabilities {
+                        tool_calling: caps["toolCalling"].as_bool(),
+                        vision: caps["vision"].as_bool(),
+                        reasoning: caps["thinking"].as_bool(),
+                        context_window: caps["maxInputTokens"].as_u64(),
+                        max_output_tokens: caps["maxOutputTokens"].as_u64(),
+                    },
+                },
+                |s| {
+                    repeats_private(
+                        s,
+                        map.get(&fields[0]).and_then(Value::as_str),
+                        caps.get("requestHeaders"),
+                    ) || repeats_private(s, map.get(&model_key).and_then(Value::as_str), None)
+                },
+            )?;
+        }
+    }
+    Ok(catalog)
+}
+
 pub(super) fn prepare_at(
     path: &Path,
     connection: &Connection,
@@ -346,10 +417,11 @@ pub(super) fn prepare_at(
     revoke: bool,
 ) -> AppResult<(transaction::PreparedWrite, Option<String>)> {
     validation::validate_connection(connection)?;
-    if !revoke {
-        compatibility(connection)?;
-    }
     validation::validate_api_key(secret)?;
+    let secret = secret.filter(|value| !value.trim().is_empty());
+    if !revoke {
+        publication_endpoint(connection, secret.is_some()).map_err(|(_, error)| error)?;
+    }
     safe_file::ensure_regular_or_missing(path)?;
     let before = safe_io::read_optional(path, MAX_BYTES)?;
     let original = parse(before.as_deref())?;

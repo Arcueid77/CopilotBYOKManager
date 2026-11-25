@@ -48,6 +48,8 @@ pub struct ManagedState {
     pub(crate) test_targets: Option<Vec<crate::domain::ClientTarget>>,
     pub(crate) writes: Arc<Mutex<()>>,
     pub(crate) resource_plans: Arc<Mutex<crate::resources::ResourcePlans>>,
+    pub(crate) import_reviews: Arc<Mutex<crate::provider_import::Reviews>>,
+    pub(crate) existing_provider_plans: Arc<Mutex<crate::provider_management::Plans>>,
     recovery_plan: Arc<Mutex<Option<RecoveryPlan>>>,
     installs: Arc<Mutex<()>>,
     install_jobs: Arc<installer::history::InstallJobs>,
@@ -84,6 +86,10 @@ impl ManagedState {
             test_targets: None,
             writes: Arc::new(Mutex::new(())),
             resource_plans: Arc::new(Mutex::new(crate::resources::ResourcePlans::default())),
+            import_reviews: Arc::new(Mutex::new(crate::provider_import::Reviews::default())),
+            existing_provider_plans: Arc::new(Mutex::new(
+                crate::provider_management::Plans::default(),
+            )),
             recovery_plan: Arc::new(Mutex::new(None)),
             installs: Arc::new(Mutex::new(())),
             install_jobs,
@@ -189,7 +195,11 @@ pub async fn get_dashboard(state: State<'_, ManagedState>) -> Result<DashboardSn
         crate::app_sync::qualify_json_targets(&state, &mut clients, &[]);
         let mut client_configurations =
             deployment::publication::observe(&clients, &connections, &owner_id);
-        state.app_sync.observe(&state, &mut client_configurations);
+        if clients.iter().any(|target| {
+            target.kind == crate::domain::ClientKind::GithubCopilotApp && target.detected
+        }) {
+            state.app_sync.observe(&state, &mut client_configurations);
+        }
         Ok(DashboardSnapshot {
             client_configurations,
             credential_statuses,
@@ -581,40 +591,59 @@ pub async fn preview_deployment(
 ) -> Result<DeploymentPlan, String> {
     let state = state.inner().clone();
     native_job(move || {
-        let (connection, secret, context) = {
-            let store = state.store().map_err(command_error)?;
-            store.ensure_writable().map_err(command_error)?;
-            deployment::ensure_no_pending_journal(store.path()).map_err(command_error)?;
-            let connection = store.connection(&connection_id).map_err(command_error)?;
-            if !connection.enabled {
-                return Err(command_error(AppError::InvalidInput(
-                    "Enable this connection before publishing".into(),
-                )));
-            }
-            let secret = store.secret_for(&connection).map_err(command_error)?;
-            let context = PlanContext::new(
-                store.installation_owner_id(),
-                store.revision().map_err(command_error)?,
-                secret.as_deref(),
-            )
-            .with_ownership(store.ownership());
-            (connection, secret, context)
-        };
-        let targets = crate::app_sync::targets_for_connection(&state, &connection, &target_ids);
-        let plan = adapters::preview_resolved(&connection, &target_ids, &targets)
-            .map_err(command_error)?;
-        let context = context.with_app(
-            crate::app_sync::commands::approval_for_plan(&state, &connection, &plan)
-                .map_err(command_error)?,
-        );
-        state
-            .plans()
-            .and_then(|mut plans| {
-                plans.insert(&connection, secret.as_deref(), plan, &targets, context)
-            })
-            .map_err(command_error)
+        review_publication(&state, &connection_id, &target_ids).map_err(command_error)
     })
     .await
+}
+
+#[tauri::command(rename_all = "camelCase")]
+pub fn discard_deployment_preview(
+    state: State<'_, ManagedState>,
+    plan_id: String,
+) -> Result<(), String> {
+    state
+        .plans()
+        .map_err(command_error)?
+        .discard_review(&plan_id);
+    Ok(())
+}
+
+pub(crate) fn review_publication(
+    state: &ManagedState,
+    connection_id: &str,
+    target_ids: &[String],
+) -> AppResult<DeploymentPlan> {
+    let (connection, secret, context) = {
+        let store = state.store()?;
+        store.ensure_writable()?;
+        deployment::ensure_no_pending_journal(store.path())?;
+        let connection = store.connection(connection_id)?;
+        if !connection.enabled {
+            return Err(AppError::InvalidInput(
+                "Enable this connection before publishing".into(),
+            ));
+        }
+        let secret = store.secret_for(&connection)?;
+        let context = PlanContext::new(
+            store.installation_owner_id(),
+            store.revision()?,
+            secret.as_deref(),
+        )
+        .with_ownership(store.ownership());
+        (connection, secret, context)
+    };
+    let targets = crate::app_sync::publication_targets(state, target_ids);
+    let mut preview_connection = connection.clone();
+    preview_connection.has_secret = secret.as_deref().is_some_and(|key| !key.trim().is_empty());
+    let mut plan = adapters::preview_resolved(&preview_connection, target_ids, &targets)?;
+    let context = context.with_app(crate::app_sync::commands::review_publication_approval(
+        state,
+        &connection,
+        &mut plan,
+    )?);
+    state
+        .plans()
+        .and_then(|mut plans| plans.insert(&connection, secret.as_deref(), plan, &targets, context))
 }
 
 #[tauri::command(rename_all = "camelCase")]
@@ -623,24 +652,51 @@ pub async fn apply_deployment_plan(
     plan_id: String,
     confirmed: bool,
     app_model_references_resolved: Option<bool>,
+    app_scope_confirmed: Option<bool>,
 ) -> Result<ApplyResult, String> {
     let state = state.inner().clone();
     native_job(move || {
-        let stored = state
-            .plans()
-            .and_then(|mut plans| plans.consume(&plan_id))
-            .map_err(command_error)?;
-        if !confirmed {
-            return Err("Explicit deployment confirmation is required".into());
-        }
-        execute_stored_plan(
+        apply_reviewed_publication(
             &state,
-            stored,
+            &plan_id,
+            confirmed,
             app_model_references_resolved.unwrap_or(false),
+            app_scope_confirmed == Some(true),
         )
         .map_err(command_error)
     })
     .await
+}
+
+pub(crate) fn apply_reviewed_publication(
+    state: &ManagedState,
+    plan_id: &str,
+    confirmed: bool,
+    model_removal_confirmed: bool,
+    scope_confirmed: bool,
+) -> AppResult<ApplyResult> {
+    let stored = state.plans()?.consume(plan_id)?;
+    if !confirmed {
+        return Err(AppError::InvalidInput(
+            "Explicit deployment confirmation is required".into(),
+        ));
+    }
+    if stored.plan.app_scope_confirmation && !scope_confirmed {
+        return Err(AppError::InvalidInput(
+            "Confirm the reviewed Copilot App storage scope before publishing".into(),
+        ));
+    }
+    let deploy = stored.plan.purpose == DeploymentPurpose::Deploy;
+    let result = execute_stored_plan(state, stored, model_removal_confirmed)?;
+    if deploy
+        && result.records.iter().any(|r| {
+            r.target_kind == crate::domain::ClientKind::GithubCopilotApp
+                && r.status == DeploymentStatus::Applied
+        })
+    {
+        state.app_sync.resume_after_publication();
+    }
+    Ok(result)
 }
 
 #[tauri::command(rename_all = "camelCase")]
@@ -666,7 +722,7 @@ pub async fn preview_revoke_and_delete(
             DeploymentPlan {
                 id: Uuid::new_v4().to_string(), purpose: DeploymentPurpose::RevokeAndDelete,
                 connection_id: connection.id.clone(), connection_name: connection.name.clone(),
-                target_ids: Vec::new(), operations: Vec::new(), app_model_removals:Vec::new(),created_at: Utc::now(),
+                target_ids: Vec::new(), operations: Vec::new(), app_model_removals:Vec::new(),app_scope_confirmation:false,created_at: Utc::now(),
             }
         } else {
             adapters::preview_revoke_resolved(&connection, &owned_ids, &targets).map_err(command_error)?
@@ -683,7 +739,7 @@ pub async fn preview_revoke_and_delete(
         let context = PlanContext::new(store.installation_owner_id(), store.revision().map_err(command_error)?, None)
             .with_ownership(store.ownership());
         drop(store);
-        let context=context.with_app(crate::app_sync::commands::approval_for_plan(&state,&connection,&plan).map_err(command_error)?);
+        let context=context.with_app(crate::app_sync::commands::approval_for_plan(&state,&connection,&plan,false).map_err(command_error)?);
         state.plans().and_then(|mut plans| plans.insert(&connection, None, plan, &targets, context)).map_err(command_error)
     }).await
 }
@@ -729,6 +785,7 @@ pub(crate) fn execute_stored_plan(
         state,
         &connection,
         &stored.plan,
+        stored.plan.app_scope_confirmation,
     )?);
     let targets = if revoke {
         crate::app_sync::targets(state)
@@ -739,15 +796,23 @@ pub(crate) fn execute_stored_plan(
             .iter()
             .map(|op| op.target_id.clone())
             .collect::<Vec<_>>();
-        crate::app_sync::targets_for_connection(state, &connection, &selected)
+        crate::app_sync::publication_targets(state, &selected)
     };
     deployment::validate_plan(&stored, &connection, &targets, &context)?;
-    crate::app_sync::commands::authorize_plan(
-        state,
-        &connection,
-        &stored.writes,
-        allow_app_model_removal,
-    )?;
+    if !allow_app_model_removal && !stored.plan.app_model_removals.is_empty() {
+        return Err(AppError::Unsupported("Confirm that affected active/default models were switched in Copilot App before removal".into()));
+    }
+    let grant = context
+        .app
+        .as_ref()
+        .filter(|approval| approval.grant_epoch.is_some())
+        .map(|approval| state.app_sync.reserve_publication(&connection, approval))
+        .transpose()?;
+    for write in &stored.writes {
+        state
+            .app_sync
+            .authorize_publication(&connection, &write.resource, grant.as_ref())?;
+    }
     if revoke {
         for resource in &app_resources {
             state
@@ -761,7 +826,9 @@ pub(crate) fn execute_stored_plan(
         stored.writes,
     )?;
     let applied = tx.apply_checked(allow_app_model_removal, &|resource| {
-        state.app_sync.authorize(&connection, resource)
+        state
+            .app_sync
+            .authorize_publication(&connection, resource, grant.as_ref())
     });
     let failed = applied.is_err();
     let mut detail = "Prepared changes were applied and verified".to_string();
@@ -833,6 +900,13 @@ pub(crate) fn execute_stored_plan(
             if record.target_fingerprint.as_ref() != Some(&deployment::fingerprint_target(target)?)
             {
                 return Err(AppError::PlanChanged);
+            }
+        }
+        if !failed {
+            if let Some(grant) = &grant {
+                state
+                    .app_sync
+                    .commit_publication_scope(&connection, grant)?;
             }
         }
         state.store()?.commit_deployment(
@@ -933,6 +1007,7 @@ fn record(
         target_kind: operation.target_kind,
         status,
         purpose: Some(plan.purpose),
+        blocker: operation.blocker,
         detail: redact::redact_text(&detail),
         created_at: Utc::now(),
         target_fingerprint: None,

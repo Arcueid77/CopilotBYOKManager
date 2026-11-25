@@ -358,10 +358,11 @@ pub fn preview(connection: &Connection, target: &ClientTarget) -> DeploymentOper
             .filter(|m| m.enabled)
             .map(|m| format!("Enable model: {}", m.model_id)),
     );
-    let compatibility = byok::compatibility(connection);
-    let supported = target.detected && target.supports_write && compatibility.is_ok();
+    let compatibility = byok::publication_endpoint(connection, connection.has_secret);
+    let writable = target.detected && target.supports_write;
+    let supported = writable && compatibility.is_ok();
     if supported {
-        if let Ok(endpoint) = byok::effective_endpoint(connection) {
+        if let Ok(endpoint) = &compatibility {
             changes.push(format!("Effective inference endpoint: {endpoint}"));
         }
         changes.extend([
@@ -381,16 +382,27 @@ pub fn preview(connection: &Connection, target: &ClientTarget) -> DeploymentOper
         title: format!("Configure {} in {}", connection.name, target.name),
         description: if supported {
             "Automatically deploy the selected BYOK catalog using the reviewed JetBrains 1.19 storage schema. This changes models/providers, not GitHub authentication or the currently open Chat's selected model.".into()
-        } else if target.detected {
+        } else if writable {
             compatibility
+                .as_ref()
                 .err()
-                .map(|e| e.to_string())
+                .map(|(_, error)| error.to_string())
+                .unwrap_or_else(|| MANUAL_PROVIDER.into())
+        } else if target.detected {
+            target
+                .diagnostic
+                .clone()
                 .unwrap_or_else(|| MANUAL_PROVIDER.into())
         } else {
             target.detail.clone()
         },
         changes,
         supported,
+        blocker: if writable {
+            compatibility.err().map(|(blocker, _)| blocker)
+        } else {
+            None
+        },
         requires_restart: supported,
     }
 }
@@ -398,6 +410,7 @@ pub fn preview(connection: &Connection, target: &ClientTarget) -> DeploymentOper
 pub fn preview_revocation(connection: &Connection, target: &ClientTarget) -> DeploymentOperation {
     let mut operation = preview(connection, target);
     operation.supported = target.detected && target.supports_write;
+    operation.blocker = None;
     operation.requires_restart = operation.supported;
     operation.title = format!("Revoke owned BYOK configuration in {}", target.name);
     operation.description = "Remove only configuration with a matching durable owner/Connection/resource binding and current ownership markers. Current endpoint compatibility and provider key are not required for removal.".into();

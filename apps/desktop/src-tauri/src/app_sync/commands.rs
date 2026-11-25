@@ -3,7 +3,6 @@ use super::*;
 use crate::{
     deployment::PlanContext,
     domain::{ApplyResult, DeploymentPlan, DeploymentPurpose},
-    transaction::Resource,
 };
 use serde::Serialize;
 use std::{collections::BTreeSet, time::Duration};
@@ -49,6 +48,49 @@ pub async fn check_app_sync_compatibility() -> Result<(), CommandFailure> {
     native(|| sqlite::target::review().map(|_| ())).await
 }
 
+#[tauri::command]
+pub async fn enable_app_sync_waiting(
+    state: State<'_, ManagedState>,
+) -> Result<Status, CommandFailure> {
+    let state = state.inner().clone();
+    let epoch = state.app_sync.settings_epoch.load(Ordering::Acquire);
+    native(move || enable_waiting(&state, epoch, sqlite::target::installation_version)).await
+}
+
+/// Record the switch without granting App database access. Common publication
+/// reviews and confirms individual providers.
+pub(super) fn enable_waiting(
+    state: &ManagedState,
+    epoch: u64,
+    inspect_build: impl FnOnce() -> AppResult<String>,
+) -> AppResult<Status> {
+    let version = inspect_build()?;
+    let _write = state.writes.try_lock().map_err(|_| AppError::Busy)?;
+    let mut store = state.store()?;
+    store.ensure_writable()?;
+    let _lease = crate::write_lock::WriteLock::acquire(store.path())?;
+    crate::deployment::ensure_no_pending_journal(store.path())?;
+    let mut settings = state.app_sync.mode.lock().map_err(|_| AppError::Lock)?;
+    let mut mode = settings.snapshot()?;
+    if state.app_sync.settings_epoch.load(Ordering::Acquire) != epoch
+        || mode.owner_id != store.installation_owner_id()
+        || mode.has_scope()
+    {
+        return Err(AppError::PlanChanged);
+    }
+    if !mode.waiting_for_providers() {
+        store.persist_owner_if_new()?;
+        mode.enabled = true;
+        mode.scopes.clear();
+        mode.granted_at = None;
+        mode.nonce = uuid::Uuid::new_v4().to_string();
+        settings.save(mode)?;
+    }
+    drop(settings);
+    drop(store);
+    state.app_sync.status_for_installation(state, Ok(version))
+}
+
 #[tauri::command(rename_all = "camelCase")]
 pub async fn preview_app_sync_enable(
     state: State<'_, ManagedState>,
@@ -69,11 +111,11 @@ pub(super) fn preview_enable(
         || connection_ids.iter().collect::<BTreeSet<_>>().len() != connection_ids.len()
     {
         return Err(AppError::InvalidInput(
-            "Select between one and sixteen distinct saved providers".into(),
+            "Select distinct saved providers within the configuration limit".into(),
         ));
     }
     let mode = state.app_sync.snapshot()?;
-    if mode.enabled {
+    if mode.has_scope() {
         return Err(AppError::InvalidInput(
             "Turn App sync off before reviewing a different scope".into(),
         ));
@@ -201,7 +243,7 @@ pub(super) fn enable(
     }
     let mut mode = state.app_sync.mode.lock().map_err(|_| AppError::Lock)?;
     let current = mode.snapshot()?;
-    if current.enabled
+    if current.has_scope()
         || current.revision()? != plan.mode_revision
         || state.app_sync.settings_epoch.load(Ordering::Acquire) != plan.epoch
     {
@@ -257,7 +299,7 @@ pub async fn retry_app_sync(state: State<'_, ManagedState>) -> Result<Status, Co
     native(move || {
         let epoch = state.app_sync.settings_epoch.load(Ordering::Acquire);
         let mode = state.app_sync.snapshot()?;
-        if !mode.enabled {
+        if !mode.has_scope() {
             return Err(AppError::Unsupported(
                 "Enable the reviewed App synchronization scope first".into(),
             ));
@@ -369,10 +411,7 @@ pub(crate) fn synchronize(state: &ManagedState, connection_id: &str) -> AppResul
     if !stored.plan.app_model_removals.is_empty() {
         state.app_sync.halt(
             Phase::ReviewRequired,
-            Some(
-                "Review model removals in Apps, then check and retry automatic synchronization"
-                    .into(),
-            ),
+            Some("Review model removals in the publication preview".into()),
         );
         return Err(AppError::Unsupported("Model removals need a reviewed publication after switching active/default models in Copilot App".into()));
     }
@@ -383,6 +422,7 @@ pub(crate) fn approval_for_plan(
     state: &ManagedState,
     connection: &Connection,
     plan: &DeploymentPlan,
+    review_new_scope: bool,
 ) -> AppResult<Option<Approval>> {
     if !plan
         .operations
@@ -391,28 +431,43 @@ pub(crate) fn approval_for_plan(
     {
         return Ok(None);
     }
+    if !plan.purpose.is_revocation() && review_new_scope {
+        return state.app_sync.publication_approval(connection).map(Some);
+    }
     state
         .app_sync
         .approval(connection, plan.purpose.is_revocation())
 }
 
-pub(crate) fn authorize_plan(
+pub(crate) fn review_publication_approval(
     state: &ManagedState,
     connection: &Connection,
-    writes: &[crate::transaction::PreparedWrite],
-    allow_removal: bool,
-) -> AppResult<()> {
-    for write in writes {
-        state.app_sync.authorize(connection, &write.resource)?;
-        if let Resource::AppSqlite(resource) = &write.resource {
-            if !allow_removal
-                && !resource
-                    .removed_models(write.before.as_deref(), write.after.as_deref())?
-                    .is_empty()
+    plan: &mut DeploymentPlan,
+) -> AppResult<Option<Approval>> {
+    use crate::domain::DeploymentBlocker;
+    match approval_for_plan(state, connection, plan, true) {
+        Ok(approval) => Ok(approval),
+        Err(error) => {
+            let blocker = match error {
+                AppError::AppRunning | AppError::AppExitUnverified => {
+                    DeploymentBlocker::ClientRunning
+                }
+                AppError::UnsafeAppPermissions => DeploymentBlocker::UnsafeClientPermissions,
+                AppError::AppCompatibility(_) => DeploymentBlocker::UnsupportedClientFormat,
+                _ => return Err(error),
+            };
+            for operation in plan
+                .operations
+                .iter_mut()
+                .filter(|operation| operation.target_kind == ClientKind::GithubCopilotApp)
             {
-                return Err(AppError::Unsupported("Confirm that affected active/default models were switched in Copilot App before removal".into()));
+                operation.supported = false;
+                operation.blocker = Some(blocker);
+                operation.requires_restart = false;
+                operation.description = crate::redact::redact_text(&error.to_string());
+                operation.changes.clear();
             }
+            Ok(None)
         }
     }
-    Ok(())
 }

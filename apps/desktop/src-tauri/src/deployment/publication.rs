@@ -45,12 +45,20 @@ pub enum ConfigurationState {
     Unsupported,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum ConfigurationIssue {
+    ClientRunning,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ClientConfiguration {
     pub target_id: String,
     pub state: ConfigurationState,
     pub sources: Vec<ConfiguredSource>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub issue: Option<ConfigurationIssue>,
 }
 
 pub fn selection_notice(kind: ClientKind) -> &'static str {
@@ -81,6 +89,7 @@ pub fn observe(
                 target_id: target.id.clone(),
                 state: ConfigurationState::Unsupported,
                 sources: Vec::new(),
+                issue: None,
             };
             if !target.detected || !target.supports_write {
                 return result;

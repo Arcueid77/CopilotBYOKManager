@@ -4,6 +4,8 @@ This file is the entry point for a coding agent continuing the repository on `ma
 
 The public repository is `Arcueid77/CopilotBYOKManager`. Use `CopilotBYOKManager` for the product and configuration directory, `copilot-byok-manager` for packages/binaries, and `COPILOT_BYOK_MANAGER_*` for app-specific environment options. Do not add historical-brand aliases, automatic credential adoption or old-directory migration.
 
+Provider extraction may save a static API key from an allowlisted BYOK configuration after the user opts in on the current preview. Save it in the local system credential store under the selected Connection. Account credentials and arbitrary headers remain outside the import.
+
 ## Read first
 
 Read these files before changing code:

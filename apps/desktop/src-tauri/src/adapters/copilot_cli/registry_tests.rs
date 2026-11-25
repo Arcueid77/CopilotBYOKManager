@@ -205,6 +205,24 @@ fn protocols_headers_limits_and_local_no_key_are_projected_without_default_selec
         .is_none());
     local.models[0].capabilities.tool_calling = Some(false);
     assert!(prepare_at(&path, &local, None, "owner", &[], false).is_err());
+    let target = crate::domain::ClientTarget {
+        id: "fixture-cli".into(),
+        kind: crate::domain::ClientKind::CopilotCli,
+        name: "CLI fixture".into(),
+        detail: String::new(),
+        path: None,
+        detected: true,
+        supports_write: true,
+        status: crate::domain::ClientStatus::Available,
+        diagnostic: None,
+    };
+    let operation = super::super::preview(&local, &target, false);
+    assert!(!operation.supported);
+    assert_eq!(
+        operation.blocker,
+        Some(crate::domain::DeploymentBlocker::ModelToolCallingRequired)
+    );
+    assert!(super::super::preview(&local, &target, true).supported);
 }
 
 #[test]
@@ -275,9 +293,10 @@ fn projected_fingerprint_uses_registry_after_bytes_and_external_edits_invalidate
             connection_id: c.id.clone(),
             connection_name: c.name.clone(),
             target_ids: vec![target.id.clone()],
-            operations: vec![super::super::preview(&c, &target)],
+            operations: vec![super::super::preview(&c, &target, false)],
             purpose: crate::domain::DeploymentPurpose::Deploy,
             app_model_removals: Vec::new(),
+            app_scope_confirmation: false,
             created_at: chrono::Utc::now(),
         };
         let mut plans = PlanStore::default();

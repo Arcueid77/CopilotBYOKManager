@@ -303,10 +303,12 @@ mod tests {
                 description: "test".to_string(),
                 changes: vec![],
                 supported: true,
+                blocker: None,
                 requires_restart: false,
             }],
             created_at: Utc::now(),
             app_model_removals: Vec::new(),
+            app_scope_confirmation: false,
         }
     }
 

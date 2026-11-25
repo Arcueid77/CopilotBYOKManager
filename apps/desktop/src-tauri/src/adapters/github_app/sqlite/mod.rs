@@ -1,5 +1,6 @@
 //! Native-only scoped projections. Snapshots contain only this manager's owned rows.
 pub(super) mod build;
+pub(crate) mod import;
 mod provider_settings;
 mod rows;
 mod schema;

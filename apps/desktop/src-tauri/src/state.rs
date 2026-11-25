@@ -115,6 +115,16 @@ impl StateStore {
         &self.state.installation_owner_id
     }
 
+    /// A first-run preference can refer to this installation before the first
+    /// provider is saved. Persist the owner under the caller's managed-write lock.
+    pub(crate) fn persist_owner_if_new(&mut self) -> AppResult<()> {
+        self.ensure_writable()?;
+        if self.loaded_bytes.is_none() {
+            self.persist()?;
+        }
+        Ok(())
+    }
+
     pub fn revision(&self) -> AppResult<String> {
         self.ensure_writable()?;
         crate::fingerprint::json("application-state-v1", &self.state)
@@ -126,6 +136,72 @@ impl StateStore {
 
     pub fn connections(&self) -> &[Connection] {
         &self.state.connections
+    }
+
+    pub(crate) fn import_providers(
+        &mut self,
+        revision: &str,
+        rows: &[crate::provider_import::Candidate],
+        include_keys: bool,
+    ) -> AppResult<crate::provider_import::Outcome> {
+        if self.revision()? != revision {
+            return Err(AppError::PlanChanged);
+        }
+        let mut next = self.state.clone();
+        let mut result = crate::provider_import::merge_selected(&mut next.connections, rows)?;
+        let mut writes = Vec::new();
+        if include_keys {
+            for (row, id) in rows.iter().zip(&result.connection_ids) {
+                let Some(key) = row.key_material() else {
+                    continue;
+                };
+                let connection = next
+                    .connections
+                    .iter_mut()
+                    .find(|connection| &connection.id == id)
+                    .ok_or(AppError::PlanChanged)?;
+                if secrets::get(&connection.secret_ref)?.is_some() {
+                    return Err(AppError::PlanChanged);
+                }
+                connection.has_secret = true;
+                writes.push((connection.secret_ref.clone(), key));
+            }
+        }
+        if writes.is_empty() {
+            self.replace_state(next)?;
+            return Ok(result);
+        }
+        serialized_state(&next)?;
+        let mut attempted = 0;
+        let saved = (|| {
+            for (reference, key) in &writes {
+                if secrets::get(reference)?.is_some() {
+                    return Err(AppError::PlanChanged);
+                }
+                attempted += 1;
+                secrets::set(reference, key)?;
+            }
+            self.replace_state(next)
+        })();
+        if let Err(error) = saved {
+            let mut cleanup_failed = false;
+            for (reference, key) in writes[..attempted].iter().rev() {
+                let restored = match secrets::get(reference) {
+                    Ok(None) => true,
+                    Ok(Some(current)) if current == *key => secrets::delete(reference).is_ok(),
+                    _ => false,
+                };
+                cleanup_failed |= !restored;
+            }
+            if cleanup_failed {
+                return Err(AppError::Secret(
+                    "Could not restore the credential store after an incomplete import".into(),
+                ));
+            }
+            return Err(error);
+        }
+        result.keys_imported = writes.len();
+        Ok(result)
     }
 
     pub fn deployments(&self) -> &[DeploymentRecord] {

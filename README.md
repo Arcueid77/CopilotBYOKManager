@@ -23,7 +23,7 @@
   Community: <a href="https://linux.do">LINUX DO</a>
 </p>
 
-> **v0.2.4** — [Download Windows and macOS packages](https://github.com/Arcueid77/CopilotBYOKManager/releases).
+> **v0.2.5** — [Download Windows and macOS packages](https://github.com/Arcueid77/CopilotBYOKManager/releases).
 
 ![Overview — interface example with simulated data](docs/images/overview-en.png)
 
@@ -80,10 +80,10 @@ To explore now, open [the current browser frontend](apps/desktop/web/index.html)
 
 ## Quick start
 
-1. In **Providers**, add the provider endpoint and API key.
-2. Fetch models or enter model IDs manually; save the provider.
-3. Select your apps/profiles. CLI requires explicit selection.
-4. Click **Publish configuration** and read each target's result. **View changes** is optional; CLI publication and removing a provider group require confirmation.
+1. Add an endpoint and API key in **Providers**, or choose **Extract providers** in **Apps** to reuse an existing configuration. The extraction review lets you save available keys in the local system credential store.
+2. Fetch models or enter model IDs manually, then save the provider.
+3. Review the preselected apps and profiles. You can change the selection before publishing.
+4. Click **Publish configuration** and check each target's result. CLI writes, first App sync and model removal show a confirmation.
 5. Select the model in the client and send a minimal, non-sensitive test request.
 
 Requests may incur charges. See the [English user guide](docs/user-guide.md) or [中文手册](docs/user-guide.zh-CN.md) for fields, client steps, updates, revocation and recovery.
@@ -93,6 +93,7 @@ Requests may incur charges. See the [English user guide](docs/user-guide.md) or 
 | Feature | What it gives you |
 | --- | --- |
 | Central provider profiles | Endpoint, protocol, key reference, catalog and recommended model |
+| Configuration reuse | Extract providers, models and available API keys. Manage existing configurations from Apps |
 | Multi-client publication | Explicit targets and persistent per-target results |
 | Review before write | Native-held, expiring, one-use plans and live target checks |
 | Ownership-aware revoke | Remove owned configuration, preserve other providers |

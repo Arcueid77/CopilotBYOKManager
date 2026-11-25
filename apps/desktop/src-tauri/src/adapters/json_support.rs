@@ -196,6 +196,12 @@ pub(crate) fn qualify(targets: &mut [ClientTarget], selected: &[String]) {
                 }
             }
             ClientKind::CopilotCli => {
+                if let Err(error) = super::copilot_cli::check_publication_root() {
+                    target.supports_write = false;
+                    target.status = ClientStatus::ReadOnly;
+                    target.diagnostic = Some(crate::redact::redact_text(&error.to_string()));
+                    continue;
+                }
                 let Some(path) = target.path.as_deref().map(Path::new) else {
                     continue;
                 };

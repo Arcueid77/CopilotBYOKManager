@@ -32,12 +32,12 @@ test("Agents is hidden only when the same edition's Chat actually shares its wri
   assert.equal(clients.name(named), "GitHub Copilot · VS Code · Work <team>");
 });
 
-test("JetBrains plugin availability and version support keep unknown states distinct", () => {
-  assert.match(clients.capability(target("supported")), /已安装.*支持自动/);
-  assert.match(clients.capability(target("unsupported", { supportsWrite: false })), /当前版本不支持/);
-  assert.match(clients.capability(target("disabled", { detected: false, status: "read-only" })), /已停用/);
-  assert.match(clients.capability(target("missing", { detected: false, status: "not-installed" })), /未检测到/);
-  assert.match(clients.capability(target("unknown", { detected: false, status: "error" })), /未知/);
+test("an unreadable configuration, disabled installation and unsupported format stay distinct", () => {
+  const snapshot = { connections: [] };
+  assert.equal(clients.configurationState(target("unsupported", { supportsWrite: false }), snapshot).state, "unsupported");
+  assert.equal(clients.configurationState(target("disabled", { detected: false, status: "read-only" }), snapshot).state, "disabled");
+  assert.equal(clients.configurationState(target("missing", { detected: false, status: "not-installed" }), snapshot).state, "missing");
+  assert.equal(clients.configurationState(target("unknown", { detected: false, status: "error" }), snapshot).state, "unavailable");
 });
 
 test("all application names share one surface naming policy and preserve instance data", () => {

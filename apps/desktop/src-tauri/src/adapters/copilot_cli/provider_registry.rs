@@ -133,6 +133,66 @@ fn observe_at(
     Ok(Some(sources))
 }
 
+pub(crate) fn import_at(
+    path: &Path,
+    collect_keys: bool,
+) -> AppResult<crate::provider_import::Catalog> {
+    use crate::provider_import::{protocol, repeats_private, Catalog, ModelFields};
+    let root = parse(safe_io::read_optional(path, MAX_BYTES)?.as_deref())?;
+    let mut catalog = Catalog::for_scan(collect_keys);
+    for provider in root["providers"]
+        .as_array()
+        .ok_or_else(schema::unsupported)?
+    {
+        let name = text(provider, "name")?;
+        let kind = provider["type"].as_str().unwrap_or("openai");
+        let wire = if kind == "anthropic" {
+            Some(ApiProtocol::Messages)
+        } else {
+            protocol(provider["wireApi"].as_str())
+        };
+        let models = root["models"].as_array().ok_or_else(schema::unsupported)?;
+        let mut found = false;
+        for model in models.iter().filter(|m| m["provider"] == name) {
+            found = true;
+            let id = ["wireModel", "modelId", "id"]
+                .iter()
+                .find_map(|key| model[*key].as_str())
+                .unwrap_or_default();
+            let supports = &model["capabilities"]["supports"];
+            catalog.add(
+                ModelFields {
+                    provider: name,
+                    endpoint: text(provider, "baseUrl")?,
+                    protocol: wire,
+                    kind: (kind == "azure").then_some(ProviderKind::Azure),
+                    id,
+                    name: model["name"].as_str().unwrap_or(id),
+                    api_key: provider
+                        .get("bearerToken")
+                        .or_else(|| provider.get("apiKey"))
+                        .and_then(Value::as_str),
+                    caps: crate::domain::ModelCapabilities {
+                        tool_calling: supports["toolCalls"].as_bool(),
+                        vision: supports["vision"].as_bool(),
+                        context_window: model["maxContextWindowTokens"].as_u64(),
+                        max_output_tokens: model["maxOutputTokens"].as_u64(),
+                        ..Default::default()
+                    },
+                },
+                |s| {
+                    repeats_private(s, provider["apiKey"].as_str(), provider.get("headers"))
+                        || repeats_private(s, provider["bearerToken"].as_str(), None)
+                },
+            )?;
+        }
+        if !found {
+            catalog.skipped += 1;
+        }
+    }
+    Ok(catalog)
+}
+
 pub(super) fn prepare_owned(
     connection: &Connection,
     secret: Option<&str>,
@@ -186,10 +246,7 @@ fn prepare_at(
                 "Provider API key is unavailable; restore it before publishing".into(),
             ));
         }
-        if enabled
-            .iter()
-            .any(|m| m.capabilities.tool_calling == Some(false))
-        {
+        if !super::supports_models(connection) {
             return Err(AppError::Unsupported("Copilot CLI requires tool-calling models; disable incompatible models before publishing".into()));
         }
         let kind = match (connection.protocol, connection.provider_kind) {

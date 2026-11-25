@@ -1,12 +1,14 @@
 # JetBrains GitHub Copilot integration
 
-Automatic publication supports stable GitHub Copilot plugins from 1.19.0. [Implementation status](implementation-status.md) tracks execution evidence and deferred Rider runtime testing.
+Automatic publication supports stable GitHub Copilot plugins from 1.13.0 with a compatible BYOK format. [Implementation status](implementation-status.md) tracks execution evidence and deferred Rider runtime testing.
 
 ## Automatic BYOK deployment
 
 The maintainer requires automatic configuration, not manual instructions as the completed integration. Home and Clients expose an automatic BYOK review, and bulk deployment includes detected writable JetBrains profiles. Viewing the guide reads no key and allocates no apply-plan slot. Apply receives only the native-held reviewed plan ID and confirmation.
 
 The adapter publishes endpoint, protocol (`chatCompletions`, `responses`, `messages`), enabled model IDs/names, registration, tool calling/vision/reasoning, explicit input/output limits, request headers with native secret substitution, and the Connection's own provider key. It writes the official runtime's **dedicated BYOK namespace**, not per-IDE preference XML, authentication stores or Password Safe. No keys/header values cross the frontend preview. The native BYOK file and private rollback journal may contain materialized provider keys; never publish them.
+
+The publication review checks the selected provider's current credential and endpoint. If the provider has no stored key, the JetBrains target card tells you to save one in **Providers**. An incompatible endpoint has its own reason in the same card.
 
 Each owner/Connection gets a stable provider name with exactly three managed keys: `<provider>-api-key`, `<provider>-provider-config`, `<provider>-models-config`. Provider config contains upstream `groupName`/`apiType` plus CopilotBYOKManager owner/Connection/schema markers, ignored by the upstream reader. Markers alone are not authority: replacement/revocation requires matching persisted owner/Connection/physical-resource binding and current ownership/schema markers. Existing content edits do not invalidate that binding; each new plan uses current bytes. Foreign, partial, conflicting or per-model overriding keys cause conflict. A fully absent provider can be recreated by a new publication. Other providers and unknown values (including precise JSON numbers) survive. Semantic no-ops preserve source bytes. Revoke removes only owned keys and does not require the current Connection's key/endpoint to remain deployable; the current target/schema and ownership checks still apply. Detach leaves client data untouched.
 

@@ -638,6 +638,83 @@ fn jetbrains_prepare_failure_leaves_an_earlier_vscode_target_untouched() {
 }
 
 #[test]
+fn publication_uses_the_current_key_instead_of_the_saved_flag() {
+    let root = tempfile::tempdir().unwrap();
+    install(root.path(), "PyCharm2026.2");
+    let path = root.path().join("byok.json");
+    with_test_roots(root.path(), || {
+        byok::with_test_path(&path, || {
+            crate::secrets::with_fake_credentials(|| {
+                let targets = discover_at(root.path(), root.path())
+                    .unwrap()
+                    .into_iter()
+                    .map(|observation| observation.target)
+                    .collect::<Vec<_>>();
+                assert!(targets[0].supports_write);
+                let ids = vec![targets[0].id.clone()];
+                let mut store = crate::state::StateStore::open_at(root.path().join("state.json"));
+                let c = store
+                    .upsert_connection(crate::domain::ConnectionInput {
+                        id: None,
+                        name: "Fixture with an imported endpoint".into(),
+                        base_url: "https://example.invalid/v1".into(),
+                        provider_kind: crate::domain::ProviderKind::Openai,
+                        protocol: crate::domain::ApiProtocol::ChatCompletions,
+                        headers: Default::default(),
+                        models: connection().models,
+                        api_key: None,
+                        clear_secret: false,
+                    })
+                    .unwrap();
+                let mut state = crate::commands::ManagedState::new(
+                    store,
+                    crate::account::LoginStore::open_at(root.path().join("login.json")),
+                    crate::github_auth::GithubAuthorizationStore::isolated(
+                        root.path().join("auth.json"),
+                    ),
+                    None,
+                    None,
+                );
+                state.test_targets = Some(targets);
+                let review = || crate::commands::review_publication(&state, &c.id, &ids).unwrap();
+                let blocked = review();
+                assert!(!blocked.operations[0].supported);
+                assert_eq!(
+                    blocked.operations[0].blocker,
+                    Some(crate::domain::DeploymentBlocker::MissingProviderKey)
+                );
+                assert!(state
+                    .plans()
+                    .unwrap()
+                    .consume(&blocked.id)
+                    .unwrap()
+                    .writes
+                    .is_empty());
+                assert!(!path.exists());
+
+                let synthetic_key = "fixture-provider-key-only";
+                crate::secrets::set(&c.secret_ref, synthetic_key).unwrap();
+                assert!(!state.store().unwrap().connection(&c.id).unwrap().has_secret);
+                let ready = review();
+                assert!(ready.operations[0].supported);
+                assert_eq!(ready.operations[0].blocker, None);
+                assert!(!serde_json::to_string(&ready)
+                    .unwrap()
+                    .contains(synthetic_key));
+                assert!(!state
+                    .plans()
+                    .unwrap()
+                    .consume(&ready.id)
+                    .unwrap()
+                    .writes
+                    .is_empty());
+                assert!(!path.exists());
+            })
+        })
+    });
+}
+
+#[test]
 fn owned_revocation_does_not_require_a_cleared_key_or_changed_endpoint_to_be_deployable() {
     use crate::{deployment, transaction};
     let root = tempfile::tempdir().unwrap();

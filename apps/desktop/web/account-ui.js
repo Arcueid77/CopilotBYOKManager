@@ -520,12 +520,11 @@
   }
 
   function surfaceName(surface) {
-    return {
-      vsCodeCopilot: "VS Code Copilot",
-      copilotCli: "GitHub Copilot CLI",
-      githubCopilotApp: "GitHub Copilot app",
-      jetBrainsCopilot: "JetBrains GitHub Copilot",
-    }[surface] ?? surface;
+    const kind = {
+      vsCodeCopilot: "vs-code-copilot", copilotCli: "copilot-cli",
+      githubCopilotApp: "github-copilot-app", jetBrainsCopilot: "jetbrains-copilot",
+    }[surface];
+    return kind ? window.CopilotBYOKManagerClients.surfaceName(kind) : surface;
   }
 
   function surfaceIcon(surface) {

@@ -13,8 +13,8 @@ function element() {
     setAttribute() {}, removeAttribute() {}, querySelector() { return null; }, querySelectorAll() { return []; },
     append() {}, replaceChildren() {}, focus() {}, scrollIntoView() {}, remove() {} };
 }
-function shell({ delayManual = false } = {}) {
-  const elements = Object.fromEntries(['content', 'modal-root', 'toast-root', 'page-title', 'page-subtitle', 'add-connection-button', 'overview-publish-button', 'refresh-button', 'runtime-label', 'runtime-detail', 'interface-language', 'primary-nav'].map(id => [id, element()]));
+function shell({ delayManual = false, delayImport = false } = {}) {
+  const elements = Object.fromEntries(['content', 'modal-root', 'toast-root', 'page-title', 'page-subtitle', 'add-connection-button', 'import-providers-button', 'overview-publish-button', 'refresh-button', 'runtime-label', 'runtime-detail', 'interface-language', 'primary-nav'].map(id => [id, element()]));
   const nav = ['overview', 'connections', 'clients', 'about'].map(route => Object.assign(element(), { dataset: { route } }));
   const calls = [], documentEvents = {};
   const snapshot = { version: 2, statePath: 'fixture', connections: [{ id: 'p', name: 'Provider A', enabled: true, baseUrl: 'https://example.invalid/v1', protocol: 'chat-completions', models: [{ modelId: 'm', name: 'Model', enabled: true }] }],
@@ -27,6 +27,7 @@ function shell({ delayManual = false } = {}) {
   const invoke = async command => {
     calls.push(command);
     if (command === 'get_dashboard') return structuredClone(snapshot);
+    if (command === 'get_provider_import_availability') return delayImport ? new Promise(() => {}) : { targetIds: [], batch: false };
     if (command === 'get_manual_provider_status') return delayManual ? new Promise(() => {}) : [];
     if (command === 'get_app_sync_status') return { enabled:false, phase:'disabled', selectedConnectionIds:[], ownedConnectionIds:[], results:[] };
     if (command === 'get_window_behavior') return { trayAvailable: true, preferencesAvailable: true, closeAction: 'tray' };
@@ -42,6 +43,8 @@ function shell({ delayManual = false } = {}) {
     CopilotBYOKManagerManager: require('../manager-ui.js'), CopilotBYOKManagerClients: require('../client-presentation.js'),
     CopilotBYOKManagerAppSync: require('../app-sync-ui.js'),
     CopilotBYOKManagerWorkspace: require('../workspace-ui.js'),
+    CopilotBYOKManagerProviderImport: require('../provider-import.js'),
+    CopilotBYOKManagerProviderManagement: { create() { return {}; } },
     CopilotBYOKManagerSetup: require('../setup-ui.js'), CopilotBYOKManagerInstaller: installer,
     CopilotBYOKManagerAccount: { hydrate() {}, mount() {} }, CopilotBYOKManagerAppearance: { apply() {} },
     CopilotBYOKManagerUI: { capture() { return null; }, restore() {}, modal() { return { active: false, busy: false, close: () => true }; } } };
@@ -53,7 +56,7 @@ function shell({ delayManual = false } = {}) {
 }
 
 test('the real core shell renders all four routes while optional metadata is still pending', async () => {
-  const { elements, calls, route } = shell({ delayManual: true });
+  const { elements, calls, route } = shell({ delayManual: true, delayImport: true });
   await tick(); await tick();
   assert.equal(elements.content.dataset.route, 'overview');
   assert.match(elements.content.innerHTML, /应用配置状态/);
@@ -62,6 +65,8 @@ test('the real core shell renders all four routes while optional metadata is sti
     route(page); assert.equal(elements.content.dataset.route, page); assert.ok(elements.content.innerHTML.length > 0);
   }
   assert.doesNotMatch(calls.join(','), /get_installation_status|get_setup_status/);
+  assert.ok(calls.includes('get_provider_import_availability'));
+  assert.equal(elements['import-providers-button'].hidden, true);
   assert.equal(elements['overview-publish-button'].hidden, false);
 });
 

@@ -264,10 +264,16 @@ fn namespace_paths_follow_the_reviewed_runtime_not_ide_options_or_password_safe(
     assert!(!supported_version("1.19.0-261-win-x64"));
     let mut c = connection();
     c.base_url = "https://example.invalid/v1?api-version=future".into();
-    assert!(compatibility(&c).is_err());
+    assert!(matches!(
+        publication_endpoint(&c, true),
+        Err((DeploymentBlocker::IncompatibleEndpoint, _))
+    ));
     c.base_url = "https://example.invalid/v1".into();
     c.has_secret = false;
-    assert!(compatibility(&c).is_err());
+    assert!(matches!(
+        publication_endpoint(&c, false),
+        Err((DeploymentBlocker::MissingProviderKey, _))
+    ));
 }
 
 #[test]
@@ -329,7 +335,7 @@ fn reviewed_endpoint_normalization_never_silently_changes_a_terminal_route() {
         c.protocol = protocol;
         c.base_url = input.into();
         assert_eq!(effective_endpoint(&c).unwrap(), expected);
-        compatibility(&c).unwrap();
+        publication_endpoint(&c, c.has_secret).unwrap();
     }
     for (protocol, input) in [
         (ApiProtocol::ChatCompletions, "https://example.invalid/api"),

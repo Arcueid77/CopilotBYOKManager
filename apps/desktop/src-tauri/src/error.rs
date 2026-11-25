@@ -17,6 +17,8 @@ pub enum AppCompatibilityIssue {
 
 #[derive(Debug, thiserror::Error)]
 pub enum AppError {
+    #[error("Provider import limit reached; select a smaller set or scan one app")]
+    ProviderImportLimit,
     #[error(transparent)]
     AppCompatibility(#[from] AppCompatibilityIssue),
     #[error("Copilot App storage changed. Review the synchronization scope again")]

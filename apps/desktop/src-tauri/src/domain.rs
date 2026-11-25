@@ -284,7 +284,20 @@ pub struct DeploymentOperation {
     #[serde(default)]
     pub changes: Vec<String>,
     pub supported: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub blocker: Option<DeploymentBlocker>,
     pub requires_restart: bool,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub enum DeploymentBlocker {
+    MissingProviderKey,
+    IncompatibleEndpoint,
+    ModelToolCallingRequired,
+    ClientRunning,
+    UnsafeClientPermissions,
+    UnsupportedClientFormat,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -299,6 +312,8 @@ pub struct DeploymentPlan {
     pub operations: Vec<DeploymentOperation>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub app_model_removals: Vec<String>,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub app_scope_confirmation: bool,
     pub created_at: DateTime<Utc>,
 }
 
@@ -321,6 +336,8 @@ pub struct DeploymentRecord {
     pub status: DeploymentStatus,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub purpose: Option<DeploymentPurpose>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub blocker: Option<DeploymentBlocker>,
     pub detail: String,
     pub created_at: DateTime<Utc>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
