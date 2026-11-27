@@ -304,6 +304,9 @@ impl Jobs {
         connection: &Connection,
         resource: &crate::transaction::Resource,
     ) -> AppResult<()> {
+        if matches!(resource, crate::transaction::Resource::AppManualProvider(_)) {
+            return Err(AppError::PlanUnavailable);
+        }
         let crate::transaction::Resource::AppSqlite(resource) = resource else {
             return Ok(());
         };
@@ -325,6 +328,17 @@ impl Jobs {
             return Err(AppError::PlanChanged);
         }
         Ok(())
+    }
+    pub(crate) fn manual_deletion_consent(&self) -> AppResult<(consent::Consent, u64)> {
+        let epoch = self.settings_epoch.load(Ordering::Acquire);
+        let mode = self.snapshot()?;
+        if !mode.enabled
+            || self.stopping.load(Ordering::Acquire)
+            || self.settings_epoch.load(Ordering::Acquire) != epoch
+        {
+            return Err(AppError::PlanChanged);
+        }
+        Ok((mode, epoch))
     }
     pub fn observe(
         &self,

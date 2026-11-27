@@ -415,7 +415,7 @@ pub(crate) fn synchronize(state: &ManagedState, connection_id: &str) -> AppResul
         );
         return Err(AppError::Unsupported("Model removals need a reviewed publication after switching active/default models in Copilot App".into()));
     }
-    crate::commands::execute_stored_plan(state, stored, false)
+    crate::commands::execute_stored_plan(state, stored, Default::default())
 }
 
 pub(crate) fn approval_for_plan(

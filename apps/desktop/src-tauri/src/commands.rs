@@ -653,6 +653,7 @@ pub async fn apply_deployment_plan(
     confirmed: bool,
     app_model_references_resolved: Option<bool>,
     app_scope_confirmed: Option<bool>,
+    app_recreation_confirmed: Option<bool>,
 ) -> Result<ApplyResult, String> {
     let state = state.inner().clone();
     native_job(move || {
@@ -660,20 +661,29 @@ pub async fn apply_deployment_plan(
             &state,
             &plan_id,
             confirmed,
-            app_model_references_resolved.unwrap_or(false),
-            app_scope_confirmed == Some(true),
+            AppWriteConfirmations {
+                model_references_resolved: app_model_references_resolved == Some(true),
+                scope_confirmed: app_scope_confirmed == Some(true),
+                recreation_confirmed: app_recreation_confirmed == Some(true),
+            },
         )
         .map_err(command_error)
     })
     .await
 }
 
+#[derive(Default)]
+pub(crate) struct AppWriteConfirmations {
+    pub(crate) model_references_resolved: bool,
+    pub(crate) scope_confirmed: bool,
+    pub(crate) recreation_confirmed: bool,
+}
+
 pub(crate) fn apply_reviewed_publication(
     state: &ManagedState,
     plan_id: &str,
     confirmed: bool,
-    model_removal_confirmed: bool,
-    scope_confirmed: bool,
+    app: AppWriteConfirmations,
 ) -> AppResult<ApplyResult> {
     let stored = state.plans()?.consume(plan_id)?;
     if !confirmed {
@@ -681,13 +691,8 @@ pub(crate) fn apply_reviewed_publication(
             "Explicit deployment confirmation is required".into(),
         ));
     }
-    if stored.plan.app_scope_confirmation && !scope_confirmed {
-        return Err(AppError::InvalidInput(
-            "Confirm the reviewed Copilot App storage scope before publishing".into(),
-        ));
-    }
     let deploy = stored.plan.purpose == DeploymentPurpose::Deploy;
-    let result = execute_stored_plan(state, stored, model_removal_confirmed)?;
+    let result = execute_stored_plan(state, stored, app)?;
     if deploy
         && result.records.iter().any(|r| {
             r.target_kind == crate::domain::ClientKind::GithubCopilotApp
@@ -722,7 +727,7 @@ pub async fn preview_revoke_and_delete(
             DeploymentPlan {
                 id: Uuid::new_v4().to_string(), purpose: DeploymentPurpose::RevokeAndDelete,
                 connection_id: connection.id.clone(), connection_name: connection.name.clone(),
-                target_ids: Vec::new(), operations: Vec::new(), app_model_removals:Vec::new(),app_scope_confirmation:false,created_at: Utc::now(),
+                target_ids: Vec::new(), operations: Vec::new(), app_model_removals:Vec::new(),app_scope_confirmation:false,app_recreates_provider:false,created_at: Utc::now(),
             }
         } else {
             adapters::preview_revoke_resolved(&connection, &owned_ids, &targets).map_err(command_error)?
@@ -747,8 +752,16 @@ pub async fn preview_revoke_and_delete(
 pub(crate) fn execute_stored_plan(
     state: &ManagedState,
     stored: StoredPlan,
-    allow_app_model_removal: bool,
+    app: AppWriteConfirmations,
 ) -> AppResult<ApplyResult> {
+    if stored.plan.app_recreates_provider && !app.recreation_confirmed {
+        return Err(AppError::AppProviderRemoved);
+    }
+    if stored.plan.app_scope_confirmation && !app.scope_confirmed {
+        return Err(AppError::InvalidInput(
+            "Confirm the reviewed Copilot App storage scope before publishing".into(),
+        ));
+    }
     let revoke = stored.plan.purpose.is_revocation();
     let delete_connection = stored.plan.purpose == DeploymentPurpose::RevokeAndDelete;
     let app_resources = stored
@@ -799,7 +812,7 @@ pub(crate) fn execute_stored_plan(
         crate::app_sync::publication_targets(state, &selected)
     };
     deployment::validate_plan(&stored, &connection, &targets, &context)?;
-    if !allow_app_model_removal && !stored.plan.app_model_removals.is_empty() {
+    if !app.model_references_resolved && !stored.plan.app_model_removals.is_empty() {
         return Err(AppError::Unsupported("Confirm that affected active/default models were switched in Copilot App before removal".into()));
     }
     let grant = context
@@ -825,7 +838,7 @@ pub(crate) fn execute_stored_plan(
         &stored.plan.id,
         stored.writes,
     )?;
-    let applied = tx.apply_checked(allow_app_model_removal, &|resource| {
+    let applied = tx.apply_checked(app.model_references_resolved, &|resource| {
         state
             .app_sync
             .authorize_publication(&connection, resource, grant.as_ref())
@@ -1029,6 +1042,9 @@ pub async fn preview_deployment_recovery(
             RecoveryAction::Restore => {
                 let mut allowed = deployment::recovery_resources().unwrap_or_default();
                 allowed.extend(state.app_sync.recovery_resources().unwrap_or_default());
+                allowed.extend(
+                    crate::transaction::reviewed_manual_resource(&path).unwrap_or_default(),
+                );
                 if let Ok(resources) = crate::resources::recovery_resources(
                     state.store().map_err(command_error)?.resources(),
                 ) {
@@ -1086,6 +1102,9 @@ pub async fn apply_deployment_recovery(
             RecoveryAction::Restore => {
                 let mut allowed = deployment::recovery_resources().unwrap_or_default();
                 allowed.extend(state.app_sync.recovery_resources().unwrap_or_default());
+                allowed.extend(
+                    crate::transaction::reviewed_manual_resource(&path).unwrap_or_default(),
+                );
                 if let Ok(resources) = crate::resources::recovery_resources(store.resources()) {
                     allowed.extend(resources);
                 }

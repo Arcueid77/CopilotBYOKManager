@@ -47,6 +47,7 @@ pub(super) fn prepare_writes(
     let mut writes = Vec::new();
     let mut ownership_after = context.ownership.clone();
     let revoke = plan.purpose.is_revocation();
+    plan.app_recreates_provider = false;
     for operation in &mut plan.operations {
         let target = targets
             .iter()
@@ -120,6 +121,16 @@ pub(super) fn prepare_writes(
                     revoke,
                 )?;
                 let resource_id = ownership::resource_id(&write.resource);
+                plan.app_recreates_provider = !revoke
+                    && write.before.is_none()
+                    && write.after.is_some()
+                    && adapters::github_app::sqlite::bound_proof(
+                        &context.ownership,
+                        &context.owner_id,
+                        &connection.id,
+                        &resource_id,
+                    )
+                    .is_some();
                 (vec![write], resource_id, projection)
             }
         };
@@ -309,6 +320,7 @@ mod tests {
             created_at: Utc::now(),
             app_model_removals: Vec::new(),
             app_scope_confirmation: false,
+            app_recreates_provider: false,
         }
     }
 

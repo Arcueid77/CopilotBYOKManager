@@ -117,13 +117,27 @@ impl Projection {
     }
 }
 
-pub(super) fn exists(db: &Connection, id: &str) -> AppResult<bool> {
-    db.query_row(
-        "SELECT EXISTS(SELECT 1 FROM model_providers WHERE id=?1)",
-        [id],
-        |r| r.get(0),
-    )
-    .map_err(sql_error)
+pub(super) fn provider_present(db: &Connection, id: &str) -> AppResult<bool> {
+    let present: bool = db
+        .query_row(
+            "SELECT EXISTS(SELECT 1 FROM model_providers WHERE id=?1)",
+            [id],
+            |r| r.get(0),
+        )
+        .map_err(sql_error)?;
+    if !present {
+        let orphaned: bool = db
+            .query_row(
+                "SELECT EXISTS(SELECT 1 FROM provider_models WHERE provider_id=?1)",
+                [id],
+                |r| r.get(0),
+            )
+            .map_err(sql_error)?;
+        if orphaned {
+            return Err(crate::deployment::ownership::conflict());
+        }
+    }
+    Ok(present)
 }
 pub(super) fn foreign_models(db: &Connection, id: &str) -> AppResult<i64> {
     let prefix = format!("{id}-m-");
@@ -139,7 +153,7 @@ pub(super) fn read(db: &Connection, id: &str, format: Format) -> AppResult<Optio
     if !valid_provider_id(id) {
         return Err(invalid());
     }
-    if !exists(db, id)? {
+    if !provider_present(db, id)? {
         return Ok(None);
     }
     let linked: bool = format.has_account()

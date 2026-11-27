@@ -40,6 +40,9 @@
     function setApplying(value) { applying = value; root.setAttribute("aria-busy", String(value)); onBusyChange?.(value); }
     function targetStatus(target, operation, selected) {
       if (!target.detected) return tr("未检测到");
+      if (operation?.supported && operation.targetKind === "github-copilot-app" && review.plan?.appRecreatesProvider) {
+        return tr("此供应商已在 App 内删除，确认发布后将重新创建。");
+      }
       if (operation?.supported) return tr("可自动发布");
       if (operation) return clients.blockerText(operation.blocker) || tr("本次无法自动发布");
       if (!target.supportsWrite) return tr("仅手动处理");
@@ -128,11 +131,16 @@
         if (!alreadyReviewed && (!connection.models.some(model => model.enabled)
           || plan.appModelRemovals?.length
           || plan.appScopeConfirmation
+          || plan.appRecreatesProvider
           || plan.operations.some(operation => !operation.supported || operation.targetKind === "copilot-cli"))) return;
         const resolved = root.querySelector("[data-app-models-resolved]")?.checked === true;
         if (plan.appModelRemovals?.length && !resolved) return;
         writeStarted = true;
-        const request = review.apply({ appModelReferencesResolved: resolved, appScopeConfirmed: plan.appScopeConfirmation === true && alreadyReviewed });
+        const request = review.apply({
+          appModelReferencesResolved: resolved,
+          appScopeConfirmed: plan.appScopeConfirmation === true && alreadyReviewed,
+          appRecreationConfirmed: plan.appRecreatesProvider === true && alreadyReviewed,
+        });
         body.textContent = tr("正在发布配置…");
         buttons();
         const result = await request;

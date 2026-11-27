@@ -50,6 +50,7 @@
             planId, confirmed: true,
             ...(options.appModelReferencesResolved === true ? { appModelReferencesResolved: true } : {}),
             ...(options.appScopeConfirmed === true ? { appScopeConfirmed: true } : {}),
+            ...(options.appRecreationConfirmed === true ? { appRecreationConfirmed: true } : {}),
           });
         } finally {
           busy = false;

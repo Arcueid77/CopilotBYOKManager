@@ -66,7 +66,7 @@ An App-only selection has no supported automatic operation, so the publish butto
 | Stop managing only | Provider and publication records are removed; its confirmation is no longer shown | Remove the App entry yourself if desired |
 | Revoke and delete | Normal reviewed revocation covers owned automatic targets, then removes the provider | Remove the App entry and its stored key inside the App |
 
-A manual confirmation creates no App ownership proof. Deleting a provider in the manager cannot revoke its manually entered App configuration. Confirmation metadata for deleted Connections is filtered from reads and pruned on a subsequent confirmation save.
+A manual confirmation creates no App ownership proof. With experimental sync enabled, the user can separately select a manually entered BYOK group in **Apps → Manage configuration** and confirm deletion from the App. Confirmation metadata for deleted Connections is filtered from reads and pruned on a subsequent confirmation save.
 
 ## Storage and implementation
 

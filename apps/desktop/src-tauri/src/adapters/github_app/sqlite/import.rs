@@ -14,16 +14,27 @@ pub(crate) fn observed_catalog(
 ) -> AppResult<Vec<ConfiguredSource>> {
     let _guard = target.verify()?;
     let db = open_readonly(&target.database)?;
-    let inspected = target.check_schema(&db)?;
-    let account_scope = if inspected.format.has_account() {
+    target.check_schema(&db)?;
+    Ok(provider_catalog(&db, target, owned)?
+        .into_values()
+        .collect())
+}
+
+pub(super) fn provider_catalog(
+    db: &rusqlite::Connection,
+    target: &Target,
+    owned: &BTreeMap<String, String>,
+) -> AppResult<BTreeMap<String, ConfiguredSource>> {
+    let account_scope = if target.format.has_account() {
         "p.account_id IS NULL"
     } else {
         "1"
     };
+    let types = super::manual::BYOK_TYPES;
     let sql = format!(
         "SELECT p.id,p.name,m.id IS NOT NULL
         FROM model_providers p LEFT JOIN provider_models m ON m.provider_id=p.id
-        WHERE {account_scope} AND p.type IN ('openai','custom','azure','anthropic')
+        WHERE {account_scope} AND p.type IN {types}
         ORDER BY p.id,m.id LIMIT 2049"
     );
     let mut statement = db.prepare(&sql).map_err(schema::sql_error)?;
@@ -58,7 +69,12 @@ pub(crate) fn observed_catalog(
     providers
         .into_iter()
         .map(|(id, (name, count))| {
-            ConfiguredSource::new(&name, owned.get(&id).map(String::as_str), count)
+            let mut source =
+                ConfiguredSource::new(&name, owned.get(&id).map(String::as_str), count)?;
+            if source.connection_id.is_none() && super::manual::eligible_id(&id) {
+                source.manual_deletion_id = Some(super::manual::selector(target, &id, &source)?);
+            }
+            Ok((id, source))
         })
         .collect()
 }

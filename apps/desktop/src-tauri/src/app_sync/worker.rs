@@ -148,6 +148,8 @@ pub(super) fn run_once(jobs: &Jobs, state: &ManagedState) -> AppResult<()> {
                 jobs.set_phase(
                     if matches!(error, AppError::AppRunning | AppError::AppExitUnverified) {
                         Phase::PendingAppExit
+                    } else if matches!(error, AppError::AppProviderRemoved) {
+                        Phase::ReviewRequired
                     } else if matches!(error, AppError::AppScopeChanged) {
                         Phase::ConsentRequired
                     } else if matches!(

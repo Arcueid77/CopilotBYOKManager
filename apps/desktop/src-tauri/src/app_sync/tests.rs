@@ -306,7 +306,7 @@ fn destination_scope_change_missing_key_model_removal_and_disable_never_silently
             vec![selected.models[0].model_id.clone()]
         );
         let stored = state.plans().unwrap().consume(&plan.id).unwrap();
-        assert!(crate::commands::execute_stored_plan(&state, stored, false).is_err());
+        assert!(crate::commands::execute_stored_plan(&state, stored, Default::default()).is_err());
         assert_eq!(resource.read().unwrap(), before);
         let mut edit = input(selected);
         edit.base_url = "https://different.invalid/v1".into();
@@ -363,7 +363,15 @@ fn saved_multi_provider_sync_survives_restart_and_disabled_revocation_keeps_mana
             .insert(connection, None, plan, &targets, context)
             .unwrap();
         let stored = state.plans().unwrap().consume(&plan.id).unwrap();
-        let result = crate::commands::execute_stored_plan(&state, stored, true).unwrap();
+        let result = crate::commands::execute_stored_plan(
+            &state,
+            stored,
+            crate::commands::AppWriteConfirmations {
+                model_references_resolved: true,
+                ..Default::default()
+            },
+        )
+        .unwrap();
         assert!(!result.connection_deleted);
         assert!(result
             .records
@@ -513,7 +521,15 @@ fn enabled_app_uses_normal_publication_for_an_unscoped_provider() {
         let ids = [TARGET_ID.to_owned()];
         let review = || crate::commands::review_publication(&state, &second.id, &ids);
         let apply = |plan_id, consent| {
-            crate::commands::apply_reviewed_publication(&state, plan_id, true, false, consent)
+            crate::commands::apply_reviewed_publication(
+                &state,
+                plan_id,
+                true,
+                crate::commands::AppWriteConfirmations {
+                    scope_confirmed: consent,
+                    ..Default::default()
+                },
+            )
         };
         assert!(!review().unwrap().operations[0].supported);
         approve(&state, &app, vec![first.id.clone()]);
@@ -550,6 +566,124 @@ fn enabled_app_uses_normal_publication_for_an_unscoped_provider() {
 }
 
 #[test]
+fn manual_deletion_requires_a_fresh_confirmed_publication_to_recreate_the_provider() {
+    crate::secrets::with_fake_credentials(|| {
+        let (_root, state, target, connections) = fixture();
+        let c = &connections[0];
+        approve(&state, &target, vec![c.id.clone()]);
+        super::commands::synchronize(&state, &c.id).unwrap();
+        let resource = scoped(&state, &target, &c.id);
+        let provider_id = resource.provider_id.as_str();
+        let open = || rusqlite::Connection::open(&target.database).unwrap();
+        {
+            let db = open();
+            db.execute_batch("PRAGMA foreign_keys=ON").unwrap();
+            db.execute(
+                "UPDATE model_providers SET name=?1 WHERE id='manual'",
+                [&c.name],
+            )
+            .unwrap();
+            db.execute("INSERT INTO provider_models(id,provider_id,model_id,display_name) VALUES('manual-one','manual','manual-one','Manual model')", []).unwrap();
+            db.execute("DELETE FROM model_providers WHERE id=?1", [provider_id])
+                .unwrap();
+        }
+        assert!(resource.read().unwrap().is_none());
+        super::worker::run_once(&state.app_sync, &state).unwrap();
+        assert_eq!(
+            state.app_sync.status(&state).unwrap().phase,
+            Phase::ReviewRequired
+        );
+        assert!(resource.read().unwrap().is_none());
+
+        let review = || crate::commands::review_publication(&state, &c.id, &[TARGET_ID.into()]);
+        let apply = |id: &str, recreate| {
+            crate::commands::apply_reviewed_publication(
+                &state,
+                id,
+                true,
+                crate::commands::AppWriteConfirmations {
+                    recreation_confirmed: recreate,
+                    ..Default::default()
+                },
+            )
+        };
+        let plan = review().unwrap();
+        assert!(plan.operations[0].supported && plan.app_recreates_provider);
+        assert!(!plan.app_scope_confirmation);
+        assert!(matches!(
+            apply(&plan.id, false),
+            Err(AppError::AppProviderRemoved)
+        ));
+        assert!(matches!(
+            apply(&plan.id, true),
+            Err(AppError::PlanUnavailable)
+        ));
+        assert!(resource.read().unwrap().is_none());
+
+        // A provider that appears after preview cannot be replaced by the reviewed insert.
+        let stale = review().unwrap();
+        open().execute("INSERT INTO model_providers(id,name,type,settings_json) VALUES(?1,'Intervening provider','openai','{}')", [provider_id]).unwrap();
+        assert!(apply(&stale.id, true).is_err());
+        let db = open();
+        assert_eq!(
+            db.query_row(
+                "SELECT name FROM model_providers WHERE id=?1",
+                [provider_id],
+                |row| row.get::<_, String>(0)
+            )
+            .unwrap(),
+            "Intervening provider"
+        );
+        db.execute("DELETE FROM model_providers WHERE id=?1", [provider_id])
+            .unwrap();
+        drop(db);
+
+        // An incomplete external delete is a conflict both before and after review.
+        let stale = review().unwrap();
+        let db = open();
+        db.execute_batch("PRAGMA foreign_keys=OFF").unwrap();
+        db.execute("INSERT INTO provider_models(id,provider_id,model_id,display_name) VALUES('orphan',?1,'foreign','Foreign')", [provider_id]).unwrap();
+        drop(db);
+        assert!(apply(&stale.id, true).is_err());
+        assert!(review().is_err());
+        assert_eq!(
+            open()
+                .execute("DELETE FROM provider_models WHERE id='orphan'", [])
+                .unwrap(),
+            1
+        );
+
+        let result = apply(&review().unwrap().id, true).unwrap();
+        assert_eq!(
+            result.records[0].status,
+            crate::domain::DeploymentStatus::Applied
+        );
+        assert!(!review().unwrap().app_recreates_provider);
+        assert!(!state.app_sync.halted.load(Ordering::Acquire));
+        let db = open();
+        let actual: u32 = db
+            .query_row(
+                "SELECT count(*) FROM provider_models WHERE provider_id=?1",
+                [provider_id],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(actual as usize, c.enabled_models().count());
+        let manual: u32 = db.query_row("SELECT count(*) FROM provider_models m JOIN model_providers p ON p.id=m.provider_id WHERE p.id='manual' AND p.name=?1 AND m.id='manual-one'", [&c.name], |row| row.get(0)).unwrap();
+        assert_eq!(manual, 1);
+        let store = state.store().unwrap();
+        sqlite::check_owned(
+            &target,
+            store.installation_owner_id(),
+            &c.id,
+            store.ownership(),
+        )
+        .unwrap();
+        assert!(!crate::deployment::recovery_required(store.path()));
+    });
+}
+
+#[test]
 fn enabled_empty_scope_lists_app_as_ready_and_a_stale_confirmation_cannot_establish_it() {
     crate::secrets::with_fake_credentials(|| {
         let (_root, state, app, connections) = fixture();
@@ -567,15 +701,30 @@ fn enabled_empty_scope_lists_app_as_ready_and_a_stale_confirmation_cannot_establ
         assert!(plan.app_scope_confirmation);
         state.app_sync.settings_epoch.fetch_add(1, Ordering::AcqRel);
         assert!(matches!(
-            crate::commands::apply_reviewed_publication(&state, &plan.id, true, false, true),
+            crate::commands::apply_reviewed_publication(
+                &state,
+                &plan.id,
+                true,
+                crate::commands::AppWriteConfirmations {
+                    scope_confirmed: true,
+                    ..Default::default()
+                }
+            ),
             Err(AppError::PlanChanged)
         ));
         assert!(scoped(&state, &app, &c.id).read().unwrap().is_none());
         assert!(state.app_sync.snapshot().unwrap().scopes.is_empty());
         let plan = crate::commands::review_publication(&state, &c.id, &ids).unwrap();
-        let published =
-            crate::commands::apply_reviewed_publication(&state, &plan.id, true, false, true)
-                .unwrap();
+        let published = crate::commands::apply_reviewed_publication(
+            &state,
+            &plan.id,
+            true,
+            crate::commands::AppWriteConfirmations {
+                scope_confirmed: true,
+                ..Default::default()
+            },
+        )
+        .unwrap();
         assert_eq!(
             published.records[0].status,
             crate::domain::DeploymentStatus::Applied

@@ -1,11 +1,9 @@
 # CopilotBYOKManager v{{VERSION}}
 
-Reuse provider configurations across Copilot Chat in VS Code and JetBrains, Copilot CLI and the Copilot App.
+Configure a provider once for Copilot Chat in VS Code and JetBrains, Copilot CLI and the Copilot App. This release improves provider management in the Windows x64 Copilot App with experimental sync enabled.
 
-- **Extract existing providers.** Bring in endpoints and models from supported app configurations, individually or together. With confirmation, you can also save available API keys in the local system credential store and fill in missing keys on saved providers. Extraction runs locally without uploads.
-- **Manage existing configurations.** Open **Manage configuration** in an app instance. Edit or delete supported entries in VS Code, CLI and JetBrains. Manage synchronized Copilot App providers from the same entry.
-- **Review one publication plan.** Global publication preselects eligible targets, including CLI and a compatible Copilot App with sync enabled. Each card shows its own result or blocker, and the publication history retains the reason.
-- **Publish to an enabled Copilot App alongside other targets.** The shared review handles first-time provider consent and shows when Copilot App needs to be closed.
+- **Delete a provider you added in Copilot App.** Quit Copilot App, open **Apps → Copilot App → Manage configuration** in the manager, then select **Delete**. The confirmation shows the model count and the endpoint host when available. Providers with the same name have separate entries. If another App record still uses the provider or a model, the manager explains what is blocking deletion.
+- **Republish a provider you deleted in the App.** Choose **Publish configuration** for the saved provider. The preview now offers to recreate it and its enabled models. Background sync waits for your confirmation.
 
 ### 下载与安装 / Downloads
 
@@ -15,10 +13,10 @@ Run Windows x64 Setup or extract the standalone ZIP. On macOS 15 or later, open 
 
 ### 简体中文
 
-- **提取已有供应商。** 可单独或批量提取端点和模型。用户确认后，可将明文 API Key 保存到本机系统凭据库，也能为已保存的供应商补齐密钥。提取不上传。
-- **管理原有配置。** 在应用实例中打开「管理配置」。VS Code、CLI 和 JetBrains 支持编辑或删除适配的配置，已同步到 Copilot App 的供应商也从同一入口管理。
-- **统一发布预览。** 全局发布默认勾选符合条件的应用，包括 CLI 和已启用同步的兼容 Copilot App。各目标的阻塞原因直接显示在卡片上，并保留到发布记录。
-- **一并发布到 Copilot App。** 首次同步供应商在同一预览中确认。App 在后台运行时，对应目标会提示退出后重新核对。
+一次配置供应商，即可发布到 VS Code 和 JetBrains 的 Copilot Chat、Copilot CLI 和 Copilot App。本版改进适用于已开启实验性同步的 Windows x64 Copilot App。
+
+- **删除在 Copilot App 里手动添加的供应商。** 退出 Copilot App，在管理器的 **应用 → Copilot App → 管理配置** 中选择条目，点 **删除**。确认框显示模型数和可读取的端点主机。同名条目可以分别删除。如果 App 中仍有记录引用该供应商或模型，界面会提示原因。
+- **重新发布在 App 里删掉的受管供应商。** 对已保存的供应商点 **发布配置**，预览会提示重新创建供应商及其已启用的模型。后台同步会等待你确认。
 
 Windows x64 用户可运行安装器或解压便携 ZIP。macOS 15 及以上用户可打开 Universal DMG，将应用拖入 Applications。可用 `SHA256SUMS.txt` 核对文件。
 

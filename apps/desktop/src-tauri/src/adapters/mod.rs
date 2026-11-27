@@ -136,6 +136,7 @@ fn preview_for_purpose(
         operations,
         app_model_removals: Vec::new(),
         app_scope_confirmation: false,
+        app_recreates_provider: false,
         created_at: Utc::now(),
     })
 }

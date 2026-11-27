@@ -44,6 +44,12 @@ pub enum AppError {
     #[error("Cannot verify that Copilot App has exited; review its background processes before retrying")]
     AppExitUnverified,
 
+    #[error("The managed provider was removed in Copilot App. Review publication to recreate it.")]
+    AppProviderRemoved,
+
+    #[error("This provider or one of its models is referenced in Copilot App")]
+    AppProviderReferenced,
+
     #[error(
         "Copilot App database access is not restricted to its owner and system administrators"
     )]

@@ -21,6 +21,9 @@
       case "busy": return tr("有其他配置操作正在进行，请完成后重试。");
       case "invalid": return tr("请检查名称和端点 URL。");
       case "recovery": return tr("请先完成配置恢复。");
+      case "appRunning": return tr("退出 Copilot App 后重新核对。");
+      case "permissions": return tr("请检查 App 数据目录的读取权限。");
+      case "referenced": return tr("Copilot App 仍在引用该供应商或模型。请在 App 的 Model providers 设置中处理。");
       default: return tr("此应用配置无法安全读取或写入，请在应用内检查。");
     }
   }
@@ -57,9 +60,11 @@
     function rows(entries) {
       return entries.length ? `<div class="existing-providers">${entries.map((entry, index) => {
         const endpoint = entry.fields?.find(field => field.kind === "endpoint" || field.kind === "modelEndpoint");
-        const models = Number.isInteger(entry.modelCount) ? tr("{0} 个模型", entry.modelCount) : tr("模型数量未知");
-        return `<article class="existing-provider-row"><div><strong>${escape(displayName(entry))}</strong><small>${models}${endpoint ? ` · ${escape(endpoint.value)}` : ""}</small></div>
-          <div class="inline-actions">${entry.editable ? `<button type="button" class="button ghost small" data-existing-edit="${index}">${tr("编辑")}</button>` : ""}${entry.deletable !== false ? `<button type="button" class="button ghost small danger-text" data-existing-delete="${index}">${tr("删除")}</button>` : ""}</div></article>`;
+        const models = entry.syncRecordOnly ? tr("仅有管理器的同步记录") : Number.isInteger(entry.modelCount) ? tr("{0} 个模型", entry.modelCount) : tr("模型数量未知");
+        const sameName = entry.manualDeletionId && entries.some(other => other !== entry && displayName(other) === displayName(entry));
+        const ref = sameName ? ` · ${tr("条目 {0}", escape(entry.manualDeletionId.slice(0, 8)))}` : "";
+        return `<article class="existing-provider-row"><div><strong>${escape(displayName(entry))}</strong><small>${models}${endpoint ? ` · ${escape(endpoint.value)}` : ""}${ref}</small></div>
+          <div class="inline-actions">${entry.editable ? `<button type="button" class="button ghost small" data-existing-edit="${index}">${tr("编辑")}</button>` : ""}${entry.deletable !== false ? `<button type="button" class="button ghost small danger-text" data-existing-delete="${index}">${entry.syncRecordOnly ? tr("撤销同步") : tr("删除")}</button>` : ""}</div></article>`;
       }).join("")}</div>` : `<p class="manager-meta">${tr("此应用暂无可管理的供应商。")}</p>`;
     }
 
@@ -75,15 +80,19 @@
       const guide = entries.some(entry => entry.deletable === false) ? `<p class="manager-meta">${tr("手动添加的供应商可在 Copilot App 的 Model providers 设置中编辑和删除。")}</p>` : "";
       openModal({ title: tr("{0} 的供应商配置", appName), body: rows(entries) + guide, wide: true, footer: closeButton(), onOpen(root) {
         root.querySelectorAll("[data-existing-edit]").forEach(button => button.addEventListener("click", () => editSaved(entries[Number(button.dataset.existingEdit)].id)));
-        root.querySelectorAll("[data-existing-delete]").forEach(button => button.addEventListener("click", () => revokeApp(entries[Number(button.dataset.existingDelete)].id)));
+        root.querySelectorAll("[data-existing-delete]").forEach(button => button.addEventListener("click", () => {
+          const index = Number(button.dataset.existingDelete);
+          if (entries[index].manualDeletionId) remove({ appName, entries }, index);
+          else revokeApp(entries[index].id);
+        }));
       } });
     }
 
-    async function write(root, button, plan, kind) {
+    async function write(root, button, plan, kind, command = "apply_existing_provider_change") {
       button.disabled = true;
       setBusy(true);
       try {
-        await invoke("apply_existing_provider_change", { planId: await plan(), confirmed: true });
+        await invoke(command, { planId: await plan(), confirmed: true });
         setBusy(false);
         closeModal();
         await refresh();
@@ -92,7 +101,7 @@
         if (root.isConnected) {
           setBusy(false);
           showError(root, error);
-          button.disabled = error === "stale" || error === "recovery";
+          button.disabled = kind === "delete" || error === "stale" || error === "recovery";
         }
       }
     }
@@ -129,20 +138,35 @@
 
     function remove(inventory, index) {
       const entry = inventory.entries[index];
+      let pending;
+      function discard() {
+        if (pending) void invoke("discard_existing_provider_change", { planId: pending }).catch(() => {});
+        pending = null;
+      }
       openModal({ title: tr("删除 {0}", displayName(entry)), compact: true,
-        body: `<p>${tr("将从 {0} 中删除该供应商及其 {1} 个模型。", escape(inventory.appName), entry.modelCount)}</p>${sharedScope(inventory)}${message}`,
+        body: `<p>${tr("将从 {0} 中删除该供应商及其 {1} 个模型。", escape(inventory.appName), entry.modelCount)}</p><p class="manager-meta" data-delete-origin hidden></p>${sharedScope(inventory)}${message}`,
         footer: `${cancelButton()}<button type="button" class="button danger" data-existing-confirm disabled>${tr("确认删除")}</button>`,
+        onClose: discard,
         async onOpen(root) {
           const button = root.querySelector("[data-existing-confirm]");
           try {
-            let plan = await review(inventory, index, { kind: "delete" });
-            if (!root.isConnected) return;
+            const manual = entry.manualDeletionId;
+            const preview = manual
+              ? await invoke("preview_app_provider_delete", { selection: manual })
+              : await review(inventory, index, { kind: "delete" });
+            pending = manual ? preview.planId : preview;
+            if (!root.isConnected) { discard(); return; }
+            if (manual && preview.origin) {
+              const origin = root.querySelector("[data-delete-origin]");
+              origin.textContent = preview.origin;
+              origin.hidden = false;
+            }
             button.disabled = false;
-            button.addEventListener("click", () => write(root, button, () => {
-              const id = plan;
-              plan = null;
-              return id ?? review(inventory, index, { kind: "delete" });
-            }, "delete"));
+            button.addEventListener("click", () => {
+              const plan = pending;
+              pending = null;
+              void write(root, button, () => plan, "delete", manual ? "apply_app_provider_delete" : "apply_existing_provider_change");
+            }, { once: true });
           } catch (error) { if (root.isConnected) showError(root, error); }
         }
       });

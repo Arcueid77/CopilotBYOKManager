@@ -1,6 +1,7 @@
-//! Native-only scoped projections. Snapshots contain only this manager's owned rows.
+//! Scoped App configuration writes and native-only rollback snapshots.
 pub(super) mod build;
 pub(crate) mod import;
+pub(crate) mod manual;
 mod provider_settings;
 mod rows;
 mod schema;
@@ -114,7 +115,6 @@ impl AppResource {
         if self.provider_id != rows::provider_id(&self.owner_id, &self.connection_id)? {
             return Err(AppError::PlanChanged);
         }
-        let _guard = self.target.verify()?;
         let before = expected.map(rows::Projection::decode).transpose()?;
         let desired = after.map(rows::Projection::decode).transpose()?;
         if !allow_removal && !rows::removed(before.as_ref(), desired.as_ref()).is_empty() {
@@ -122,57 +122,70 @@ impl AppResource {
                 "Review removed models after selecting another model in Copilot App".into(),
             ));
         }
-        let mut db = Connection::open_with_flags(
-            &self.target.database,
-            OpenFlags::SQLITE_OPEN_READ_WRITE | OpenFlags::SQLITE_OPEN_NO_MUTEX,
-        )
-        .map_err(schema::sql_error)?;
-        configure(&db)?;
-        let transaction = db
-            .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)
-            .map_err(schema::sql_error)?;
-        let schema = self.target.check_schema(&transaction)?;
-        schema::guard_references(&transaction, &schema.references)?;
-        let current = rows::read(&transaction, &self.provider_id, schema.format)?
-            .map(|p| p.bytes())
-            .transpose()?;
-        if current.as_deref() != expected {
-            return Err(AppError::PlanChanged);
-        }
-        authorize()?;
-        rows::write(
-            &transaction,
-            &self.provider_id,
-            before.as_ref(),
-            desired.as_ref(),
-            schema.format,
-        )?;
-        let written = rows::read(&transaction, &self.provider_id, schema.format)?
-            .map(|p| p.bytes())
-            .transpose()?;
-        if written.as_deref() != after {
-            return Err(AppError::Config(
-                "Copilot App owned-row verification failed".into(),
-            ));
-        }
-        target::ensure_closed(&self.target.binary)?;
-        if security::path_identity(&self.target.database)? != self.target.identity {
-            return Err(AppError::PlanChanged);
-        }
-        // Recheck sidecar ACLs and consent immediately before the transaction commits.
-        let _final_guard = security::open_guard(&self.target.database)?;
-        authorize()?;
-        transaction.commit().map_err(|_| {
-            AppError::Config("Copilot App commit outcome requires read-only reconciliation".into())
-        })?;
-        #[cfg(test)]
-        if FAIL_ACK.with(|flag| flag.replace(false)) {
-            return Err(AppError::Config(
-                "Injected interruption after App commit".into(),
-            ));
-        }
-        Ok(())
+        write_transaction(&self.target, authorize, |transaction, format| {
+            let current = rows::read(transaction, &self.provider_id, format)?
+                .map(|p| p.bytes())
+                .transpose()?;
+            if current.as_deref() != expected {
+                return Err(AppError::PlanChanged);
+            }
+            rows::write(
+                transaction,
+                &self.provider_id,
+                before.as_ref(),
+                desired.as_ref(),
+                format,
+            )?;
+            let written = rows::read(transaction, &self.provider_id, format)?
+                .map(|p| p.bytes())
+                .transpose()?;
+            if written.as_deref() != after {
+                return Err(AppError::Config(
+                    "Copilot App owned-row verification failed".into(),
+                ));
+            }
+            Ok(())
+        })
     }
+}
+
+fn write_transaction(
+    target: &Target,
+    authorize: impl Fn() -> AppResult<()>,
+    update: impl FnOnce(&rusqlite::Transaction<'_>, schema::Format) -> AppResult<()>,
+) -> AppResult<()> {
+    let _guard = target.verify()?;
+    target::no_pending_wal(&target.database)?;
+    let mut db = Connection::open_with_flags(
+        &target.database,
+        OpenFlags::SQLITE_OPEN_READ_WRITE | OpenFlags::SQLITE_OPEN_NO_MUTEX,
+    )
+    .map_err(schema::sql_error)?;
+    configure(&db)?;
+    let transaction = db
+        .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)
+        .map_err(schema::sql_error)?;
+    let schema = target.check_schema(&transaction)?;
+    schema::guard_references(&transaction, &schema.references)?;
+    authorize()?;
+    update(&transaction, schema.format)?;
+    target::ensure_closed(&target.binary)?;
+    if security::path_identity(&target.database)? != target.identity {
+        return Err(AppError::PlanChanged);
+    }
+    // Recheck sidecar ACLs and consent immediately before the transaction commits.
+    let _final_guard = security::open_guard(&target.database)?;
+    authorize()?;
+    transaction.commit().map_err(|_| {
+        AppError::Config("Copilot App commit outcome requires read-only reconciliation".into())
+    })?;
+    #[cfg(test)]
+    if FAIL_ACK.with(|flag| flag.replace(false)) {
+        return Err(AppError::Config(
+            "Injected interruption after App commit".into(),
+        ));
+    }
+    Ok(())
 }
 
 pub fn resource(
@@ -189,6 +202,21 @@ pub fn resource(
         connection_id: connection.into(),
         consent_revision,
         revoke,
+    })
+}
+
+pub(crate) fn bound_proof<'a>(
+    records: &'a [TargetOwnership],
+    owner: &str,
+    connection: &str,
+    resource_id: &str,
+) -> Option<&'a TargetOwnership> {
+    records.iter().find(|proof| {
+        proof.target_kind == crate::domain::ClientKind::GithubCopilotApp
+            && proof.target_id == crate::app_sync::TARGET_ID
+            && proof.owner_id == owner
+            && proof.connection_id == connection
+            && proof.resource_id == resource_id
     })
 }
 
@@ -212,14 +240,8 @@ pub fn prepare(
     let _guard = target.verify()?;
     let db = open_readonly(&target.database)?;
     target.check_schema(&db)?;
-    let has_row = rows::exists(&db, &app_resource.provider_id)?;
-    let proof = records.iter().find(|r| {
-        r.target_kind == crate::domain::ClientKind::GithubCopilotApp
-            && r.target_id == crate::app_sync::TARGET_ID
-            && r.owner_id == owner
-            && r.connection_id == connection.id
-            && r.resource_id == resource_id
-    });
+    let has_row = rows::provider_present(&db, &app_resource.provider_id)?;
+    let proof = bound_proof(records, owner, &connection.id, &resource_id);
     if has_row && proof.is_none() {
         return Err(ownership::conflict());
     }
@@ -227,13 +249,9 @@ pub fn prepare(
         return Err(ownership::conflict());
     }
     let before = if has_row { app_resource.read()? } else { None };
-    if let Some(proof) = proof {
-        if !has_row && !revoke {
-            return Err(ownership::conflict());
-        }
-        if has_row
-            && crate::fingerprint::bytes("app-owned-rows-v1", before.as_deref())
-                != proof.projection_fingerprint
+    if let (Some(proof), Some(bytes)) = (proof, before.as_deref()) {
+        if crate::fingerprint::bytes("app-owned-rows-v1", Some(bytes))
+            != proof.projection_fingerprint
         {
             return Err(ownership::conflict());
         }
@@ -328,16 +346,11 @@ pub fn check_owned(
     let id = ownership::resource_id(&crate::transaction::Resource::AppSqlite(Box::new(
         resource.clone(),
     )));
-    let proof = records.iter().find(|r| {
-        r.target_kind == crate::domain::ClientKind::GithubCopilotApp
-            && r.target_id == crate::app_sync::TARGET_ID
-            && r.owner_id == owner
-            && r.connection_id == connection
-            && r.resource_id == id
-    });
+    let proof = bound_proof(records, owner, connection, &id);
     let bytes = resource.read()?;
     match (proof, bytes) {
         (None, None) => Ok(()),
+        (Some(_), None) => Err(AppError::AppProviderRemoved),
         (Some(proof), Some(bytes))
             if proof.projection_fingerprint
                 == crate::fingerprint::bytes("app-owned-rows-v1", Some(&bytes)) =>

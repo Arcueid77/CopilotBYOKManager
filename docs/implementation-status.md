@@ -1,6 +1,18 @@
 # CopilotBYOKManager implementation status
 
-Updated 2026-11-21 for v0.2.4 client upgrade compatibility. Initial release engineering started at `83a82db3555eb0defa278bd6e042b7c55a76088f`; source and evidence are recorded below. The [specification §21](mvp-implementation-spec.md#21-final-acceptance) and [feature availability](feature-availability.md) separate the core release from the retained extended milestone. Public versions and their exact build metadata are on [Releases](https://github.com/Arcueid77/CopilotBYOKManager/releases).
+Updated 2026-11-27 for v0.2.6 Copilot App provider management. Initial release engineering started at `83a82db3555eb0defa278bd6e042b7c55a76088f`; source and evidence are recorded below. The [specification §21](mvp-implementation-spec.md#21-final-acceptance) and [feature availability](feature-availability.md) separate the core release from the retained extended milestone. Public versions and their exact build metadata are on [Releases](https://github.com/Arcueid77/CopilotBYOKManager/releases).
+
+## 2026-11-27 · Delete a manually added Copilot App provider
+
+With experimental sync enabled, **Apps → Manage configuration** can remove one manually added BYOK provider and its models. The confirmation shows the model count and the endpoint host when available. A scoped row identifier distinguishes same-name entries. Cancelling discards the native preview. A changed configuration or an external App reference blocks deletion. A private journal and plan-bound permit support conditional recovery of the selected rows.
+
+Local checks passed 359 Rust tests, 104 web tests, 27 release checks, 18 isolated browser scenarios and strict Clippy. SQLite fixtures exercised all five supported formats, cancellation, replay, stale previews, reference protection and recovery after interruption. The Windows x64 GUI preview was built and opened. Deletion was exercised on isolated fixtures.
+
+## 2026-11-27 · Republish a provider deleted inside Copilot App
+
+The native preview recognizes a fully absent provider and model group bound to this installation and connection. The App card explains that confirming publication will recreate it. Background sync waits for that decision. A stale plan, orphaned model or modified existing row blocks the write. The management list identifies a retained sync record when its provider is absent from the observed catalog.
+
+Local checks passed 355 Rust tests, 104 web tests, 27 release checks, 17 isolated browser scenarios and strict Clippy. Fixtures cover explicit recreation, cancellation, a same-name independent provider and changes between preview and apply. A read-only host check used a placeholder key and stopped at preview. The Windows GUI preview was built and opened.
 
 ## 2026-11-25 · Save provider API keys with explicit extraction consent
 

@@ -183,11 +183,97 @@ fn migrated_vision_column_preserves_legacy_ownership_and_conditional_rollback() 
     app(&remove)
         .write(remove.before.as_deref(), None, true, || Ok(()))
         .unwrap();
-    assert!(rows::exists(&db, "manual").unwrap());
+    assert!(rows::provider_present(&db, "manual").unwrap());
     assert!(app(&remove).read().unwrap().is_none());
     db.execute_batch("ALTER TABLE provider_models ADD COLUMN future_field TEXT;")
         .unwrap();
     assert!(target::fixture(&old.database).is_err());
+}
+
+fn set_fixture_format(db: &Connection, format: schema::Format) {
+    if format.has_legacy_columns() {
+        db.execute_batch("PRAGMA foreign_keys=OFF; DROP TABLE sessions; DROP TABLE provider_models; DROP TABLE model_providers;").unwrap();
+        db.execute_batch(include_str!(
+            "../../../../tests/fixtures/copilot-app/schema-early-json.sql"
+        ))
+        .unwrap();
+        if format.has_account() {
+            db.execute_batch("ALTER TABLE model_providers ADD COLUMN account_id TEXT REFERENCES accounts(id) ON DELETE CASCADE;").unwrap();
+        }
+    } else if format == schema::Format::Basic {
+        db.execute_batch("ALTER TABLE provider_models DROP COLUMN supported_reasoning_efforts;")
+            .unwrap();
+    } else if format == schema::Format::VisionV2 {
+        db.execute_batch(include_str!(
+            "../../../../tests/fixtures/copilot-app/schema-v2-upgrade.sql"
+        ))
+        .unwrap();
+    }
+}
+
+#[test]
+fn manual_deletion_round_trips_each_supported_format_including_provider_and_model_options() {
+    use schema::Format::*;
+    for format in [
+        JsonWithLegacyColumns,
+        JsonWithLegacyColumnsAndAccount,
+        Basic,
+        V1,
+        VisionV2,
+    ] {
+        let root = private_root();
+        let path = root.path().join("data.db");
+        database(&path);
+        let db = Connection::open(&path).unwrap();
+        set_fixture_format(&db, format);
+        db.execute_batch("INSERT INTO provider_models(id,provider_id,model_id,display_name,wire_model,max_prompt_tokens,max_output_tokens,wire_api_override) VALUES('arbitrary-id','manual','model','Model','mapped',2048,1024,'responses');").unwrap();
+        if format.has_legacy_columns() {
+            db.execute_batch("UPDATE model_providers SET azure_api_version='2026-01-01',auth_kind='bearer_token',headers_json='{}' WHERE id='manual';").unwrap();
+        }
+        if format.has_efforts() {
+            db.execute_batch(
+                "UPDATE provider_models SET supported_reasoning_efforts='[\"high\"]';",
+            )
+            .unwrap();
+        }
+        if format == VisionV2 {
+            db.execute_batch("UPDATE provider_models SET supports_vision=1;")
+                .unwrap();
+        }
+        let target = target::fixture(&path).unwrap();
+        let selection = import::observed_catalog(&target, &BTreeMap::new()).unwrap()[0]
+            .manual_deletion_id
+            .clone()
+            .unwrap();
+        let resource = manual::review(&target, &selection).unwrap().0;
+        let original = resource.read().unwrap().unwrap();
+        resource.write(Some(&original), None, || Ok(())).unwrap();
+        assert!(resource.read().unwrap().is_none());
+        resource.write(None, Some(&original), || Ok(())).unwrap();
+        assert_eq!(resource.read().unwrap().unwrap(), original);
+        if format.has_legacy_columns() {
+            assert_eq!(
+                db.query_row::<String, _, _>(
+                    "SELECT azure_api_version FROM model_providers WHERE id='manual'",
+                    [],
+                    |r| r.get(0)
+                )
+                .unwrap(),
+                "2026-01-01"
+            );
+        }
+        if format == VisionV2 {
+            assert_eq!(
+                db.query_row::<i64, _, _>(
+                    "SELECT supports_vision FROM provider_models WHERE id='arbitrary-id'",
+                    [],
+                    |r| r.get(0)
+                )
+                .unwrap(),
+                1
+            );
+        }
+    }
 }
 
 #[test]
@@ -202,21 +288,7 @@ fn earlier_json_stores_update_only_owned_rows_and_detect_divergent_legacy_column
         // Reuse the restrictive directory and file permissions of the v1 fixture.
         let original = database(&path);
         let db = Connection::open(&path).unwrap();
-        if format.has_legacy_columns() {
-            db.execute_batch("PRAGMA foreign_keys=OFF; DROP TABLE sessions; DROP TABLE provider_models; DROP TABLE model_providers;").unwrap();
-            db.execute_batch(include_str!(
-                "../../../../tests/fixtures/copilot-app/schema-early-json.sql"
-            ))
-            .unwrap();
-            if format.has_account() {
-                db.execute_batch("ALTER TABLE model_providers ADD COLUMN account_id TEXT REFERENCES accounts(id) ON DELETE CASCADE;").unwrap();
-            }
-        } else {
-            db.execute_batch(
-                "ALTER TABLE provider_models DROP COLUMN supported_reasoning_efforts;",
-            )
-            .unwrap();
-        }
+        set_fixture_format(&db, format);
         let target = target::fixture(&path).unwrap();
         assert_eq!(target.format, format);
         assert!(original.same_store(&target));
@@ -266,7 +338,7 @@ fn earlier_json_stores_update_only_owned_rows_and_detect_divergent_legacy_column
             .write(write.after.as_deref(), None, true, || Ok(()))
             .unwrap();
         assert!(app(&write).read().unwrap().is_none());
-        assert!(rows::exists(&db, "manual").unwrap());
+        assert!(rows::provider_present(&db, "manual").unwrap());
     }
 }
 

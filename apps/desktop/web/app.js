@@ -744,12 +744,12 @@
     },
     revokeApp: id => appSync.handle("app-sync-revoke", id),
   });
-  function openModal({ title, body, footer = "", wide = false, compact = false, drawer = false, onOpen }) {
+  function openModal({ title, body, footer = "", wide = false, compact = false, drawer = false, onOpen, onClose }) {
     if (deploymentCleanup?.busy) return;
     if (!dialogs.prepare()) return;
     closeDeployment();
     modalCleanup?.();
-    modalCleanup = null;
+    modalCleanup = onClose ?? null;
     modalRoot.innerHTML = `
       <div class="modal-backdrop ${drawer ? "drawer-backdrop" : ""}" role="presentation">
         <section class="modal ${wide ? "wide" : ""} ${compact ? "compact" : ""} ${drawer ? "drawer" : ""}" role="dialog" aria-modal="true" aria-label="${escapeHtml(title)}">
@@ -1349,15 +1349,17 @@
           const owned = new Set(data.appSync?.ownedConnectionIds ?? []);
           const selected = new Set(data.appSync?.selectedConnectionIds ?? []);
           const canSync = names.publicationTarget(client, snapshot, data).supportsWrite;
+          const catalogAvailable = names.configuration(client, snapshot)?.state === "available";
           const entries = sources.map(source => {
             const id = source.connectionId;
-            const deletable = id != null && (owned.has(id) || snapshot.connections.some(connection => connection.id === id));
-            return { id, name: names.sourceName(source, snapshot), modelCount: source.modelCount, editable: deletable && canSync && selected.has(id), deletable };
+            const bound = id != null && (owned.has(id) || snapshot.connections.some(connection => connection.id === id));
+            const manualDeletionId = !bound && data.appSync?.enabled && canSync ? source.manualDeletionId : null;
+            return { id, name: names.sourceName(source, snapshot), modelCount: source.modelCount, editable: bound && canSync && selected.has(id), deletable: bound || Boolean(manualDeletionId), manualDeletionId };
           });
           for (const id of owned) {
             const connection = snapshot.connections.find(item => item.id === id);
             if (connection && !entries.some(entry => entry.id === id)) {
-              entries.push({ id, name: connection.name, editable: canSync && selected.has(id), deletable: true });
+              entries.push({ id, name: connection.name, syncRecordOnly: catalogAvailable, editable: !catalogAvailable && canSync && selected.has(id), deletable: true });
             }
           }
           providerManagement.openApp(names.name(client), entries);

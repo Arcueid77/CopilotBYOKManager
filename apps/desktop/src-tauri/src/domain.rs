@@ -314,6 +314,8 @@ pub struct DeploymentPlan {
     pub app_model_removals: Vec<String>,
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub app_scope_confirmation: bool,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub app_recreates_provider: bool,
     pub created_at: DateTime<Utc>,
 }
 

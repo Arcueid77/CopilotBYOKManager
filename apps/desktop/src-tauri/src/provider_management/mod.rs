@@ -1,6 +1,7 @@
 //! Explicit edits to one existing client provider group. Client catalogs and
 //! editor field addresses stay native, and every change uses the shared journal.
 mod catalog;
+pub(crate) mod manual_app;
 #[cfg(test)]
 mod tests;
 
@@ -148,6 +149,25 @@ struct Plan {
 pub(crate) struct Plans {
     observed: Option<Observed>,
     plan: Option<Plan>,
+    manual_app: Option<manual_app::Plan>,
+}
+
+impl Plans {
+    fn discard(&mut self, id: &str) {
+        if self.plan.as_ref().is_some_and(|plan| plan.id == id) {
+            self.plan = None;
+        }
+        if self.manual_app.as_ref().is_some_and(|plan| plan.id == id) {
+            self.manual_app = None;
+        }
+    }
+}
+
+#[tauri::command(rename_all = "camelCase")]
+pub(crate) fn discard_existing_provider_change(state: State<'_, ManagedState>, plan_id: String) {
+    if let Ok(mut plans) = state.existing_provider_plans.lock() {
+        plans.discard(&plan_id);
+    }
 }
 
 #[derive(Serialize)]
@@ -158,6 +178,9 @@ pub(crate) enum Failure {
     Invalid,
     Unavailable,
     Recovery,
+    AppRunning,
+    Referenced,
+    Permissions,
 }
 
 async fn job<T: Send + 'static>(
@@ -176,6 +199,9 @@ async fn job<T: Send + 'static>(
                 AppError::PlanChanged | AppError::PlanUnavailable => Failure::Stale,
                 AppError::Busy => Failure::Busy,
                 AppError::InvalidInput(_) => Failure::Invalid,
+                AppError::AppRunning | AppError::AppExitUnverified => Failure::AppRunning,
+                AppError::AppProviderReferenced => Failure::Referenced,
+                AppError::UnsafeAppPermissions => Failure::Permissions,
                 _ => Failure::Unavailable,
             }
         })

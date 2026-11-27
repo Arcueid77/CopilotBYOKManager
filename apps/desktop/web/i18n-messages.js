@@ -5,6 +5,9 @@
   if (typeof module === "object" && module.exports) module.exports = messages;
   else root.CopilotBYOKManagerMessages = messages;
 })(globalThis, () => ({
+  "此供应商已在 App 内删除，确认发布后将重新创建。": ["此供应商已在 App 内删除，确认发布后将重新创建。", "This provider was deleted in Copilot App. Confirm publication to create it again."],
+  "仅有管理器的同步记录": ["仅有管理器的同步记录", "Sync record only"],
+  "撤销同步": ["撤销同步", "Revoke sync"],
   "密钥只保存在本机系统凭据库。提取过程不联网、不上传。": ["密钥只保存在本机系统凭据库。提取过程不联网、不上传。", "API keys are saved in this computer's credential store. Extraction runs locally without uploads."],
   "同时提取所选供应商的 API Key": ["同时提取所选供应商的 API Key", "Also import API keys for the selected providers"],
   "补充 API Key": ["补充 API Key", "Add API key"],
@@ -45,10 +48,12 @@
   "删除": ["删除", "Delete"],
   "此应用暂无可管理的供应商。": ["此应用暂无可管理的供应商。", "No providers to manage in this app."],
   "手动添加的供应商可在 Copilot App 的 Model providers 设置中编辑和删除。": ["手动添加的供应商可在 Copilot App 的 Model providers 设置中编辑和删除。", "Edit or delete manually added providers in Copilot App under Model providers."],
+  "Copilot App 仍在引用该供应商或模型。请在 App 的 Model providers 设置中处理。": ["Copilot App 仍在引用该供应商或模型。请在 App 的 Model providers 设置中处理。", "Copilot App still references this provider or one of its models. Manage it under Model providers in the App."],
   "修改端点后，应用将使用此配置中已有的密钥访问新地址。": ["修改端点后，应用将使用此配置中已有的密钥访问新地址。", "The app will send any existing key in this configuration to the new endpoint."],
   "保存修改": ["保存修改", "Save changes"],
   "删除 {0}": ["删除 {0}", "Delete {0}"],
   "将从 {0} 中删除该供应商及其 {1} 个模型。": ["将从 {0} 中删除该供应商及其 {1} 个模型。", "Delete this provider and its {1} models from {0}."],
+  "条目 {0}": ["条目 {0}", "Entry {0}"],
   "确认删除": ["确认删除", "Confirm deletion"],
   "发布后，保存此供应商的变更会自动同步到 Copilot App。": ["发布后，保存此供应商的变更会自动同步到 Copilot App。", "After publishing, saved changes to this provider sync to Copilot App."],
   "Copilot App 会在本地数据库中以明文保存此供应商的密钥，数据库日志和备份也可能保留该密钥。": ["Copilot App 会在本地数据库中以明文保存此供应商的密钥，数据库日志和备份也可能保留该密钥。", "Copilot App stores this provider key in plaintext in its local database. Database logs and backups may also retain it."],
@@ -311,7 +316,7 @@
   "关闭窗口收起到系统托盘；点击托盘图标恢复，右键菜单可退出。普通最小化仍留在任务栏。": ["关闭窗口收起到系统托盘；点击托盘图标恢复，右键菜单可退出。普通最小化仍留在任务栏。", "Closing the window hides it to the system tray. Left-click to open the main window, or right-click and choose Exit CopilotBYOKManager. Ordinary minimize stays on the taskbar."],
   "系统托盘不可用，关闭窗口将正常退出。": ["系统托盘不可用，关闭窗口将正常退出。", "System tray is unavailable. Closing the window exits normally."],
   "一次配置供应商，用于多个 Copilot 应用。": ["一次配置供应商，用于多个 Copilot 应用。", "Configure a provider once, reuse it across Copilot apps."],
-  "核心配置版 · 预发布 · 0.2.5": ["核心配置版 · 预发布 · 0.2.5", "Core configuration edition · Pre-release · 0.2.5"],
+  "核心配置版 · 预发布 · 0.2.6": ["核心配置版 · 预发布 · 0.2.6", "Core configuration edition · Pre-release · 0.2.6"],
   "界面与窗口": ["界面与窗口", "Appearance and window"],
   "未推出功能记录": ["未推出功能记录", "Planned feature status"],
   "用量、账单与共享资源暂未开放，已有数据保留。规划记录不承诺上线日期。": ["用量、账单与共享资源暂未开放，已有数据保留。规划记录不承诺上线日期。", "Usage, Billing and shared resources are not available in this edition. Existing data is retained. The feature record promises no release dates."],

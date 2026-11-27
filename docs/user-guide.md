@@ -112,7 +112,7 @@ When an app has a new provider, a new model or a key you can add to a saved prov
 
 Matching endpoints and protocols are merged. When a supported source has a static API key, select **Also import API keys for the selected providers** to save it in this computer's credential store. Extraction runs locally without uploads. Existing keys are kept. To fill a missing key on an already saved provider, use the same extraction action. If source keys differ, extract from the app you want to use. To include Copilot App, quit it and refresh the manager.
 
-To change an existing client configuration, open **Apps**, expand the instance and choose **Manage configuration**. **Edit** opens the names and endpoints supported by that configuration. **Delete** shows the target and model count before removing the provider. An edit in VS Code, CLI or JetBrains changes the selected client configuration. For Copilot App, use the same entry for synchronized providers and **Model providers** inside the App for manually added providers.
+To change an existing client configuration, open **Apps**, expand the instance and choose **Manage configuration**. **Edit** opens the names and endpoints supported by that configuration. **Delete** shows the target and model count before removing the provider. An edit in VS Code, CLI or JetBrains changes the selected client configuration. With experimental sync on, quit Copilot App and use **Delete** here for a provider you added in the App. Check the name, endpoint host when shown, and model count, then confirm. To edit a manual provider, open **Model providers** in Copilot App.
 
 Go to **Providers (供应商) → Add provider (添加供应商)** and fill in:
 
@@ -192,6 +192,8 @@ In **Apps → GitHub Copilot · App**, choose **Enable sync**. App is then prese
 
 Quit Copilot App before publishing. After the write, reopen App and choose the model in its picker. Saved changes to published providers sync within the reviewed scope. Changes to the endpoint or credential storage scope require another publication review.
 
+If you delete a synchronized provider inside Copilot App, open **Publish configuration** to restore it. The App target shows that confirmation will recreate the provider with its current enabled models.
+
 Use **Experimental auto-sync** in the app details to turn sync on or off. Open **Manage configuration** to review existing providers and remove a synchronized provider. The App card shows when you need to quit the App before a refresh or publication. Other eligible targets can still be published from the same review.
 
 **Copilot App: manual setup, confirmation and updates**
@@ -257,9 +259,9 @@ Select the active model in each client's model picker.
 | **Remove (移除) → Stop managing only (仅停止管理…) → Confirm (确认停止管理)** | Removes the connection, publication records, ownership proofs, and its dedicated credential | Configuration and any materialized keys remain; you are responsible for managing them afterward |
 | **Remove (移除) → Preview revocation and deletion (预览撤销并删除) → Confirm (确认撤销并删除)** | Removes the connection after successful revocation | Removes only configuration verified as managed by this app, not other providers |
 
-For automatic targets, use **Revoke and delete** to remove the provider's managed configuration and review all targets in its preview. Delete manually entered Copilot App providers and keys inside the App.
+For automatic targets, use **Revoke and delete** to remove the provider's managed configuration and review all targets in its preview. To remove a manually entered Copilot App configuration, choose its row under **Apps → Manage configuration → Delete** with experimental sync enabled.
 
-For apps with supported configuration reads, Overview and Apps show the current catalog on refresh; read errors stay distinct from an empty catalog. Copilot App reads safely observable owned-provider metadata while experimental sync is enabled, and otherwise shows manual confirmations. Changes after preview stop publication; external edits after writing stop rollback. Changed App ownership fingerprints require conflict review. Check **Apps → Publication and revocation history** and **About → Local storage and security** first. Do not delete configuration files or backups directly.
+For apps with supported configuration reads, Overview and Apps show the current catalog on refresh; read errors stay distinct from an empty catalog. Copilot App reads the names and model counts of supported BYOK providers while experimental sync is enabled, and otherwise shows manual confirmations. Changes after preview stop publication; external edits after writing stop rollback. Changed App ownership fingerprints require conflict review. Check **Apps → Publication and revocation history** and **About → Local storage and security** first. Do not delete configuration files or backups directly.
 
 <a id="usage"></a>
 

@@ -297,6 +297,7 @@ fn projected_fingerprint_uses_registry_after_bytes_and_external_edits_invalidate
             purpose: crate::domain::DeploymentPurpose::Deploy,
             app_model_removals: Vec::new(),
             app_scope_confirmation: false,
+            app_recreates_provider: false,
             created_at: chrono::Utc::now(),
         };
         let mut plans = PlanStore::default();

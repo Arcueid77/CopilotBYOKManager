@@ -3,7 +3,7 @@ use crate::state::StateStore;
 use serde_json::json;
 use std::fs;
 
-fn isolated(path: &Path) -> ManagedState {
+pub(super) fn isolated(path: &Path) -> ManagedState {
     ManagedState::new(
         StateStore::open_at(path.join("state.json")),
         crate::account::LoginStore::open_at(path.join("login.json")),

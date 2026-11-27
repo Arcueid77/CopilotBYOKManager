@@ -12,6 +12,8 @@ pub struct ConfiguredSource {
     pub connection_id: Option<String>,
     pub name: String,
     pub model_count: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub manual_deletion_id: Option<String>,
 }
 
 impl ConfiguredSource {
@@ -33,6 +35,7 @@ impl ConfiguredSource {
                 })
                 .map(str::to_owned),
             model_count: model_count as u32,
+            manual_deletion_id: None,
         })
     }
 }

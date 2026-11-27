@@ -16,6 +16,7 @@ const MAX_WRITES: usize = 160;
 pub enum Resource {
     File(PathBuf),
     AppSqlite(Box<crate::adapters::github_app::sqlite::AppResource>),
+    AppManualProvider(Box<crate::adapters::github_app::sqlite::manual::ManualProvider>),
     #[cfg(windows)]
     UserEnvironment(String),
 }
@@ -24,6 +25,7 @@ impl Resource {
     pub fn key(&self) -> String {
         match self {
             Self::AppSqlite(resource) => resource.key(),
+            Self::AppManualProvider(resource) => resource.key(),
             Self::File(path) => {
                 let key = format!("file:{}", path.display());
                 #[cfg(windows)]
@@ -43,6 +45,7 @@ impl Resource {
     pub fn read(&self) -> AppResult<Option<Vec<u8>>> {
         match self {
             Self::AppSqlite(resource) => resource.read(),
+            Self::AppManualProvider(resource) => resource.read(),
             Self::File(path) => safe_io::read_optional(path, MAX_RESOURCE_BYTES),
             #[cfg(windows)]
             Self::UserEnvironment(name) => {
@@ -88,6 +91,9 @@ impl Resource {
         authorize: &dyn Fn(&Resource) -> AppResult<()>,
     ) -> AppResult<()> {
         match self {
+            Self::AppManualProvider(resource) => {
+                resource.write(expected, bytes, || authorize(self))
+            }
             Self::AppSqlite(resource) => {
                 resource.write(expected, bytes, allow_model_removal, || authorize(self))
             }
@@ -207,6 +213,12 @@ impl PreparedWrite {
     }
 
     fn validate(&self) -> AppResult<()> {
+        if let Resource::AppManualProvider(row) = &self.resource {
+            if self.after.is_some() || !self.before.as_ref().is_some_and(|bytes| row.matches(bytes))
+            {
+                return Err(AppError::PlanChanged);
+            }
+        }
         if self
             .before
             .as_ref()
@@ -322,7 +334,10 @@ impl Transaction {
 
     pub fn apply(&mut self) -> AppResult<()> {
         self.apply_checked(false, &|resource| {
-            if matches!(resource, Resource::AppSqlite(_)) {
+            if matches!(
+                resource,
+                Resource::AppSqlite(_) | Resource::AppManualProvider(_)
+            ) {
                 return Err(AppError::Unsupported(
                     "App SQLite synchronization requires native consent authorization".into(),
                 ));
@@ -336,6 +351,21 @@ impl Transaction {
         allow_model_removal: bool,
         authorize: &dyn Fn(&Resource) -> AppResult<()>,
     ) -> AppResult<()> {
+        if self
+            .journal
+            .writes
+            .iter()
+            .any(|write| matches!(write.resource, Resource::AppManualProvider(_)))
+        {
+            let expected = self
+                .manual_undo_digest()?
+                .ok_or(AppError::PlanUnavailable)?;
+            let permit =
+                safe_io::read_optional(&self.path.with_extension("manual-delete-permit"), 64)?;
+            if !allow_model_removal || permit.as_deref() != Some(expected.as_bytes()) {
+                return Err(AppError::PlanUnavailable);
+            }
+        }
         // Check every target's authorization before the first cross-target mutation.
         for write in &self.journal.writes {
             authorize(&write.resource)?;
@@ -442,7 +472,35 @@ impl Transaction {
 
     pub fn clear(self) -> AppResult<()> {
         safe_io::ensure_regular_or_missing(&self.path)?;
-        fs::remove_file(&self.path).map_err(|error| AppError::io(&self.path, error))
+        fs::remove_file(&self.path).map_err(|error| AppError::io(&self.path, error))?;
+        if self.manual_undo_digest()?.is_some() {
+            // An interrupted cleanup leaves only an unusable hash of the consumed plan.
+            let _ = fs::remove_file(self.path.with_extension("manual-delete-permit"));
+        }
+        Ok(())
+    }
+
+    fn manual_undo_digest(&self) -> AppResult<Option<String>> {
+        match self.journal.writes.as_slice() {
+            [write] if matches!(write.resource, Resource::AppManualProvider(_)) => {
+                crate::fingerprint::json(
+                    "confirmed-app-manual-deletion-v1",
+                    &(&self.journal.plan_id, &write.resource),
+                )
+                .map(Some)
+            }
+            _ => Ok(None),
+        }
+    }
+
+    /// Only the explicit manual-delete command issues this permit. It lets a
+    /// restarted process authenticate the exact row, preimage, target and plan.
+    pub(crate) fn permit_manual_undo(&self) -> AppResult<()> {
+        let digest = self.manual_undo_digest()?.ok_or(AppError::PlanChanged)?;
+        safe_io::write_private(
+            &self.path.with_extension("manual-delete-permit"),
+            digest.as_bytes(),
+        )
     }
 
     fn persist(&self) -> AppResult<()> {
@@ -455,6 +513,18 @@ impl Transaction {
         }
         safe_io::write_private(&self.path, &bytes)
     }
+}
+
+pub(crate) fn reviewed_manual_resource(path: &Path) -> AppResult<Option<Resource>> {
+    let Some(permit) = safe_io::read_optional(&path.with_extension("manual-delete-permit"), 64)?
+    else {
+        return Ok(None);
+    };
+    let tx = load_checked(path)?;
+    Ok(tx
+        .manual_undo_digest()?
+        .filter(|digest| digest.as_bytes() == permit)
+        .map(|_| tx.journal.writes[0].resource.clone()))
 }
 
 #[derive(Clone, Serialize)]
@@ -507,19 +577,25 @@ fn load_checked(path: &Path) -> AppResult<Transaction> {
 }
 
 pub fn recovery_view(path: &Path, allowed: &[Resource]) -> AppResult<RecoveryView> {
+    view_of(&load_checked(path)?, allowed)
+}
+
+fn view_of(tx: &Transaction, allowed: &[Resource]) -> AppResult<RecoveryView> {
     use sha2::{Digest, Sha256};
-    let tx = load_checked(path)?;
     let bytes = serde_json::to_vec(&tx.journal)
         .map_err(|_| AppError::Config("Cannot fingerprint recovery journal".into()))?;
     let mut conflicts = 0;
     let mut unknown = 0;
     let mut unreadable = 0;
-    let allowed = allowed
+    let allowed_keys = allowed
         .iter()
         .map(Resource::key)
         .collect::<std::collections::HashSet<_>>();
     for (index, write) in tx.journal.writes.iter().enumerate() {
-        if !allowed.contains(&write.resource.key()) {
+        if !allowed_keys.contains(&write.resource.key())
+            || (matches!(write.resource, Resource::AppManualProvider(_))
+                && !allowed.contains(&write.resource))
+        {
             unknown += 1;
             continue; // Never inspect a path/registry value outside native discovery.
         }
@@ -543,24 +619,15 @@ pub fn recovery_view(path: &Path, allowed: &[Resource]) -> AppResult<RecoveryVie
 }
 
 pub fn recover(path: &Path, expected_digest: &str, allowed: &[Resource]) -> AppResult<()> {
-    let current = recovery_view(path, allowed)?;
+    let mut tx = load_checked(path)?;
+    let current = view_of(&tx, allowed)?;
     if current.digest != expected_digest {
         return Err(AppError::InvalidInput(
             "Recovery journal changed after preview".into(),
         ));
     }
-    let mut tx = load_checked(path)?;
-    if tx.journal.phase != Phase::Committed {
-        let allowed = allowed
-            .iter()
-            .map(Resource::key)
-            .collect::<std::collections::HashSet<_>>();
-        if tx
-            .journal
-            .writes
-            .iter()
-            .any(|write| !allowed.contains(&write.resource.key()))
-        {
+    if tx.journal.phase != Phase::Committed && tx.journal.attempted > 0 {
+        if current.unknown_resource_count > 0 {
             return Err(AppError::Config("A recovery target is no longer available. Review keeping current files to end recovery without restoring targets.".into()));
         }
         tx.rollback()?;
@@ -572,13 +639,14 @@ pub fn recover(path: &Path, expected_digest: &str, allowed: &[Resource]) -> AppR
 /// bounded, backend-owned journal is removed. Target paths are never accessed,
 /// and no deployment is recorded as successful by this operation.
 pub fn keep_current(path: &Path, expected_digest: &str) -> AppResult<()> {
-    let current = recovery_view(path, &[])?;
+    let tx = load_checked(path)?;
+    let current = view_of(&tx, &[])?;
     if current.digest != expected_digest {
         return Err(AppError::InvalidInput(
             "Recovery journal changed after preview".into(),
         ));
     }
-    load_checked(path)?.clear()
+    tx.clear()
 }
 
 #[cfg(test)]

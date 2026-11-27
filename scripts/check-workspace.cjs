@@ -38,6 +38,25 @@ function fixture(){
     window.__fixture.calls.push(command);
     if(command==='set_tray_locale')return;
     if(command==='get_dashboard')return structuredClone(state);
+    if(command==='discard_existing_provider_change'){
+      plans.delete(args.planId);
+      window.__fixture.discardedProviderPlan=args.planId;
+      return;
+    }
+    if(command==='preview_app_provider_delete'){
+      const row=state.clientConfigurations.find(c=>c.targetId==='app')?.sources.find(s=>s.manualDeletionId===args.selection);
+      assertFixture(sync.enabled&&row);
+      const planId='app-delete-'+(++counter);
+      plans.set(planId,{row});
+      return {planId,origin:'https://manual.example.invalid'};
+    }
+    if(command==='apply_app_provider_delete'){
+      const plan=plans.get(args.planId);plans.delete(args.planId);
+      const catalog=state.clientConfigurations.find(c=>c.targetId==='app');
+      assertFixture(sync.enabled&&args.confirmed&&plan?.row&&catalog.sources.includes(plan.row));
+      catalog.sources=catalog.sources.filter(s=>s!==plan.row);
+      return;
+    }
     if(command==='list_existing_providers'){
       const rows=window.__fixture.existingProviders?.[args.targetId];
       if(!rows)throw 'unavailable';
@@ -131,7 +150,11 @@ function fixture(){
       if (plan.operations.some(op=>op.targetKind==='github-copilot-app'&&op.supported)) {
         const app=plan.operations.find(operation=>operation.targetKind==='github-copilot-app');
         if(window.__fixture.appRunning)Object.assign(app,{supported:false,blocker:'clientRunning',description:'Quit Copilot App and preview again'});
-        else plan.appScopeConfirmation=!sync.selectedConnectionIds.includes(connection.id);
+        else {
+          plan.appScopeConfirmation=!sync.selectedConnectionIds.includes(connection.id);
+          const catalog=state.clientConfigurations.find(config=>config.targetId===app.targetId);
+          plan.appRecreatesProvider=sync.ownedConnectionIds.includes(connection.id)&&!catalog?.sources.some(source=>source.connectionId===connection.id);
+        }
       }
       plans.set(id,plan);return structuredClone(plan);
     }
@@ -139,12 +162,14 @@ function fixture(){
     if(command==='apply_deployment_plan'){
       const plan=plans.get(args.planId);plans.delete(args.planId);if(!plan||!args.confirmed)throw Error('One-shot plan unavailable');
       if(plan.appScopeConfirmation)assertFixture(args.appScopeConfirmed);
+      if(plan.appRecreatesProvider)assertFixture(args.appRecreationConfirmed===true);
       if(window.__fixture.failApply)throw Error('Synthetic write failure');
       if(plan.appScopeConfirmation)sync.selectedConnectionIds.push(plan.connectionId);
       const records=plan.operations.map(op=>({id:'record-'+(++counter),planId:plan.id,connectionId:plan.connectionId,targetId:op.targetId,targetKind:op.targetKind,status:op.supported?'applied':'skipped',blocker:op.blocker,createdAt:new Date().toISOString()}));
       state.deployments.unshift(...records);
       for(const record of records.filter(r=>r.status==='applied')){
         const config=state.clientConfigurations.find(c=>c.targetId===record.targetId),provider=state.connections.find(c=>c.id===record.connectionId);
+        if(record.targetKind==='github-copilot-app'&&!sync.ownedConnectionIds.includes(provider.id))sync.ownedConnectionIds.push(provider.id);
         if(config){config.sources=config.sources.filter(s=>s.connectionId!==provider.id);config.sources.push({connectionId:provider.id,name:provider.name,modelCount:provider.models.filter(m=>m.enabled).length});}
       }
       return {planId:plan.id,records};
@@ -278,6 +303,29 @@ async function main(){
     await page.locator('.modal').waitFor({state:'detached'});
     assert.equal(await page.evaluate(()=>window.__fixture.calls.filter(c=>c==='apply_deployment_plan').length),beforeApp+2);
     results.push('An instance with the provider selected publishes ordinary configuration in one click');
+    await page.evaluate(()=>{
+      const f=window.__fixture,app=f.state.clientConfigurations.find(config=>config.targetId==='app');
+      app.sources=app.sources.filter(source=>source.connectionId!=='north');
+    });
+    await page.locator('#refresh-button').click();
+    await appGroup.locator('[data-action="publish-family"]').click();
+    await page.locator('#publication-provider').selectOption('north');
+    const recreate=page.getByText('此供应商已在 App 内删除，确认发布后将重新创建。',{exact:true});
+    await recreate.waitFor();
+    await page.locator('.modal-header [data-modal-close]').click();
+    assert.equal(await page.evaluate(()=>window.__fixture.state.clientConfigurations.find(config=>config.targetId==='app').sources.some(source=>source.connectionId==='north')),false);
+    const appExpand=appGroup.locator('[data-action="toggle-app-group"]');
+    if(await appExpand.getAttribute('aria-expanded')==='false')await appExpand.click();
+    await page.locator('[data-client-id="app"] [data-action="manage-existing-providers"]').click();
+    await page.getByText('仅有管理器的同步记录',{exact:true}).waitFor();
+    await page.locator('.modal-header [data-modal-close]').click();
+    await appGroup.locator('[data-action="publish-family"]').click();
+    await page.locator('#publication-provider').selectOption('north');
+    await recreate.waitFor();
+    await page.getByRole('button',{name:'确认发布',exact:true}).click();
+    await page.locator('.modal').waitFor({state:'detached'});
+    assert.equal(await page.evaluate(()=>window.__fixture.state.clientConfigurations.find(config=>config.targetId==='app').sources.filter(source=>source.connectionId==='north').length),1);
+    results.push('An App deletion leaves a sync record and requires a reviewed confirmation before recreating the provider');
     await page.evaluate(()=>{
       window.__fixture.sync.phase='syncedConfiguration';
       for(const client of window.__fixture.state.clients){
@@ -474,7 +522,9 @@ async function main(){
         Object.assign(f.sync,{enabled:true,reviewSupported:true,selectedConnectionIds:[],ownedConnectionIds:[]});
         for(const client of f.state.clients)Object.assign(client,{supportsWrite:true,status:'available'});
         f.state.clientConfigurations=f.state.clients.map(client=>({targetId:client.id,state,
-          sources:hasProviders?[{name:'Existing provider',connectionId:null,modelCount:1}]:[]}));
+          sources:hasProviders?(client.id==='app'
+            ? ['a','b'].map(letter=>({name:'Existing provider',connectionId:null,modelCount:1,manualDeletionId:letter.repeat(64)}))
+            : [{name:'Existing provider',connectionId:null,modelCount:1}]):[]}));
       },{state,hasProviders});
       await page.locator('#refresh-button').click();await visit('overview');
       const roster=page.locator('.status-row > .status-pill');
@@ -489,9 +539,21 @@ async function main(){
         assert.equal(await page.locator('.client-card:visible [data-action="manage-existing-providers"]').count(),4);
         const appCard=page.locator('[data-client-id="app"]');
         await appCard.locator('[data-action="manage-existing-providers"]').click();
-        await page.locator('.existing-provider-row').getByText('Existing provider',{exact:true}).waitFor();
-        assert.equal(await page.locator('[data-existing-delete]').count(),0,'An unmanaged App row stays read-only');
-        await page.locator('.modal-header [data-modal-close]').click();
+        assert.equal(await page.locator('[data-existing-delete]').count(),2);
+        await page.getByText(/条目 bbbbbbbb/).waitFor();
+        await page.locator('[data-existing-delete="1"]').click();
+        await page.getByText('https://manual.example.invalid',{exact:true}).waitFor();
+        await page.getByRole('dialog').screenshot({path:path.join(output,'manual-app-provider-delete.png')});
+        await page.getByRole('button',{name:'取消',exact:true}).click();
+        await page.waitForFunction(()=>window.__fixture.discardedProviderPlan?.startsWith('app-delete-'));
+        const remaining=()=>page.evaluate(()=>window.__fixture.state.clientConfigurations.find(c=>c.targetId==='app').sources.map(s=>s.manualDeletionId));
+        assert.deepEqual(await remaining(),['a'.repeat(64),'b'.repeat(64)]);
+        await appCard.locator('[data-action="manage-existing-providers"]').click();
+        await page.locator('[data-existing-delete="1"]').click();
+        await page.getByRole('button',{name:'确认删除',exact:true}).click();
+        await page.locator('[data-existing-confirm]').waitFor({state:'detached'});
+        assert.deepEqual(await remaining(),['a'.repeat(64)]);
+        results.push('Manual App providers: same-name entries, scoped confirmation, cancellation and selected deletion');
       }
     }
     results.push('All four clients share configured, empty, unreadable and unsupported states across overview, group and instance');
